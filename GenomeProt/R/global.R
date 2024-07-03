@@ -28,4 +28,4 @@ suppressPackageStartupMessages({
 
 options(shiny.maxRequestSize = 2097152000) # 2GB
 
-source("functions.R")
+source("R/functions.R")
