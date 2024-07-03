@@ -74,10 +74,9 @@ server <- function(input, output, session) {
     req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
     
     # file handling for different proteomics outputs
-    #
     
     # Uncomment once fixed
-    #system(paste0("Rscript map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
+    #system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
     
     # check files exist
     if (file.exists("peptide_info.csv")) {
