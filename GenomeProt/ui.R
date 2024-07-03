@@ -11,7 +11,7 @@ ui <- dashboardPage(
                   )),
   # tabs
   dashboardSidebar(
-    sidebarMenu(menuItem("Welcome test", tabName = "welcome", icon = icon("house")),
+    sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
                 menuItem("Map FASTQs", tabName = "map_fastqs", icon = icon("dna")),
                 menuItem("Identify isoforms", tabName = "run_bambu", icon = icon("magnifying-glass")),
                 menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
