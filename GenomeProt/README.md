@@ -1,4 +1,4 @@
-### <b>GenomeProt: An integrated proteogenomics data analysis platform for long-read RNA-Seq datasets</b>
+### <b>An integrated proteogenomics data analysis platform for long-read RNA-Seq datasets</b>
 
 <br>
   
