@@ -5,7 +5,7 @@ Make sure you have [Docker](https://docs.docker.com/engine/install/) installed a
 
 Open your terminal application and run:
 ```
-docker image pull josiegleeson/GenomeProt:latest
+docker image pull josieg/GenomeProt:latest
 ```
 This will take approximately 10 minutes to download.
 
