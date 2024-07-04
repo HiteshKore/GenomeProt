@@ -1,7 +1,7 @@
-# GenomeProt: an integrated proteogenomics data analysis platform for long-read RNA-Seq datasets
+# GenomeProt: an integrated proteogenomics analysis platform for long-read RNA-Seq datasets
 
 ### Run the shiny application with Docker
-Make sure you have [Docker](https://docs.docker.com/engine/install/) installed and the application running in the background before you beign.
+Make sure you have [Docker](https://docs.docker.com/engine/install/) installed and the application running in the background before you begin.
 
 Open your terminal application and run:
 ```
@@ -15,3 +15,5 @@ To **access the local shiny application**, navigate to this link on your web bro
 You can now upload all files and run the steps in your web browser. Although the app is running through a web browser, no files are being uploaded to the internet and everything will be run locally.
 
 To stop the container, close the web browser tab and head back to the terminal where Docker is running and press ctrl+c.
+
+
