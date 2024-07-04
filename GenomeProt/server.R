@@ -1,0 +1,305 @@
+library(shiny)
+library(shinyjs)
+
+# internal server functions
+fastq_server <- function(input, output, session) {
+  
+  # call minimap2 script and wait for BAM output
+  # short-reads, call STAR
+
+}
+
+bambu_server <- function(input, output, session) {
+  
+  req(input$user_bam_files)  # BAMs required
+  
+  # create list of BAMs
+  bam_file_list <- Rsamtools::BamFileList(as.vector(input$user_bam_files$datapath))
+  # get original names
+  bame_file_names <- as.vector(input$user_bam_files$name)
+  # remove bam extension
+  bame_file_names <- str_remove(bame_file_names,".bam")
+  # rename list to original names
+  names(bam_file_list) <- bame_file_names
+  
+  # run bambu function
+  run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
+  
+  # check files exist
+  if (file.exists("bambu_output/bambu_isoform_annotations.gtf")) {
+    # create a zip file with results
+    files_to_zip <- c("bambu_output/bambu_isoform_annotations.gtf", "bambu_output/counts_gene.txt", "bambu_output/counts_isoform.txt", "bambu_output/novel_isoform_classes.csv")
+    zipfile_path <- "bambu_output/results.zip"
+    zip(zipfile = zipfile_path, files = files_to_zip)
+  }
+  
+  # if short-reads are supplied this won't work
+  # short-read data should skip isoform identification and just perform quantification, then filter based on counts
+
+}
+
+database_server <- function(input, output, session) {
+  
+  # NOTE: create results dir
+  req(input$user_gtf_file)  # GTF is required
+  
+  gtf_path <- input$user_gtf_file$datapath
+  
+  if (!is.null(input$user_tx_count_file)) {
+    tx_count_path <- input$user_tx_count_file$datapath
+  } else {
+    tx_count_path <- NULL
+  }
+  
+  # run filter_custom_gtf, if counts are present, supply them
+  if (!is.null(tx_count_path)) {
+    filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, tx_counts=tx_count_path, min_count=input$minimum_tx_count)
+  } else {
+    filtered_gtf <- filter_custom_gtf(customgtf=gtf_path)
+  }
+  
+  # currently calls a function defined in 'functions.R'
+  get_transcript_seqs("ORFome_transcripts.gtf", input$organism)
+  
+  # should call # python cdhit script defined in bin/
+  # system(paste0("python bin/script.py))
+  
+  # check files exist
+  if (file.exists("ORFome_transcripts_nt.fasta") && file.exists("ORFome_transcripts.gtf")) {
+    # create a zip file with results
+    files_to_zip <- c("ORFome_transcripts_nt.fasta", "ORFome_transcripts.gtf")
+    zipfile_path <- "database_results.zip"
+    zip(zipfile = zipfile_path, files = files_to_zip)
+  }
+  
+}
+
+proteomics_server <- function(input, output, session) {
+  
+  # call FragPipe and supply running options 
+  
+}
+
+integration_server <- function(input, output, session) {
+  # NOTE: create results dir
+  req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
+  
+  # file handling for different proteomics pipelines
+  
+  # un-comment once fixed
+  #system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
+  
+  # check files exist
+  if (file.exists("peptide_info.csv")) {
+    # create a zip file with results
+    files_to_zip_int <- c("peptide_info.csv", "peptides.gtf", "ORFs.gtf", "transcripts.gtf")
+    zipfile_path_int <- "integration_results.zip"
+    zip(zipfile = zipfile_path_int, files = files_to_zip_int)
+  }  
+  
+}
+
+visualisation_server <- function(input, output, session) {
+  
+  # unsure if the following will break the code if run in sep function
+  # data_storage <- reactiveValues()
+  
+}
+
+# shiny app server
+server <- function(input, output, session) {
+  
+  # IDENTIFY ISOFORMS MODULE
+  file_available_bambu <- reactiveVal(FALSE)
+  observeEvent(input$bambu_submit_button, { 
+    bambu_server(input, output, session)
+    
+    # check if the zip file is created
+    if (file.exists("bambu_output/results.zip")) {
+      file_available_bambu(TRUE)
+    }
+  })
+  
+  # enable download once files are available
+  observe({
+    if (file_available_bambu()) {
+      shinyjs::enable("bambu_download_button")
+      shinyjs::runjs("document.getElementById('bambu_download_button').style.backgroundColor = '#4CAF50';")
+    }
+  })
+  
+  # download handler for the database results.zip file
+  output$bambu_download_button <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_bambu_results.zip")
+    },
+    content = function(file) {
+      file.copy("bambu_output/results.zip", file)
+    }
+  )
+  
+  # DATABASE MODULE
+  
+  # create reactive value for the database zip
+  file_available_db <- reactiveVal(FALSE)
+  
+  # run database function when submit is pressed
+  observeEvent(input$db_submit_button, { 
+    
+    database_server(input, output, session)
+
+    # check if the zip file is created
+    if (file.exists("database_results.zip")) {
+      file_available_db(TRUE)
+    }
+  })
+  
+  # enable download once files are available
+  observe({
+    if (file_available_db()) {
+      shinyjs::enable("db_download_button")
+      shinyjs::runjs("document.getElementById('db_download_button').style.backgroundColor = '#4CAF50';")
+    }
+  })
+  
+  # download handler for the database results.zip file
+  output$db_download_button <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_database_results.zip")
+    },
+    content = function(file) {
+      file.copy("database_results.zip", file)
+    }
+  )
+  
+  # END DATABASE MODULE
+  
+  
+  # INTEGRATION MODULE
+  
+  # create reactive value for the database zip
+  file_available_integ <- reactiveVal(FALSE)
+  
+  observeEvent(input$integ_submit_button, { 
+    
+    integration_server(input, output, session)
+    
+    # check if the zip file is created
+    if (file.exists("integration_results.zip")) {
+      file_available_integ(TRUE)
+    }
+  })
+  
+  observe({
+    if (file_available_integ()) {
+      shinyjs::enable("integ_download_button")
+      shinyjs::runjs("document.getElementById('integ_download_button').style.backgroundColor = '#4CAF50';")
+    }
+  })
+  
+  # download handler 
+  output$downloadResultsIntegration <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_integration_results.zip")
+    },
+    content = function(file) {
+      file.copy("integration_results.zip", file)
+    }
+  )
+  
+  # END INTEGRATION MODULE
+  
+  
+  # VISUALISATION MODULE
+  data_storage <- reactiveValues()
+  observeEvent(input$vis_submit_button, { 
+    
+    req(input$user_tx_gtf_file, input$user_orf_gtf_file, input$user_pep_gtf_file)
+    
+    data_storage$res_tx_import <- rtracklayer::import(input$user_tx_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
+      separate(gene_id, into = c("gene_id"), sep = "\\.")
+    
+    data_storage$res_ORF_import <- rtracklayer::import(input$user_orf_gtf_file$datapath, format="gtf") %>% as_tibble()
+    
+    data_storage$res_pep_import <- rtracklayer::import(input$user_pep_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
+      separate(gene_id, into = c("gene_id"), sep = "\\.")
+    
+    if (!is.null(input$user_tx_count_file)) {
+      
+      print("Counts detected")
+      data_storage$countst <- fread(input$user_tx_count_file$datapath)
+      data_storage$countsp <- fread(input$user_pep_count_file$datapath)
+      
+      # when samples don't match
+      sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
+      
+      print("Samples with peptide intensities and transcript counts:")
+      print(sample_names)
+      
+      data_storage$countsp$Peptide <- data_storage$countsp$Stripped.Sequence
+      
+      # noted that sometimes a peptide is in the data twice, so take max count value
+      data_storage$countsp <- data_storage$countsp %>% 
+        dplyr::select(Peptide, sample_names) %>% 
+        dplyr::mutate(sum = rowSums(across(where(is.numeric)), na.rm=TRUE)) %>% 
+        dplyr::group_by(Peptide) %>% 
+        slice_max(sum) %>% dplyr::ungroup() %>% dplyr::select(-sum)
+      
+      # VSN
+      countsp_matrix <- as.matrix(data_storage$countsp[,-1])
+      rownames(countsp_matrix) <- data_storage$countsp$Peptide
+      
+      # apply justvsn
+      vsnp <- as.data.frame(justvsn(countsp_matrix))
+      vsnp$peptide <- rownames(vsnp)
+      
+      # melt for plotting
+      data_storage$countspm <- reshape2::melt(vsnp, id.vars = c("peptide"),
+                                              variable.name = "sample_id", value.name = "count")
+      
+      data_storage$countstm <- reshape2::melt(data_storage$countst, id.vars = c("transcript_id"),
+                                              variable.name = "sample_id", value.name = "count")
+    } 
+    
+    # update genes available
+    genes_available <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
+    updateSelectInput(session, "gene_selector", choices = genes_available)
+  })
+  
+  observeEvent(input$gene_selector, {
+    
+    req(input$gene_selector)
+    
+    data_storage$gene_to_plot <- input$gene_selector
+    print(data_storage$gene_to_plot)
+    
+    if (!is.null(input$user_tx_count_file)) {
+      print("counts")
+      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
+    } else {
+      print("no counts")
+      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import)
+    }
+    
+    # print the plot
+    output$plot <- renderPlot({
+      suppressWarnings(print(data_storage$plot_obj))
+    })
+    
+    shinyjs::enable("vis_download_button")
+  })
+  
+  # download handler for the plot
+  output$vis_download_button <- downloadHandler(
+    filename = function() {
+      paste0(data_storage$gene_to_plot, "_", Sys.Date(), ".pdf")
+    },
+    content = function(file) {
+      pdf(file)
+      print(data_storage$plot_obj)
+      dev.off()
+    }
+  )
+  # END VISUALISATION MODULE
+  
+}
