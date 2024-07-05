@@ -33,7 +33,7 @@ ui <- dashboardPage(
           text-align: center;
           text-decoration: none;
           display: inline-block;
-          font-size: 16px;
+          font-size: 12px;
         }
         #downloadResults:disabled {
           background-color: #d3d3d3; /* Gray */
@@ -109,16 +109,14 @@ ui <- dashboardPage(
                        selectInput("organism", label = "Organism:", 
                                    choices = list("human" = "human", "mouse" = "mouse"), 
                                    selected = "human"),
-                       selectInput("startcodon", label = "Start codon:", 
-                                   choices = list("ATG" = "ATG", "ATG+CTG" = "ATG+CTG"), 
-                                   selected = "ATG"),
+                       #selectInput("startcodon", label = "Start codon:", choices = list("ATG" = "ATG", "ATG+CTG" = "ATG+CTG"), selected = "ATG"),
                        numericInput("ORFLength", 
                                     label = "ORF Length (AA):", 
                                     value = 30),
                        fileInput("user_gtf_file", "Upload GTF file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_tx_count_file", "Upload transcript counts file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        numericInput("minimum_tx_count", 
-                                    label = "Minimum count per transcript (sum):", 
+                                    label = "Minimum total transcript expression (sum):", 
                                     value = 5),
                        actionButton("db_submit_button", "Submit", class = "btn btn-primary")
                 ),
@@ -136,9 +134,6 @@ ui <- dashboardPage(
                        selectInput("organism", label = "Organism:", 
                                    choices = list("human" = "human", "mouse" = "mouse"), 
                                    selected = "human"),
-                       selectInput("startcodon", label = "Start codon:", 
-                                   choices = list("ATG" = "ATG", "ATG+CTG"), 
-                                   selected = "ATG"),
                        numericInput("ORFLength", 
                                     label = "ORF Length (AA):", 
                                     value = 30),
@@ -161,8 +156,8 @@ ui <- dashboardPage(
               fluidRow(
                 column(4,
                        fileInput("user_proteomics_file", "Upload proteomics file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_fasta_file", "Upload FASTA file used for proteomics (from pervious step):", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_post_gtf_file", "Upload transcripts GTF used to build FASTA (from pervious step):", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_fasta_file", "Upload FASTA file used for proteomics:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_post_gtf_file", "Upload transcripts GTF used to build FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        actionButton("integ_submit_button", "Submit", class = "btn btn-primary")
                 ),
                 column(6,
