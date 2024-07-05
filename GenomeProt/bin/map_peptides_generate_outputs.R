@@ -18,14 +18,9 @@ library(stringdist)
 library(Repitools)
 library(optparse)
 
-
-# Trying CDHIT 
-# library(CellaRepertorium)
-# db <- readAAStringSet("~/Documents/pg_server/integ_test_data/ProteomeDb.fasta", format="fasta", use.names=TRUE)
-# tbl <- cdhit(db, identity = 0.8, only_index = FALSE)
-
-
+#source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/functions.R")
 source("R/functions.R")
+source("global.R")
 
 option_list = list(
   make_option(c("-p", "--proteomics"), type="character", default=NULL, 
@@ -43,9 +38,9 @@ proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
 
-#proteomics_import_file <- "~/Documents/pg_server/integ_test_data/report.pr_matrix.tsv"
-#fasta_import_file <- "~/Documents/pg_server/integ_test_data/ProteomeDb.fasta"
-#gtf_import_file <- "~/Documents/pg_server/integ_test_data/ORFome_transcripts.gtf"
+# proteomics_import_file <- "~/Documents/pg_server/integ_test_data/report.pr_matrix.tsv"
+# fasta_import_file <- "~/Documents/pg_server/integ_test_data/ProteomeDb.fasta"
+# gtf_import_file <- "~/Documents/pg_server/integ_test_data/ORFome_transcripts.gtf"
 
 # ------------- args input ------------- #
 # # replace with args[]
@@ -71,9 +66,6 @@ gtf <- makeTxDbFromGFF(gtf_import_file) # make txdb of gtf
 
 md <- import_fasta(fasta_import_file, pd, gtf)
 
-# get exons for mapping
-exons <- exonsBy(gtf, "tx", use.names=TRUE) # get exon data per transcript
-exons_filt <- exons[names(exons) %in% md$transcript_id] # filter for only transcripts with peptides
 
 # ---------------------------------------- #
 
@@ -81,6 +73,7 @@ exons_filt <- exons[names(exons) %in% md$transcript_id] # filter for only transc
 # ------------- apply functions ------------- #
 
 # extract ORF transcript coordinates to df
+md$orf_tx_id <- paste0(md$protein_name, "_", md$transcript_id)
 
 orf_transcript_coords_df <- md %>% dplyr::select(orf_tx_id, txstart, txend, transcript_id, gene_id)
 orf_transcript_coords_df <- orf_transcript_coords_df[!(base::duplicated(orf_transcript_coords_df)),]
@@ -88,10 +81,15 @@ orf_transcript_coords_df <- orf_transcript_coords_df[!(base::duplicated(orf_tran
 # make GRanges from df of ORF transcript coordinates
 orf_transcript_coords <- makeGRangesFromDataFrame(orf_transcript_coords_df,
   keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
-  seqnames.field="transcript", start.field="txstart", end.field="txend", strand.field="strand",
+  seqnames.field="transcript_id", start.field="txstart", end.field="txend", strand.field="strand",
   starts.in.df.are.0based=FALSE, na.rm=TRUE)
+
 names(orf_transcript_coords) <- c(orf_transcript_coords$orf_tx_id) # set names
-mcols(orf_transcript_coords)$gene <- c(orf_transcript_coords_df$gene)
+mcols(orf_transcript_coords)$gene_id <- c(orf_transcript_coords_df$gene_id)
+
+# get exons for mapping
+exons <- exonsBy(gtf, "tx", use.names=TRUE) # get exon data per transcript
+exons_filt <- exons[names(exons) %in% orf_transcript_coords_df$transcript_id] # filter for only transcripts with peptides
 
 orf_tx_names <- as.character(seqnames(orf_transcript_coords)) # get tx names
 
@@ -104,6 +102,8 @@ orf_ids <- orf_transcript_coords$orf_tx_id
 
 # ORFik map to genome coordinates
 orf_in_genomic <- ORFik::pmapFromTranscriptF(orf_transcript_coords, exons_filt, removeEmpty = T)
+
+#orf_in_genomic <- mapFromTranscripts(orf_transcript_coords, exons_filt)
 
 # map back to GRangesList, with group information
 orf_in_genomic@unlistData$PID <- orf_ids[groupings(orf_in_genomic)]
@@ -118,7 +118,6 @@ exon_number_vec <- ave(seq_along(orf_in_genomic_gr), mcols(orf_in_genomic_gr)$PI
 mcols(orf_in_genomic_gr)$exon_number <- exon_number_vec
 # re-list
 orf_in_genomic <- split(orf_in_genomic_gr, ~ mcols(orf_in_genomic_gr)$PID)
-
 
 # peptides
 # use ORF transcript coords to determine peptide transcript coords
@@ -138,7 +137,7 @@ names(filtered_peptide_transcript_coords) <- match(peptide_tx_names, names(exons
 # original peptides in the GRanges
 pep_ids <- filtered_peptide_transcript_coords$peptide
 pep_PID_ids <- filtered_peptide_transcript_coords$PID
-pep_gene_ids <- filtered_peptide_transcript_coords$gene
+pep_gene_ids <- filtered_peptide_transcript_coords$gene_id
 
 # ORFik map to genome coordinates
 pep_in_genomic <- ORFik::pmapFromTranscriptF(filtered_peptide_transcript_coords, exons_filt, removeEmpty = F)
@@ -213,11 +212,15 @@ results_pept_df_unique <- results_pept_df %>%
 
 # merge results with metadata
 metadata_to_merge <- md %>% 
-  dplyr::select(PID, peptide, transcript, gene, gene_symbol, localisation, transcript_biotype, orf_type)
-metadata_to_merge$transcript_id <- metadata_to_merge$transcript
-metadata_to_merge$transcript <- NULL
+  dplyr::select(PID, peptide, transcript_id, gene_id)
 
-peptide_result <- merge(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "transcript_id", "gene"), all.x=T, all.y=F)
+# merge results with metadata
+# missing localisaiton etc
+# metadata_to_merge <- md %>% 
+#   dplyr::select(PID, peptide, transcript_id, gene_id, localisation, transcript_biotype, orf_type)
+
+peptide_result <- merge(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "transcript_id"), all.x=T, all.y=F)
+
 peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
 # define transcripts as known or novel
@@ -238,9 +241,9 @@ peptide_result <- peptide_result %>%
 peptide_result <- peptide_result %>% 
   dplyr::group_by(peptide) %>% 
   dplyr::mutate(pep_map_status = case_when(
-    length(unique(gene))==1 & length(unique(PID))==1 ~ "high",
-    length(unique(PID))>1 & length(unique(gene))==1 ~ "medium",
-    length(unique(PID))>1 & length(unique(gene))>1 ~ "low",
+    length(unique(gene_id))==1 & length(unique(PID))==1 ~ "high",
+    length(unique(PID))>1 & length(unique(gene_id))==1 ~ "medium",
+    length(unique(PID))>1 & length(unique(gene_id))>1 ~ "low",
     TRUE ~ NA)) %>% 
   ungroup()
 
@@ -273,10 +276,8 @@ peptide_result <- peptide_result %>%
 
 # include orf_map_status and pep_map_status in GTF mcols
 results_pept_df$pep_map_status <- NULL
-results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene", "seqnames"), all.x=T, all.y=F)
+results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id", "seqnames"), all.x=T, all.y=F)
 results_to_merge_with_granges <- results_to_merge_with_granges[!(duplicated(results_to_merge_with_granges)),]
-results_to_merge_with_granges$gene_id <- results_to_merge_with_granges$gene
-results_to_merge_with_granges$gene <- NULL
 results_to_merge_with_granges$naming <- paste0(results_to_merge_with_granges$transcript_id, "_", results_to_merge_with_granges$peptide)
 
 # make GRanges from df of ORF transcript coordinates
