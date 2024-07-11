@@ -4,7 +4,17 @@ library(shinyjs)
 # internal server functions
 fastq_server <- function(input, output, session) {
   
+  
+  renderTable(input$user_fastq_files)
+  
   # call minimap2 script and wait for BAM output
+  user_threads <- 12
+  user_genome <- "genome.fa" 
+  fastq_file <- "test"
+  
+  system(paste0("minimap2 -t ", user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", user_genome, " ", fastq_file, ".fastq | samtools view -bh -F 2308 | samtools sort -@ ", user_threads, " -o ", fastq_file, ".bam"))
+  #system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
+  
   # short-reads, call STAR
 
 }
@@ -40,10 +50,12 @@ bambu_server <- function(input, output, session) {
 
 database_server <- function(input, output, session) {
   
-  # NOTE: create results dir
   req(input$user_gtf_file)  # GTF is required
   
   gtf_path <- input$user_gtf_file$datapath
+  reference_gtf <- input$user_ref_gtf_file$datapath
+  
+  system("mkdir db_output")
   
   if (!is.null(input$user_tx_count_file)) {
     tx_count_path <- input$user_tx_count_file$datapath
@@ -59,15 +71,25 @@ database_server <- function(input, output, session) {
   }
   
   # currently calls a function defined in 'functions.R'
-  get_transcript_seqs("ORFome_transcripts.gtf", input$organism)
+  # run filter_custom_gtf, if counts are present, supply them
+  get_transcript_seqs(filteredgtf="db_output/proteome_database_transcripts.gtf", organism=input$organism, orf_len=input$min_orf_length, find_UTR_orfs=input$user_find_utr_orfs, referencegtf=reference_gtf)
   
-  # should call # python cdhit script defined in bin/
-  # system(paste0("python bin/script.py))
+  if (input$organism == "human") {
+    ref_proteome <- "data/openprot_uniprotDb_hs.txt"
+  } else if (input$organism == "mouse") {
+    ref_proteome <- "data/openprot_uniprotDb_mm.txt"
+  }
+  
+  gtf_type <- "GENCODE"
+  
+  # run python script
+  #system(paste0("python bin/annotate_proteome.py ", ref_gtf, " ", ref_proteome, " db_output/ORFome_aa.txt db_output/ORFome_transcripts.gtf ", gtf_type))
+  system(paste0("source activate py39; python bin/annotate_proteome.py ", reference_gtf, " ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
   
   # check files exist
-  if (file.exists("ORFome_transcripts_nt.fasta") && file.exists("ORFome_transcripts.gtf")) {
+  if (file.exists("db_output/proteome_database.fasta") && file.exists("db_output/proteome_database_transcripts.gtf")) {
     # create a zip file with results
-    files_to_zip <- c("ORFome_transcripts_nt.fasta", "ORFome_transcripts.gtf")
+    files_to_zip <- c("db_output/proteome_database.fasta", "db_output/proteome_database_metadata.txt", "db_output/proteome_database_transcripts.gtf")
     zipfile_path <- "database_results.zip"
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
