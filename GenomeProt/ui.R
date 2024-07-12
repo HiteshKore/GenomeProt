@@ -54,7 +54,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(12, 
                        div(class = "box box-primary", style = "padding-right: 5%; padding-left: 5%; font-size:110%", 
-                           div(class = "box-body", shiny::includeMarkdown("README.md"))
+                           div(class = "box-body", shiny::includeMarkdown("welcome-page-text.md"))
                        )
                 )
               ),
