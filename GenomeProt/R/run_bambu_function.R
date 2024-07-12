@@ -16,5 +16,3 @@ run_bambu_function <- function(bam_file_list, gtf, genome) {
 	system(paste0("mv bambu_output/counts_transcript.txt bambu_output/counts_isoform.txt"))
 	system(paste0("mv bambu_output/extended_annotations.gtf bambu_output/bambu_isoform_annotations.gtf"))
 }
-
-
