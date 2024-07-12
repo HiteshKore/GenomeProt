@@ -50,7 +50,7 @@ bambu_server <- function(input, output, session) {
 
 database_server <- function(input, output, session) {
   
-  req(input$user_gtf_file)  # GTF is required
+  req(input$user_gtf_file, input$user_ref_gtf_file)  # GTF is required
   
   gtf_path <- input$user_gtf_file$datapath
   reference_gtf <- input$user_ref_gtf_file$datapath
@@ -65,9 +65,9 @@ database_server <- function(input, output, session) {
   
   # run filter_custom_gtf, if counts are present, supply them
   if (!is.null(tx_count_path)) {
-    filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, tx_counts=tx_count_path, min_count=input$minimum_tx_count)
+    filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, referencegtf=reference_gtf, tx_counts=tx_count_path, min_count=input$minimum_tx_count)
   } else {
-    filtered_gtf <- filter_custom_gtf(customgtf=gtf_path)
+    filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, referencegtf=reference_gtf)
   }
   
   # currently calls a function defined in 'functions.R'
@@ -84,7 +84,8 @@ database_server <- function(input, output, session) {
   
   # run python script
   #system(paste0("python bin/annotate_proteome.py ", ref_gtf, " ", ref_proteome, " db_output/ORFome_aa.txt db_output/ORFome_transcripts.gtf ", gtf_type))
-  system(paste0("source activate py39; python bin/annotate_proteome.py ", reference_gtf, " ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  system(paste0("source activate py39; python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  print("Annotated proteome")
   
   # check files exist
   if (file.exists("db_output/proteome_database.fasta") && file.exists("db_output/proteome_database_transcripts.gtf")) {
@@ -105,16 +106,16 @@ proteomics_server <- function(input, output, session) {
 integration_server <- function(input, output, session) {
   # NOTE: create results dir
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
-  
+  system("mkdir integ_output")
   # file handling for different proteomics pipelines
   
   # un-comment once fixed
   system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
   
   # check files exist
-  if (file.exists("peptide_info.csv")) {
+  if (file.exists("integ_output/peptide_info.csv")) {
     # create a zip file with results
-    files_to_zip_int <- c("peptide_info.csv", "peptides.gtf", "ORFs.gtf", "transcripts.gtf")
+    files_to_zip_int <- c("integ_output/peptide_info.csv", "integ_output/peptides.gtf", "integ_output/ORFs.gtf", "integ_output/transcripts.gtf")
     zipfile_path_int <- "integration_results.zip"
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
   }  
@@ -246,10 +247,10 @@ server <- function(input, output, session) {
     data_storage$res_pep_import <- rtracklayer::import(input$user_pep_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
       separate(gene_id, into = c("gene_id"), sep = "\\.")
     
-    if (!is.null(input$user_tx_count_file)) {
+    if (!is.null(input$user_vis_tx_count_file)) {
       
       print("Counts detected")
-      data_storage$countst <- fread(input$user_tx_count_file$datapath)
+      data_storage$countst <- fread(input$user_vis_tx_count_file$datapath)
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
       
       # when samples don't match
@@ -295,7 +296,7 @@ server <- function(input, output, session) {
     data_storage$gene_to_plot <- input$gene_selector
     print(data_storage$gene_to_plot)
     
-    if (!is.null(input$user_tx_count_file)) {
+    if (!is.null(input$user_vis_tx_count_file)) {
       print("counts")
       data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
     } else {
