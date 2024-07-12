@@ -1,5 +1,20 @@
 # functions
 
+# run bambu
+run_bambu_function <- function(bam_dir, gtf, genome) { 
+  
+  bam_files <- as.vector(list.files(bam_dir, pattern = "\\.bam", full.names=TRUE))
+  
+  bambuAnnotations <- prepareAnnotations(gtf)
+  se <- bambu(reads = bam_files, annotations = bambuAnnotations, genome = genome)
+  tx_data <- as.data.frame(mcols(se))
+  tx_data <- apply(tx_data, 2, as.character)
+  
+  writeBambuOutput(se, path = 'bambu_output/')
+  write.table(tx_data, "bambu_output/bambu_tx_classes.txt", row.names=F, quote=F, sep="\t")
+  
+}
+
 # import gtf and filter for minimum transcript counts
 filter_custom_gtf <- function(customgtf, referencegtf, tx_counts=NA, min_count=NA) {
   # customgtf <- "~/Documents/test_data_db/miguel_subset.gtf"
