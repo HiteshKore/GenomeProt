@@ -38,9 +38,9 @@ proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
 
-# proteomics_import_file <- "~/Documents/pg_server/integ_test_data/report.pr_matrix.tsv"
-# fasta_import_file <- "~/Documents/pg_server/integ_test_data/ProteomeDb.fasta"
-# gtf_import_file <- "~/Documents/pg_server/integ_test_data/ORFome_transcripts.gtf"
+proteomics_import_file <- "~/Documents/pg_server/integ_test_data/report.pr_matrix.tsv"
+fasta_import_file <- "~/Documents/pg_server/integ_test_data/ProteomeDb.fasta"
+gtf_import_file <- "~/Documents/pg_server/integ_test_data/ORFome_transcripts.gtf"
 
 # ------------- args input ------------- #
 # # replace with args[]
@@ -170,11 +170,11 @@ pep_in_genomic <- split(pep_in_genomic_gr, ~ names(pep_in_genomic_gr))
 
 # PEPTIDES
 # export bed12 of peptides
-ORFik::export.bed12(pep_in_genomic, "peptides.bed12", rgb = 0)
+ORFik::export.bed12(pep_in_genomic, "integ_output/peptides.bed12", rgb = 0)
 
 # ORFS
 # export bed12 of ORFs
-ORFik::export.bed12(orf_in_genomic, "ORFs.bed12", rgb = 0)
+ORFik::export.bed12(orf_in_genomic, "integ_output/ORFs.bed12", rgb = 0)
 
 # export GTF of ORFs
 orf_in_genomic_gr$source <- c("custom")
@@ -183,14 +183,14 @@ orf_in_genomic_gr$phase <- 0
 orf_in_genomic_gr$ORF_id <- names(orf_in_genomic_gr)
 orf_in_genomic_gr$tx_id <- names(orf_in_genomic_gr)
 
-export(orf_in_genomic_gr, "ORFs.gtf", format="gtf")
+export(orf_in_genomic_gr, "integ_output/ORFs.gtf", format="gtf")
 
 # TRANSCRIPTS
 # export GTF of all transcripts that had mapped peptides
 gtf_for_exporting <- import(gtf_import_file, format="gtf")
 gtf_filtered <- gtf_for_exporting[mcols(gtf_for_exporting)$transcript_id %in% md$transcript]
 
-export(gtf_filtered, "transcripts.gtf", format="gtf")
+export(gtf_filtered, "integ_output/transcripts.gtf", format="gtf")
 
 # ---------------------------------------- #
 
@@ -201,7 +201,8 @@ export(gtf_filtered, "transcripts.gtf", format="gtf")
 mcols(pep_in_genomic_gr)$txname <- names(pep_in_genomic_gr)
 results_pept_df <- pep_in_genomic_gr %>% as_tibble()
 results_pept_df <- separate(results_pept_df, txname, into = c("transcript_id", "peptide"), sep = "_", remove = TRUE)
-
+results_pept_df$gene_id <- results_pept_df$gene
+results_pept_df$gene <- NULL
 # group by peptide and transcript to summarise based on how many exons peptide spans
 results_pept_df_unique <- results_pept_df %>% 
   dplyr::group_by(peptide, transcript_id) %>% 
@@ -219,7 +220,7 @@ metadata_to_merge <- md %>%
 # metadata_to_merge <- md %>% 
 #   dplyr::select(PID, peptide, transcript_id, gene_id, localisation, transcript_biotype, orf_type)
 
-peptide_result <- merge(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "transcript_id"), all.x=T, all.y=F)
+peptide_result <- merge(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "gene_id", "transcript_id"), all.x=T, all.y=F)
 
 peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
@@ -292,10 +293,10 @@ pep_in_genomic_gr_export$source <- c("custom")
 pep_in_genomic_gr_export$type <- c("exon")
 
 # export GTF of peptides
-export(pep_in_genomic_gr_export, "peptides.gtf", format="gtf")
+export(pep_in_genomic_gr_export, "integ_output/peptides.gtf", format="gtf")
 
 # export summary data
-write.csv(peptide_result, "peptide_info.csv", row.names=F, quote=F)
+write.csv(peptide_result, "integ_output/peptide_info.csv", row.names=F, quote=F)
 
 # ---------------------------------------- #
 

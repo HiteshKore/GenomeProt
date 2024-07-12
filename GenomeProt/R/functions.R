@@ -1,7 +1,10 @@
 # functions
 
 # import gtf and filter for minimum transcript counts
-filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
+filter_custom_gtf <- function(customgtf, referencegtf, tx_counts=NA, min_count=NA) {
+  # customgtf <- "~/Documents/test_data_db/miguel_subset.gtf"
+  # tx_counts <- "~/Documents/test_data_db/counts.csv"
+  # min_count <- 10
   
   # import bambu gtf
   bambu_data <- rtracklayer::import(customgtf)
@@ -36,6 +39,16 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
   okstrand <- c("+", "-")
   bambu_data <- bambu_data[strand(bambu_data) %in% okstrand]
   
+  # ensure any known transcripts in the database were also observed in the reference
+  ref_transcripts <- rtracklayer::import(referencegtf)
+  
+  bambu_data_filtered <- bambu_data[
+    !grepl("^BambuTx", mcols(bambu_data)$transcript_id) & 
+    mcols(bambu_data)$transcript_id %in% mcols(ref_transcripts)$transcript_id
+  ]
+  
+  bambu_data <- bambu_data_filtered
+  
   # remove extra mcols
   mcols(bambu_data) <- mcols(bambu_data)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "exon_number")]
   
@@ -48,10 +61,15 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
 
 # export FASTA of transcript sequences
 get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orfs=FALSE, referencegtf) {
-  #filteredgtf <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/inputs/ORFome_transcripts.gtf"
+  # filteredgtf <- "~/Documents/proteome_database_transcripts.gtf"
+  # organism <- "human"
+  # orf_len <- 100
+  # find_UTR_orfs <- FALSE
+  # referencegtf <- "~/Documents/miguel_data/gencode.v39.primary_assembly.annotation.gtf"
   
   # import filtered gtf as a txdb
   txdb <- makeTxDbFromGFF(filteredgtf)
+  print("Imported filtered GTF")
   txs <- exonsBy(txdb, by=c("tx","gene"), use.names=TRUE)
   
   # convert to GRangesList
@@ -79,7 +97,7 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   ORFs <- findMapORFs(txs.granges, 
                       tx_seqs, 
                       groupByTx = FALSE, 
-                      longestORF = TRUE, # t or f?
+                      longestORF = TRUE, 
                       minimumLength = as.numeric(orf_len), 
                       startCodon = "ATG", 
                       stopCodon = stopDefinition(1))
@@ -109,18 +127,26 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   
   combined <- orf_aa_seq_df_genomic_coordinates
   
+  ref_transcripts <- rtracklayer::import(referencegtf)
+  ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
+  export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
+  
   if (find_UTR_orfs == TRUE) {
     #referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
     
-    ref_txdb <- makeTxDbFromGFF(referencegtf)
+    #ref_txdb <- makeTxDbFromGFF(referencegtf)
+    ref_txdb <- makeTxDbFromGFF("db_output/ref_transcripts_in_data.gtf")
     
-    utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
-    utrs3_filtered <- utrs3[names(utrs3) %in% names(txs)]
+    print("Imported ref GTF")
+    #utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
+    #utrs3_filtered <- utrs3[names(utrs3) %in% names(txs)]
     
     utrs5 <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs5_filtered <- utrs5[names(utrs5) %in% names(txs)]
     
-    combined_utrs <- c(utrs3_filtered, utrs5_filtered)
+    #combined_utrs <- c(utrs3_filtered, utrs5_filtered)
+    
+    combined_utrs <- utrs5_filtered
     
     # extract UTR transcript sequences
     utr_seqs <- extractTranscriptSeqs(genomedb, combined_utrs)
@@ -129,9 +155,9 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
     utrORFs <- findMapORFs(combined_utrs,
                         utr_seqs, 
                         groupByTx = FALSE, 
-                        longestORF = TRUE, # t or f?
-                        minimumLength = 10, 
-                        startCodon = "ATG", 
+                        longestORF = TRUE,
+                        minimumLength = 10,
+                        startCodon = "ATG|CTG", 
                         stopCodon = stopDefinition(1))
     
     utrORFs_unlisted <- unlist(utrORFs) %>% as_tibble()
@@ -148,7 +174,7 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
                 length = sum(width),
                 strand = strand[1]) %>% 
       ungroup() %>% 
-      dplyr::filter(length<90) %>% 
+      dplyr::filter(length<90) %>% # length of 90 means ORFs<30 AA
       dplyr::select(-length)
     
     utrORFs <- utrORFs[names(utrORFs) %in% utr_orf_genome_coordinates$names]
@@ -268,7 +294,6 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   # convert
   df <- convert_AA_to_df(db)
   
-  # NOTE: FASTA headers belonging to multiple genomic locations are removed
   # format headers into columns
   df <- df %>%
     separate(name, into = c("PID"), sep = "\\ |\\,", remove = FALSE) %>%

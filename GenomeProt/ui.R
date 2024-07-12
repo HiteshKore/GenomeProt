@@ -177,7 +177,7 @@ ui <- dashboardPage(
                        fileInput("user_tx_gtf_file", "Upload 'transcripts.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_orf_gtf_file", "Upload 'ORFs.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_pep_gtf_file", "Upload 'peptides.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_tx_count_file", "Upload transcript counts file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_vis_tx_count_file", "Upload transcript counts file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_pep_count_file", "Upload peptide intensities file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        actionButton("vis_submit_button", "Submit", class = "btn btn-primary")
                 ),
