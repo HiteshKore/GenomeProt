@@ -21,8 +21,9 @@ fastq_server <- function(input, output, session) {
 
 bambu_server <- function(input, output, session) {
   
-  req(input$user_bam_files)  # BAMs required
-  
+  req(input$user_bam_files, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)  # required
+
+  library(bambu)
   # create list of BAMs
   bam_file_list <- Rsamtools::BamFileList(as.vector(input$user_bam_files$datapath))
   # get original names
@@ -39,7 +40,7 @@ bambu_server <- function(input, output, session) {
   if (file.exists("bambu_output/bambu_isoform_annotations.gtf")) {
     # create a zip file with results
     files_to_zip <- c("bambu_output/bambu_isoform_annotations.gtf", "bambu_output/counts_gene.txt", "bambu_output/counts_isoform.txt", "bambu_output/novel_isoform_classes.csv")
-    zipfile_path <- "bambu_output/results.zip"
+    zipfile_path <- "bambu_output/bambu_results.zip"
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
   
@@ -138,7 +139,7 @@ server <- function(input, output, session) {
     bambu_server(input, output, session)
     
     # check if the zip file is created
-    if (file.exists("bambu_output/results.zip")) {
+    if (file.exists("bambu_output/bambu_results.zip")) {
       file_available_bambu(TRUE)
     }
   })
@@ -157,7 +158,7 @@ server <- function(input, output, session) {
       paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_bambu_results.zip")
     },
     content = function(file) {
-      file.copy("bambu_output/results.zip", file)
+      file.copy("bambu_output/bambu_results.zip", file)
     }
   )
   
