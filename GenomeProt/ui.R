@@ -120,7 +120,7 @@ ui <- dashboardPage(
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:70%;")  # initially disabled
+                       downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:70%;") # initially disabled
                 )
               )
       ),
@@ -131,13 +131,13 @@ ui <- dashboardPage(
                 column(4,
                        #selectInput("organism", label = "Organism:", choices = list("human" = "human", "mouse" = "mouse"), selected = "human"),
                        fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_reference_gtf", "Upload reference GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
                        actionButton("bambu_submit_button", "Submit", class = "btn btn-primary")
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("bambu_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"),# initially disabled
+                       downloadButton("bambu_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
                        div(id = "bambu-loading-container", class = "loading-container", div(class = "spinner"))
                 )
               )
@@ -146,27 +146,27 @@ ui <- dashboardPage(
               h2("Generate a custom proteogenomics database"),
               h5("Creates an amino acid FASTA of all ORFs in your data to use as input for MaxQuant/FragPipe etc."),
               fluidRow(
-                column(4,
+                column(6,
+                       fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_ref_gtf_file", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        selectInput("organism", label = "Organism:", 
                                    choices = list("human" = "human", "mouse" = "mouse"), 
                                    selected = "human"),
                        #selectInput("startcodon", label = "Start codon:", choices = list("ATG" = "ATG", "ATG+CTG" = "ATG+CTG"), selected = "ATG"),
                        numericInput("min_orf_length", 
-                                    label = "ORF Length (AA):", 
+                                    label = "ORF length (amino acids):", 
                                     value = 30),
-                       checkboxInput("user_find_utr_orfs", label = "Search for 5' uORFs and 3' dORFs in UTRs of reference transcripts",
+                       checkboxInput("user_find_utr_orfs", label = "Find 5' UTR 'uORFs' in reference transcripts",
                                      value = FALSE, width = NULL),
-                       fileInput("user_gtf_file", "Upload GTF file (from Bambu):", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_ref_gtf_file", "Upload reference GTF file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_tx_count_file", "Upload transcript counts file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        numericInput("minimum_tx_count", 
-                                    label = "Minimum transcript expression threshold (leave blank if no counts file is uploaded, or for a default of 5):", 
+                                    label = "Minimum expression threshold (sum per transcript):", 
                                     value = 5),
                        actionButton("db_submit_button", "Submit", class = "btn btn-primary")
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("db_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"),  # initially disabled
+                       downloadButton("db_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
                        div(id = "db-loading-container", class = "loading-container", div(class = "spinner"))
                 )
               )
@@ -201,9 +201,9 @@ ui <- dashboardPage(
               h5("Creates GTFs of peptides, ORFs and transcripts"),
               fluidRow(
                 column(4,
-                       fileInput("user_proteomics_file", "Upload proteomics file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_fasta_file", "Upload FASTA file used for proteomics:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_post_gtf_file", "Upload transcripts GTF used to build FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_proteomics_file", "Upload proteomics results:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_fasta_file", "Upload 'proteome_database.fasta':", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_post_gtf_file", "Upload 'proteome_database_transcripts.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        actionButton("integ_submit_button", "Submit", class = "btn btn-primary")
                 ),
                 column(6,
@@ -221,7 +221,7 @@ ui <- dashboardPage(
                        fileInput("user_tx_gtf_file", "Upload 'transcripts.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_orf_gtf_file", "Upload 'ORFs.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_pep_gtf_file", "Upload 'peptides.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_vis_tx_count_file", "Upload transcript counts file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       fileInput("user_vis_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_pep_count_file", "Upload peptide intensities file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        actionButton("vis_submit_button", "Submit", class = "btn btn-primary")
                 ),
@@ -229,7 +229,7 @@ ui <- dashboardPage(
                        selectInput("gene_selector", "Select Gene", choices = NULL),
                        div(id = "vis-loading-container", class = "loading-container", div(class = "spinner")),
                        plotOutput("plot"),
-                       downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing")  # initially disabled
+                       downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing") # initially disabled
                 )
               )
       )
