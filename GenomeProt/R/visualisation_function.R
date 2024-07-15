@@ -111,9 +111,6 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
       pepcounts <- pepcounts %>%
         dplyr::filter(peptide %in% pep_gtf_to_plot$transcript_id)
       
-      txcounts$sample_id <- as.factor(as.character(txcounts$sample_id))
-      pepcounts$sample_id <- as.factor(as.character(pepcounts$sample_id))
-      
       tx_gtf_to_plot <- tx_gtf_to_plot %>% 
         dplyr::filter(transcript_id %in% txcounts$transcript_id)
       pep_gtf_to_plot <- pep_gtf_to_plot %>% 
@@ -162,7 +159,6 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
       
     } else {
       
-      
       # plot peptide heatmap
       pepcounts_output <- pepcounts %>%
         ggplot(aes(x = sample_id, y = peptide, fill = count)) +
@@ -170,6 +166,7 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
         scale_fill_viridis_b(n.breaks = 8, option = "D") +
         labs(x = "", y = "", fill = "VSN Intensity") +
         theme_bw() +
+        scale_x_discrete(limits = levels(pepcounts$sample_id)) +
         theme(strip.background = element_rect(color = "black", fill = "white", size = 0, linetype = "solid"),
               axis.title.x = element_blank(),
               axis.title.y = element_blank(),
@@ -186,6 +183,7 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
         scale_fill_viridis_b(n.breaks = 8, option = "D") +
         labs(x = "Sample", y = "", fill = "log2(TPM+1)") +
         theme_bw() +
+        scale_x_discrete(limits = levels(txcounts$sample_id)) +
         theme(strip.background = element_rect(color = "black", fill = "white", size = 0, linetype = "solid"),
               axis.text.y = element_blank(),
               axis.ticks.y = element_blank(),
