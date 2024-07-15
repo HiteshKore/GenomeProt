@@ -157,7 +157,7 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
                         groupByTx = FALSE, 
                         longestORF = TRUE,
                         minimumLength = 10,
-                        startCodon = "ATG|CTG", 
+                        startCodon = "ATG", 
                         stopCodon = stopDefinition(1))
     
     utrORFs_unlisted <- unlist(utrORFs) %>% as_tibble()

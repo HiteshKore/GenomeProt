@@ -92,7 +92,7 @@ database_server <- function(input, output, session) {
   if (file.exists("db_output/proteome_database.fasta") && file.exists("db_output/proteome_database_transcripts.gtf")) {
     # create a zip file with results
     files_to_zip <- c("db_output/proteome_database.fasta", "db_output/proteome_database_metadata.txt", "db_output/proteome_database_transcripts.gtf")
-    zipfile_path <- "database_results.zip"
+    zipfile_path <- "db_output/database_results.zip"
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
   
@@ -173,7 +173,7 @@ server <- function(input, output, session) {
     database_server(input, output, session)
 
     # check if the zip file is created
-    if (file.exists("database_results.zip")) {
+    if (file.exists("db_output/database_results.zip")) {
       file_available_db(TRUE)
     }
   })
@@ -192,7 +192,7 @@ server <- function(input, output, session) {
       paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_database_results.zip")
     },
     content = function(file) {
-      file.copy("database_results.zip", file)
+      file.copy("db_output/database_results.zip", file)
     }
   )
   
