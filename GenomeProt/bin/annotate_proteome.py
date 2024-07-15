@@ -1,7 +1,7 @@
 #This script removes the redundant ORFs and considers longest ORF if ORF is part of longer ORF.
 #It annotates them based on their location on the genome/transcript
 #cd-hit (First install cd-hit commond line tool in linux (command to install:'conda install bioconda/label/cf201901::cd-hit'). Next, install py-cdhit library using  'pip install py-cdhit' command)
-#Usage:python3 annotate_proteome.py gencode.vM33.chr_patch_hapl_scaff.annotation_chrX.gtf openprot_uniprotDb_mm.txt  ORFome_aa.txt ORFome_transcripts.gtf GENCODE
+#Usage:python3 annotate_proteome.py gencode.vM33.chr_patch_hapl_scaff.annotation_chrX.gtf openprot_uniprotDb_mm.txt  ORFome_aa.txt ORFome_transcripts.gtf GENCODE <outdir>
 #######################################################################
 
 import sys
@@ -328,6 +328,7 @@ def main():
 
       for orf_annotations in orf_annotation_map[orf_id]:
         fw_proteomedb_metadata.write(protein_accession+"\t"+orf_annotations)
+        protein_seq=orf_annotations.split("\t")[10].strip()
         gene_id=orf_annotations.split("\t")[0]
         gene_accession.append(gene_id)
         gene_name=orf_annotations.split("\t")[1]
