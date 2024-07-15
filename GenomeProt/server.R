@@ -135,12 +135,15 @@ server <- function(input, output, session) {
   
   # IDENTIFY ISOFORMS MODULE
   file_available_bambu <- reactiveVal(FALSE)
+  
   observeEvent(input$bambu_submit_button, { 
+    session$sendCustomMessage("disableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # disable submit button
     bambu_server(input, output, session)
     
     # check if the zip file is created
     if (file.exists("bambu_output/bambu_results.zip")) {
       file_available_bambu(TRUE)
+      
     }
   })
   
@@ -149,6 +152,7 @@ server <- function(input, output, session) {
     if (file_available_bambu()) {
       shinyjs::enable("bambu_download_button")
       shinyjs::runjs("document.getElementById('bambu_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # re-enable submit button
     }
   })
   
@@ -169,7 +173,7 @@ server <- function(input, output, session) {
   
   # run database function when submit is pressed
   observeEvent(input$db_submit_button, { 
-    
+    session$sendCustomMessage("disableButton", list(id = "db_submit_button", spinnerId = "db-loading-container")) # disable submit button
     database_server(input, output, session)
 
     # check if the zip file is created
@@ -183,6 +187,7 @@ server <- function(input, output, session) {
     if (file_available_db()) {
       shinyjs::enable("db_download_button")
       shinyjs::runjs("document.getElementById('db_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "db_submit_button", spinnerId = "db-loading-container")) # re-enable submit button
     }
   })
   
@@ -205,7 +210,7 @@ server <- function(input, output, session) {
   file_available_integ <- reactiveVal(FALSE)
   
   observeEvent(input$integ_submit_button, { 
-    
+    session$sendCustomMessage("disableButton", list(id = "integ_submit_button", spinnerId = "integ-loading-container")) # disable submit button
     integration_server(input, output, session)
     
     # check if the zip file is created
@@ -218,6 +223,7 @@ server <- function(input, output, session) {
     if (file_available_integ()) {
       shinyjs::enable("integ_download_button")
       shinyjs::runjs("document.getElementById('integ_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "integ_submit_button", spinnerId = "integ-loading-container")) # re-enable submit button
     }
   })
   
@@ -237,7 +243,7 @@ server <- function(input, output, session) {
   # VISUALISATION MODULE
   data_storage <- reactiveValues()
   observeEvent(input$vis_submit_button, { 
-    
+    session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # disable submit button
     req(input$user_tx_gtf_file, input$user_orf_gtf_file, input$user_pep_gtf_file)
     
     data_storage$res_tx_import <- rtracklayer::import(input$user_tx_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
@@ -300,6 +306,7 @@ server <- function(input, output, session) {
     # update genes available
     genes_available <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
     updateSelectInput(session, "gene_selector", choices = genes_available)
+    session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # re-enable submit button
   })
   
   observeEvent(input$gene_selector, {

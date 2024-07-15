@@ -25,6 +25,27 @@ ui <- dashboardPage(
     useShinyjs(),  # shinyjs
     tags$head(
       tags$style(HTML("
+        .spinner {
+          margin: 0 auto;
+          width: 30px;
+          height: 30px;
+          border: 6px solid #ccc;
+          border-top: 6px solid #333;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+  
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+  
+        .loading-container {
+          display: none;
+          text-align: center;
+          margin-top: 20px;
+        }
+        
         #downloadResults {
           background-color: #4CAF50; /* Green */
           border: none;
@@ -35,13 +56,32 @@ ui <- dashboardPage(
           display: inline-block;
           font-size: 12px;
         }
+        
         #downloadResults:disabled {
           background-color: #d3d3d3; /* Gray */
           color: #a9a9a9; /* Dark gray */
         }
+        
         .spacing {
           margin-top: 20px;
         }
+      ")),
+      tags$script(HTML("
+        Shiny.addCustomMessageHandler('disableButton', function(params) {
+          var button = document.getElementById(params.id);
+          button.disabled = true;
+          button.style.backgroundColor = 'grey';
+          button.style.borderColor = 'grey';
+          document.getElementById(params.spinnerId).style.display = 'block';
+        });
+  
+        Shiny.addCustomMessageHandler('enableButton', function(params) {
+          var button = document.getElementById(params.id);
+          button.disabled = false;
+          button.style.backgroundColor = '';
+          button.style.borderColor = '';
+          document.getElementById(params.spinnerId).style.display = 'none';
+        });
       "))
     ),
     tabItems(
@@ -80,7 +120,7 @@ ui <- dashboardPage(
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:50%;")  # initially disabled
+                       downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:70%;")  # initially disabled
                 )
               )
       ),
@@ -97,7 +137,8 @@ ui <- dashboardPage(
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("bambu_download_button", "Download results (zip)", disabled = TRUE, style = "width:50%;")  # initially disabled
+                       downloadButton("bambu_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"),# initially disabled
+                       div(id = "bambu-loading-container", class = "loading-container", div(class = "spinner"))
                 )
               )
       ),
@@ -125,7 +166,8 @@ ui <- dashboardPage(
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("db_download_button", "Download results (zip)", disabled = TRUE, style = "width:50%;")  # initially disabled
+                       downloadButton("db_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"),  # initially disabled
+                       div(id = "db-loading-container", class = "loading-container", div(class = "spinner"))
                 )
               )
       ),
@@ -149,7 +191,8 @@ ui <- dashboardPage(
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("proteomics_download_button", "Download results (zip)", disabled = TRUE, style = "width:50%;")  # initially disabled
+                       downloadButton("proteomics_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
+                       div(id = "proteomics-loading-container", class = "loading-container", div(class = "spinner"))
                 )
               )
       ),
@@ -165,7 +208,8 @@ ui <- dashboardPage(
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("integ_download_button", "Download results (zip)", disabled = TRUE, style = "width:50%;")  # initially disabled
+                       downloadButton("integ_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
+                       div(id = "integ-loading-container", class = "loading-container", div(class = "spinner"))
                 )
               )
       ),
@@ -183,6 +227,7 @@ ui <- dashboardPage(
                 ),
                 column(8,
                        selectInput("gene_selector", "Select Gene", choices = NULL),
+                       div(id = "vis-loading-container", class = "loading-container", div(class = "spinner")),
                        plotOutput("plot"),
                        downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing")  # initially disabled
                 )
