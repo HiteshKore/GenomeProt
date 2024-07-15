@@ -37,9 +37,9 @@ bambu_server <- function(input, output, session) {
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
   
   # check files exist
-  if (file.exists("bambu_output/bambu_isoform_annotations.gtf")) {
+  if (file.exists("bambu_output/bambu_transcript_annotations.gtf")) {
     # create a zip file with results
-    files_to_zip <- c("bambu_output/bambu_isoform_annotations.gtf", "bambu_output/counts_gene.txt", "bambu_output/counts_isoform.txt", "bambu_output/novel_isoform_classes.csv")
+    files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv")
     zipfile_path <- "bambu_output/bambu_results.zip"
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
@@ -259,10 +259,6 @@ server <- function(input, output, session) {
       print("Counts detected")
       data_storage$countst <- fread(input$user_vis_tx_count_file$datapath)
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
-      
-      
-      #countst <- fread("~/Documents/GenomeProt_tmp/test_datasets/vis_module/bambu_cpm.csv")
-      #countsp <- fread("~/Documents/GenomeProt_tmp/test_datasets/vis_module/diann-output.pr_matrix.txt")
       
       # when samples don't match
       sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
