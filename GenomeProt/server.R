@@ -37,9 +37,9 @@ bambu_server <- function(input, output, session) {
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
   
   # check files exist
-  if (file.exists("bambu_output/bambu_isoform_annotations.gtf")) {
+  if (file.exists("bambu_output/bambu_transcript_annotations.gtf")) {
     # create a zip file with results
-    files_to_zip <- c("bambu_output/bambu_isoform_annotations.gtf", "bambu_output/counts_gene.txt", "bambu_output/counts_isoform.txt", "bambu_output/novel_isoform_classes.csv")
+    files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv")
     zipfile_path <- "bambu_output/bambu_results.zip"
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
@@ -84,8 +84,8 @@ database_server <- function(input, output, session) {
   gtf_type <- "GENCODE"
   
   # run python script
-  #system(paste0("python bin/annotate_proteome.py ", ref_gtf, " ", ref_proteome, " db_output/ORFome_aa.txt db_output/ORFome_transcripts.gtf ", gtf_type))
-  system(paste0("source activate py39; python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  #system(paste0("source activate py39; python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  system(paste0("python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
   print("Annotated proteome")
   
   # check files exist
@@ -100,8 +100,40 @@ database_server <- function(input, output, session) {
 
 proteomics_server <- function(input, output, session) {
   
-  # call FragPipe and supply running options 
+  req(input$user_mm_data, input$user_mm_fasta)
   
+  #mass_spec_data <- as.vector(input$user_mm_data$datapath)
+  #print(mass_spec_data)
+  #print(input$user_mm_data$name)
+  
+  # get directory path
+  dir_path <- dirname(input$user_mm_data$datapath[1])
+  print(dir_path)
+  
+  mass_spec_names <- c(input$user_mm_data$name)
+  print(mass_spec_names)
+  
+  # new file paths
+  new_file_paths <- file.path(dir_path, mass_spec_names)
+
+  # rename files
+  file.rename(input$user_mm_data$datapath, new_file_paths)
+  
+  # copy config files
+  # replace all lines:
+  # 'MaxThreadsToUsePerFile = 3'
+  # with user set threads
+  
+  #system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  
+  # check files exist
+  if (file.exists("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv") && file.exists("proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")) {
+    # create a zip file with results
+    files_to_zip <- c("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv", "proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")
+    zipfile_path <- "proteomics_output/proteomics_results.zip"
+    zip(zipfile = zipfile_path, files = files_to_zip)
+  }
 }
 
 integration_server <- function(input, output, session) {
@@ -135,12 +167,15 @@ server <- function(input, output, session) {
   
   # IDENTIFY ISOFORMS MODULE
   file_available_bambu <- reactiveVal(FALSE)
+  
   observeEvent(input$bambu_submit_button, { 
+    session$sendCustomMessage("disableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # disable submit button
     bambu_server(input, output, session)
     
     # check if the zip file is created
     if (file.exists("bambu_output/bambu_results.zip")) {
       file_available_bambu(TRUE)
+      
     }
   })
   
@@ -149,6 +184,7 @@ server <- function(input, output, session) {
     if (file_available_bambu()) {
       shinyjs::enable("bambu_download_button")
       shinyjs::runjs("document.getElementById('bambu_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # re-enable submit button
     }
   })
   
@@ -162,6 +198,78 @@ server <- function(input, output, session) {
     }
   )
   
+  file_available_bambu <- reactiveVal(FALSE)
+  
+  observeEvent(input$bambu_submit_button, { 
+    session$sendCustomMessage("disableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # disable submit button
+    bambu_server(input, output, session)
+    
+    # check if the zip file is created
+    if (file.exists("bambu_output/bambu_results.zip")) {
+      file_available_bambu(TRUE)
+      
+    }
+  })
+  
+  # enable download once files are available
+  observe({
+    if (file_available_bambu()) {
+      shinyjs::enable("bambu_download_button")
+      shinyjs::runjs("document.getElementById('bambu_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # re-enable submit button
+    }
+  })
+  
+  # download handler for the database results.zip file
+  output$bambu_download_button <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_bambu_results.zip")
+    },
+    content = function(file) {
+      file.copy("bambu_output/bambu_results.zip", file)
+    }
+  )
+  # END IDENTIFY MODULE
+  
+  
+  # PROTEOMICS MODULE
+  
+  # create reactive value for the database zip
+  file_available_mm <- reactiveVal(FALSE)
+  
+  # run database function when submit is pressed
+  observeEvent(input$proteomics_submit_button, { 
+    session$sendCustomMessage("disableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # disable submit button
+    proteomics_server(input, output, session)
+
+    # check if the zip file is created
+    if (file.exists("proteomics_output/proteomics_results.zip")) {
+      file_available_mm(TRUE)
+    }
+  })
+  
+  # enable download once files are available
+  observe({
+    if (file_available_mm()) {
+      shinyjs::enable("proteomics_download_button")
+      shinyjs::runjs("document.getElementById('proteomics_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # re-enable submit button
+    }
+  })
+  
+  # download handler for the database results.zip file
+  output$proteomics_download_button <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_proteomics_results.zip")
+    },
+    content = function(file) {
+      file.copy("proteomics_output/proteomics_results.zip", file)
+    }
+  )
+  
+  # END PROTEOMICS MODULE
+  
+  
   # DATABASE MODULE
   
   # create reactive value for the database zip
@@ -169,9 +277,9 @@ server <- function(input, output, session) {
   
   # run database function when submit is pressed
   observeEvent(input$db_submit_button, { 
-    
+    session$sendCustomMessage("disableButton", list(id = "db_submit_button", spinnerId = "db-loading-container")) # disable submit button
     database_server(input, output, session)
-
+    
     # check if the zip file is created
     if (file.exists("db_output/database_results.zip")) {
       file_available_db(TRUE)
@@ -183,6 +291,7 @@ server <- function(input, output, session) {
     if (file_available_db()) {
       shinyjs::enable("db_download_button")
       shinyjs::runjs("document.getElementById('db_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "db_submit_button", spinnerId = "db-loading-container")) # re-enable submit button
     }
   })
   
@@ -205,7 +314,7 @@ server <- function(input, output, session) {
   file_available_integ <- reactiveVal(FALSE)
   
   observeEvent(input$integ_submit_button, { 
-    
+    session$sendCustomMessage("disableButton", list(id = "integ_submit_button", spinnerId = "integ-loading-container")) # disable submit button
     integration_server(input, output, session)
     
     # check if the zip file is created
@@ -218,6 +327,7 @@ server <- function(input, output, session) {
     if (file_available_integ()) {
       shinyjs::enable("integ_download_button")
       shinyjs::runjs("document.getElementById('integ_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "integ_submit_button", spinnerId = "integ-loading-container")) # re-enable submit button
     }
   })
   
@@ -237,7 +347,7 @@ server <- function(input, output, session) {
   # VISUALISATION MODULE
   data_storage <- reactiveValues()
   observeEvent(input$vis_submit_button, { 
-    
+    session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # disable submit button
     req(input$user_tx_gtf_file, input$user_orf_gtf_file, input$user_pep_gtf_file)
     
     data_storage$res_tx_import <- rtracklayer::import(input$user_tx_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
@@ -253,10 +363,6 @@ server <- function(input, output, session) {
       print("Counts detected")
       data_storage$countst <- fread(input$user_vis_tx_count_file$datapath)
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
-      
-      
-      #countst <- fread("~/Documents/GenomeProt_tmp/test_datasets/vis_module/bambu_cpm.csv")
-      #countsp <- fread("~/Documents/GenomeProt_tmp/test_datasets/vis_module/diann-output.pr_matrix.txt")
       
       # when samples don't match
       sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
@@ -300,6 +406,7 @@ server <- function(input, output, session) {
     # update genes available
     genes_available <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
     updateSelectInput(session, "gene_selector", choices = genes_available)
+    session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # re-enable submit button
   })
   
   observeEvent(input$gene_selector, {
