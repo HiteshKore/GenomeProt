@@ -92,7 +92,7 @@ database_server <- function(input, output, session) {
   if (file.exists("db_output/proteome_database.fasta") && file.exists("db_output/proteome_database_transcripts.gtf")) {
     # create a zip file with results
     files_to_zip <- c("db_output/proteome_database.fasta", "db_output/proteome_database_metadata.txt", "db_output/proteome_database_transcripts.gtf")
-    zipfile_path <- "database_results.zip"
+    zipfile_path <- "db_output/database_results.zip"
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
   
@@ -173,7 +173,7 @@ server <- function(input, output, session) {
     database_server(input, output, session)
 
     # check if the zip file is created
-    if (file.exists("database_results.zip")) {
+    if (file.exists("db_output/database_results.zip")) {
       file_available_db(TRUE)
     }
   })
@@ -192,7 +192,7 @@ server <- function(input, output, session) {
       paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_database_results.zip")
     },
     content = function(file) {
-      file.copy("database_results.zip", file)
+      file.copy("db_output/database_results.zip", file)
     }
   )
   
@@ -254,11 +254,18 @@ server <- function(input, output, session) {
       data_storage$countst <- fread(input$user_vis_tx_count_file$datapath)
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
       
+      
+      #countst <- fread("~/Documents/GenomeProt_tmp/test_datasets/vis_module/bambu_cpm.csv")
+      #countsp <- fread("~/Documents/GenomeProt_tmp/test_datasets/vis_module/diann-output.pr_matrix.txt")
+      
       # when samples don't match
       sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
-      
+      #sample_names <- intersect(colnames(countsp), colnames(countst))
+
       print("Samples with peptide intensities and transcript counts:")
       print(sample_names)
+      
+      sample_names <- sample_names[order(match(sample_names,colnames(data_storage$countsp)))]
       
       data_storage$countsp$Peptide <- data_storage$countsp$Stripped.Sequence
       
@@ -281,8 +288,13 @@ server <- function(input, output, session) {
       data_storage$countspm <- reshape2::melt(vsnp, id.vars = c("peptide"),
                                               variable.name = "sample_id", value.name = "count")
       
+      data_storage$countspm$sample_id <- factor(as.character(data_storage$countspm$sample_id), level =  sample_names)
+      
       data_storage$countstm <- reshape2::melt(data_storage$countst, id.vars = c("transcript_id"),
                                               variable.name = "sample_id", value.name = "count")
+      
+      data_storage$countstm$sample_id <- factor(as.character(data_storage$countstm$sample_id), level =  sample_names)
+      
     } 
     
     # update genes available

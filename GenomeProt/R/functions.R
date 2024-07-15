@@ -91,7 +91,7 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   
   # export transcript seqs
   # write_tsv(fasta_export_nucleotides, "db_output/ORFome_transcripts_nt.txt")
-  writeXStringSet(tx_seqs, "db_output/ORFome_transcripts_nt.fasta")
+  #writeXStringSet(tx_seqs, "db_output/ORFome_transcripts_nt.fasta")
   
   # ORFik to find ORFs
   ORFs <- findMapORFs(txs.granges, 
@@ -99,7 +99,7 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
                       groupByTx = FALSE, 
                       longestORF = TRUE, 
                       minimumLength = as.numeric(orf_len), 
-                      startCodon = "ATG", 
+                      startCodon = "ATG",
                       stopCodon = stopDefinition(1))
   
   # unlist GRL
@@ -157,7 +157,7 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
                         groupByTx = FALSE, 
                         longestORF = TRUE,
                         minimumLength = 10,
-                        startCodon = "ATG|CTG", 
+                        startCodon = "ATG",
                         stopCodon = stopDefinition(1))
     
     utrORFs_unlisted <- unlist(utrORFs) %>% as_tibble()
