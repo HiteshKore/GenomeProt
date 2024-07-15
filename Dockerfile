@@ -43,17 +43,14 @@ RUN echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.profile
 # make conda activate command available from /bin/bash --interative shells
 RUN conda init bash
 
-# still need to do this?
-# set the working directory to /app
-#WORKDIR /app
-# copy the current directory contents into the container at /app
-#COPY . /app
-
-RUN pip install py-cdhit
 RUN conda install -c "bioconda/label/cf201901" cd-hit
 RUN conda install -c bioconda gffread
 RUN conda install -c bioconda gffcompare
+RUN conda install -c forge metamorpheus
+
 RUN pip install biopython==1.77
+RUN pip install py-cdhit
+RUN pip install peptides
 
 FROM rocker/r-ver:4.3.2
 
