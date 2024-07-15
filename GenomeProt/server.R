@@ -254,11 +254,18 @@ server <- function(input, output, session) {
       data_storage$countst <- fread(input$user_vis_tx_count_file$datapath)
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
       
+      
+      #countst <- fread("~/Documents/GenomeProt_tmp/test_datasets/vis_module/bambu_cpm.csv")
+      #countsp <- fread("~/Documents/GenomeProt_tmp/test_datasets/vis_module/diann-output.pr_matrix.txt")
+      
       # when samples don't match
       sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
-      
+      #sample_names <- intersect(colnames(countsp), colnames(countst))
+
       print("Samples with peptide intensities and transcript counts:")
       print(sample_names)
+      
+      sample_names <- sample_names[order(match(sample_names,colnames(data_storage$countsp)))]
       
       data_storage$countsp$Peptide <- data_storage$countsp$Stripped.Sequence
       
@@ -281,8 +288,13 @@ server <- function(input, output, session) {
       data_storage$countspm <- reshape2::melt(vsnp, id.vars = c("peptide"),
                                               variable.name = "sample_id", value.name = "count")
       
+      data_storage$countspm$sample_id <- factor(as.character(data_storage$countspm$sample_id), level =  sample_names)
+      
       data_storage$countstm <- reshape2::melt(data_storage$countst, id.vars = c("transcript_id"),
                                               variable.name = "sample_id", value.name = "count")
+      
+      data_storage$countstm$sample_id <- factor(as.character(data_storage$countstm$sample_id), level =  sample_names)
+      
     } 
     
     # update genes available
