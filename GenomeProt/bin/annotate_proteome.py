@@ -329,6 +329,7 @@ def main():
       for orf_annotations in orf_annotation_map[orf_id]:
         protein_seq=orf_annotations.split("\t")[10].strip()
         fw_proteomedb_metadata.write(protein_accession+"\t"+orf_annotations)
+        protein_seq=orf_annotations.split("\t")[10].strip()
         gene_id=orf_annotations.split("\t")[0]
         gene_accession.append(gene_id)
         gene_name=orf_annotations.split("\t")[1]
