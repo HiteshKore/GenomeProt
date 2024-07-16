@@ -27,19 +27,25 @@ bambu_server <- function(input, output, session) {
   # create list of BAMs
   bam_file_list <- Rsamtools::BamFileList(as.vector(input$user_bam_files$datapath))
   # get original names
-  bame_file_names <- as.vector(input$user_bam_files$name)
+  bam_file_names <- as.vector(input$user_bam_files$name)
   # remove bam extension
-  bame_file_names <- str_remove(bame_file_names,".bam")
+  bam_file_names <- str_remove(bam_file_names,".bam")
   # rename list to original names
-  names(bam_file_list) <- bame_file_names
+  names(bam_file_list) <- bam_file_names
   
   # run bambu function
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
   
+  # run gffcompare
+  system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
+  system(paste0("rm gffcmp*"))
+  #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " ", "bambu_output/bambu_transcript_annotations.gtf"))
+  
   # check files exist
-  if (file.exists("bambu_output/bambu_transcript_annotations.gtf")) {
+  if (file.exists("bambu_output/bambu_transcript_annotations.gtf") && file.exists("bambu_output/gffcompare.tmap.txt")) {
     # create a zip file with results
-    files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv")
+    files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt")
     zipfile_path <- "bambu_output/bambu_results.zip"
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
@@ -84,8 +90,8 @@ database_server <- function(input, output, session) {
   gtf_type <- "GENCODE"
   
   # run python script
-  #system(paste0("source activate py39; python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
-  system(paste0("python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  system(paste0("source activate py39; python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  #system(paste0("python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
   print("Annotated proteome")
   
   # check files exist
@@ -124,8 +130,8 @@ proteomics_server <- function(input, output, session) {
   # 'MaxThreadsToUsePerFile = 3'
   # with user set threads
   
-  #system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
-  system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  #system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
   
   # check files exist
   if (file.exists("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv") && file.exists("proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")) {
@@ -137,28 +143,24 @@ proteomics_server <- function(input, output, session) {
 }
 
 integration_server <- function(input, output, session) {
-  # NOTE: create results dir
+
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
   system("mkdir integ_output")
+  
   # file handling for different proteomics pipelines
   
-  # un-comment once fixed
-  system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
+  system(paste0("Rscript bin/map_peptides_generate_outputs_test.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
+  
+  # add report script
   
   # check files exist
   if (file.exists("integ_output/peptide_info.csv")) {
     # create a zip file with results
-    files_to_zip_int <- c("integ_output/peptide_info.csv", "integ_output/peptides.gtf", "integ_output/ORFs.gtf", "integ_output/transcripts.gtf")
-    zipfile_path_int <- "integration_results.zip"
+    # add report HTML
+    files_to_zip_int <- c("integ_output/peptide_info.csv", "integ_output/combined_annotations.gtf", "integ_output/peptides.bed12", "integ_output/ORFs.bed12", "integ_output/transcripts.bed12")
+    zipfile_path_int <- "integ_output/integration_results.zip"
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
   }  
-  
-}
-
-visualisation_server <- function(input, output, session) {
-  
-  # unsure if the following will break the code if run in sep function
-  # data_storage <- reactiveValues()
   
 }
 
@@ -198,37 +200,6 @@ server <- function(input, output, session) {
     }
   )
   
-  file_available_bambu <- reactiveVal(FALSE)
-  
-  observeEvent(input$bambu_submit_button, { 
-    session$sendCustomMessage("disableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # disable submit button
-    bambu_server(input, output, session)
-    
-    # check if the zip file is created
-    if (file.exists("bambu_output/bambu_results.zip")) {
-      file_available_bambu(TRUE)
-      
-    }
-  })
-  
-  # enable download once files are available
-  observe({
-    if (file_available_bambu()) {
-      shinyjs::enable("bambu_download_button")
-      shinyjs::runjs("document.getElementById('bambu_download_button').style.backgroundColor = '#4CAF50';")
-      session$sendCustomMessage("enableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # re-enable submit button
-    }
-  })
-  
-  # download handler for the database results.zip file
-  output$bambu_download_button <- downloadHandler(
-    filename = function() {
-      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_bambu_results.zip")
-    },
-    content = function(file) {
-      file.copy("bambu_output/bambu_results.zip", file)
-    }
-  )
   # END IDENTIFY MODULE
   
   
@@ -318,7 +289,7 @@ server <- function(input, output, session) {
     integration_server(input, output, session)
     
     # check if the zip file is created
-    if (file.exists("integration_results.zip")) {
+    if (file.exists("integ_output/integration_results.zip")) {
       file_available_integ(TRUE)
     }
   })
@@ -337,7 +308,7 @@ server <- function(input, output, session) {
       paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_integration_results.zip")
     },
     content = function(file) {
-      file.copy("integration_results.zip", file)
+      file.copy("integ_output/integration_results.zip", file)
     }
   )
   
@@ -347,16 +318,17 @@ server <- function(input, output, session) {
   # VISUALISATION MODULE
   data_storage <- reactiveValues()
   observeEvent(input$vis_submit_button, { 
+    
     session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # disable submit button
-    req(input$user_tx_gtf_file, input$user_orf_gtf_file, input$user_pep_gtf_file)
     
-    data_storage$res_tx_import <- rtracklayer::import(input$user_tx_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
+    req(input$user_vis_gtf_file)
+    
+    data_storage$gtf_import <- rtracklayer::import(input$user_vis_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
       separate(gene_id, into = c("gene_id"), sep = "\\.")
     
-    data_storage$res_ORF_import <- rtracklayer::import(input$user_orf_gtf_file$datapath, format="gtf") %>% as_tibble()
-    
-    data_storage$res_pep_import <- rtracklayer::import(input$user_pep_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
-      separate(gene_id, into = c("gene_id"), sep = "\\.")
+    data_storage$res_tx_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "transcripts")
+    data_storage$res_ORF_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "ORFs")
+    data_storage$res_pep_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "peptides")
     
     if (!is.null(input$user_vis_tx_count_file)) {
       
@@ -405,6 +377,23 @@ server <- function(input, output, session) {
     
     # update genes available
     genes_available <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
+    
+    # to use names
+    # library(biomaRt)
+    # 
+    # mart <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", host = "www.ensembl.org")
+    # 
+    # gene_names <- getBM(filters= "ensembl_gene_id",
+    #                          attributes= c("ensembl_gene_id","hgnc_symbol"),
+    #                          values = genes_available,
+    #                          mart = mart)
+    # 
+    # data_storage$genes_available <- gene_names$ensembl_gene_id
+    # names(data_storage$genes_available) <- gene_names$hgnc_symbol
+
+    # change back from names?
+    #updateSelectInput(session, "gene_selector", choices = names(data_storage$genes_available))
+    
     updateSelectInput(session, "gene_selector", choices = genes_available)
     session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # re-enable submit button
   })
@@ -418,10 +407,10 @@ server <- function(input, output, session) {
     
     if (!is.null(input$user_vis_tx_count_file)) {
       print("counts")
-      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
+      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot[1], data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
     } else {
       print("no counts")
-      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import)
+      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot[1], data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import)
     }
     
     # print the plot
