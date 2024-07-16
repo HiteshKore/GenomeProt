@@ -23,9 +23,9 @@ source("R/functions.R")
 source("global.R")
 
 option_list = list(
-  make_option(c("-p", "--proteomics"), type="character", default=NULL, 
+  make_option(c("-p", "--proteomics"), type="character", default=NULL,
               help="Proteomics data file", metavar="character"),
-  make_option(c("-f", "--fasta"), type="character", default=NULL, 
+  make_option(c("-f", "--fasta"), type="character", default=NULL,
               help="Custom FASTA used for proteomics", metavar="character"),
   make_option(c("-g", "--gtf"), type="character", default=NULL,
               help="GTF used to generate custom FASTA", metavar="character")
@@ -38,24 +38,9 @@ proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
 
-proteomics_import_file <- "~/Documents/pg_server/integ_test_data/report.pr_matrix.tsv"
-fasta_import_file <- "~/Documents/pg_server/integ_test_data/ProteomeDb.fasta"
-gtf_import_file <- "~/Documents/pg_server/integ_test_data/ORFome_transcripts.gtf"
-
-# ------------- args input ------------- #
-# # replace with args[]
-# #proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/Fragpipe_results/peptide.tsv"
-# proteomics_import_file <- "~/Documents/proteogenomics/2024/ben_data/report.pr_matrix.tsv"
-# 
-# # change requirement to fasta
-# metadata_import_file <- "~/Documents/proteogenomics/2024/ben_data/ProteomeDb_metadata.txt"
-# fasta_import_file <- "~/Documents/proteogenomics/2024/ben_data/ProteomeDb.fasta"
-# # still require GTF
-# gtf_import_file <- "~/Documents/proteogenomics/2024/ben_data/ORFome_transcripts.gtf"
-# 
-# output_path <- "~/Documents/proteogenomics/2024/ben_data/peptide_results"
-
-# -------------------------------------- #
+# proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/peptide.tsv"
+# fasta_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ProteomeDb.fasta"
+# gtf_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ORFome_transcripts.gtf"
 
 
 # ------------- import files ------------- #
@@ -65,7 +50,6 @@ pd <- suppressWarnings(import_proteomics_data(proteomics_import_file))
 gtf <- makeTxDbFromGFF(gtf_import_file) # make txdb of gtf
 
 md <- import_fasta(fasta_import_file, pd, gtf)
-
 
 # ---------------------------------------- #
 
@@ -174,6 +158,7 @@ ORFik::export.bed12(pep_in_genomic, "integ_output/peptides.bed12", rgb = 0)
 
 # ORFS
 # export bed12 of ORFs
+# should we change it so that only unique ORFs are exported, not every ORF per transcript?
 ORFik::export.bed12(orf_in_genomic, "integ_output/ORFs.bed12", rgb = 0)
 
 # export GTF of ORFs
@@ -181,16 +166,24 @@ orf_in_genomic_gr$source <- c("custom")
 orf_in_genomic_gr$type <- c("CDS")
 orf_in_genomic_gr$phase <- 0
 orf_in_genomic_gr$ORF_id <- names(orf_in_genomic_gr)
-orf_in_genomic_gr$tx_id <- names(orf_in_genomic_gr)
+orf_in_genomic_gr$transcript_id <- names(orf_in_genomic_gr)
+names(orf_in_genomic_gr) <- NULL
+orf_in_genomic_gr$group_id <- "ORFs"
 
-export(orf_in_genomic_gr, "integ_output/ORFs.gtf", format="gtf")
+#export(orf_in_genomic_gr, "integ_output/ORFs.gtf", format="gtf")
 
 # TRANSCRIPTS
 # export GTF of all transcripts that had mapped peptides
 gtf_for_exporting <- import(gtf_import_file, format="gtf")
 gtf_filtered <- gtf_for_exporting[mcols(gtf_for_exporting)$transcript_id %in% md$transcript]
+gtf_filtered$group_id <- "transcripts"
+#export(gtf_filtered, "integ_output/transcripts.gtf", format="gtf")
 
-export(gtf_filtered, "integ_output/transcripts.gtf", format="gtf")
+tx_in_genomic <- split(gtf_filtered, ~ gtf_filtered$transcript_id)
+# export bed12 of transcripts
+ORFik::export.bed12(tx_in_genomic, "integ_output/transcripts.bed12", rgb = 0)
+
+
 
 # ---------------------------------------- #
 
@@ -289,14 +282,26 @@ pep_in_genomic_gr_export <- makeGRangesFromDataFrame(results_to_merge_with_grang
 names(pep_in_genomic_gr_export) <- c(pep_in_genomic_gr_export$naming) # set names
 
 # add mcols
-pep_in_genomic_gr_export$source <- c("custom")
-pep_in_genomic_gr_export$type <- c("exon")
+pep_in_genomic_gr_export$source <- "custom"
+pep_in_genomic_gr_export$type <- "exon"
+pep_in_genomic_gr_export$group_id <- "peptides"
 
 # export GTF of peptides
-export(pep_in_genomic_gr_export, "integ_output/peptides.gtf", format="gtf")
+#export(pep_in_genomic_gr_export, "integ_output/peptides.gtf", format="gtf")
+
+
 
 # export summary data
 write.csv(peptide_result, "integ_output/peptide_info.csv", row.names=F, quote=F)
+
+
+# export annotations for vis
+
+combined <- c(pep_in_genomic_gr_export, orf_in_genomic_gr, gtf_filtered)
+export(combined, "integ_output/combined_annotations.gtf", format="gtf")
+
+
+
 
 # ---------------------------------------- #
 
