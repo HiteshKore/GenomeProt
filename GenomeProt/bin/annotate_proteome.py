@@ -1,7 +1,7 @@
 #This script removes the redundant ORFs and considers longest ORF if ORF is part of longer ORF.
 #It annotates them based on their location on the genome/transcript
 #cd-hit (First install cd-hit commond line tool in linux (command to install:'conda install bioconda/label/cf201901::cd-hit'). Next, install py-cdhit library using  'pip install py-cdhit' command)
-#Usage:python3 annotate_proteome.py gencode.vM33.chr_patch_hapl_scaff.annotation_chrX.gtf openprot_uniprotDb_mm.txt  ORFome_aa.txt ORFome_transcripts.gtf GENCODE <outdir>
+#Usage:python3 annotate_proteome.py gencode.vM33.chr_patch_hapl_scaff.annotation_chrX.gtf openprot_uniprotDb_mm.txt  ORFome_aa.txt ORFome_transcripts.gtf GENCODE <outdir> <canonical/all>
 #######################################################################
 
 import sys
@@ -14,8 +14,8 @@ from annotate_proteome_functions import *
 
 def main():
   args=sys.argv
-  if len(sys.argv) == 1:
-        print("Usage: python3 annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <annotations:GENCODE/RefSeq>")
+  if len(sys.argv) != 8:
+        print("Usage: python3 annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <annotations:GENCODE/RefSeq> <outdir> <canonical/all>")
         sys.exit(1)
   else:
     #reading input files
@@ -107,12 +107,12 @@ def main():
     orfome_transcript_gtf.close()
     
     #ORFomedb
-    unannotated_proteins={} #store unannotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
-    unannotated_protein_coordinates={} #store unannotated protein coordinates as key: k: transcript|orf_number|genomic_coordinates,v:protein sequence
-    orfome=open(args[3])
-    transcript_orf_map={} #store all orfs for each transcript: k;transcript_id,v:protein_seq|orf_id
+    unannotated_proteins={} #stores unannotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
+    unannotated_protein_coordinates={} #stores unannotated protein coordinates as key: k: transcript|orf_number|genomic_coordinates,v:protein sequence
+    orfome=open(args[3]) 
+    transcript_orf_map={} #stores all orfs for each transcript: k;transcript_id,v:protein_seq|orf_id
     
-    annotated_proteins={}
+    annotated_proteins={} #store annotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
     protein_seq_properties={}#k:protein_sequence,v:physicochemical_properties 
     for i in orfome:
       if i.startswith("ORF_id"):
@@ -152,7 +152,7 @@ def main():
           unannotated_protein_coordinates[orf_id+"|"+orf_coordinate]=protein_seq
     orfome.close()
     #find longest orf in transcript
-    transcript_longest_orf_map={}
+    transcript_longest_orf_map={} #stores longest ORF in transcript: k: orf_id v:protein_seq
     for k in transcript_orf_map.keys():
       orfs=[]
       id=[]
@@ -164,33 +164,41 @@ def main():
       longest_orf=orfs[longest_orf_index]
       longest_orf_id=id[longest_orf_index]
       transcript_longest_orf_map[longest_orf_id]=longest_orf
-      
+    
     
     #store sequences in the temparory file which is required to perform clustering using cdhit
     #Ouputdir 
-    outdir=os.path.dirname(args[3])+"/"
-    #outdir=args[6]+"/"
+    
+    outdir=args[6]+"/"
     orf_temp_file=outdir+"orf_temp.txt"
     fw_orf_temp=open(orf_temp_file,"w") #Temparary file to store ORF before clustering
     
     for k in unannotated_proteins.keys():
       fw_orf_temp.write(">"+unannotated_proteins[k][0]+"\n"+k+"\n")
-      
-  
-     #cdhit clusering on unannotated proteins
+    fw_orf_temp.close()
+    
+    
+    #cdhit clusering on unannotated proteins
     orf_clus=outdir+"cdhit_out"
     CS=clusterSequences() #Perform clustering to consider longest representative protein sequence
     clusters=CS.SeqClust(orf_temp_file,orf_clus)
-    
     #cluster file
     cdhit_clustering_output=open(orf_clus+".clstr")
     
     #annotations
-    fw_proteomedb=open(outdir+"proteome_database.fasta","w")
-    fw_proteomedb_metadata=open(outdir+"proteome_database_metadata.txt","w")
+    if  args[7]=="all":
+      fw_proteomedb=open(outdir+"ProteomeDb_comprehensive.fasta","w")
+      fw_proteomedb_metadata=open(outdir+"ProteomeDb_comprehensive_metadata.txt","w")
+    elif args[7]=="canonical":
+      fw_proteomedb_canonial=open(outdir+"ProteomeDb_canonical.fasta","w")
+      fw_proteomedb_metadata_canonical=open(outdir+"ProteomeDb_canonical_metadata.txt","w")
     
     # Create a tab-separated format string
-    fw_proteomedb_metadata.write("accession\tgene\tgene_symbol\ttranscript\tstrand\ttranscript_biotype\ttranscript_coordinates\torf_genomic_coordinates\torf_type\tlocalisation\topenprot_id\tprotein_sequence\tlongest_orf_in_transcript\tuniprot_status\tmolecular_weight(kDA)\tisoelectric_point\thydrophobicity\taliphatic_index\n")
+    if args[7]=="all":
+      fw_proteomedb_metadata.write("accession\tgene\tgene_symbol\ttranscript\tstrand\ttranscript_biotype\ttranscript_coordinates\torf_genomic_coordinates\torf_type\tlocalisation\topenprot_id\tprotein_sequence\tlongest_orf_in_transcript\tuniprot_status\tmolecular_weight(kDA)\tisoelectric_point\thydrophobicity\taliphatic_index\n")
+    elif args[7]=="canonical":
+      fw_proteomedb_metadata_canonical.write("accession\tgene\tgene_symbol\ttranscript\tstrand\ttranscript_biotype\ttranscript_coordinates\torf_genomic_coordinates\torf_type\tlocalisation\topenprot_id\tprotein_sequence\tuniprot_status\tmolecular_weight(kDA)\tisoelectric_point\thydrophobicity\taliphatic_index\n")
+
         
     #annotations of known proteins
     
@@ -200,6 +208,13 @@ def main():
       gene_accession=[]
       gene_symbol=[]
       orf_coordinates=[]
+      #longest ORF
+      transcripts_l=[]
+      gene_accession_l=[]
+      gene_symbol_l=[]
+      orf_coordinates_l=[]
+      
+      longest_orf_seq=""
       for orf_id in  annotated_proteins[k]:
         transcript=orf_id.split("|")[0].split("_")[0]
         transcripts.append(transcript)
@@ -211,13 +226,16 @@ def main():
         if re.match(r'.*\S.*',gene_name.strip()):
             gene_symbol.append(gene_name.strip())
         else:
-          gene_name="-" #if there is no gene name 
+          gene_name="-" #if there is no gene name
+          
+       
+        
         strand=transcript_strand[transcript]
         orf_coordinate=orf_id.split("|")[1].strip()
         orf_coordinates.append(orf_coordinate) #orf genome coordinates
-        longest_orf="-"
+        longest_orf="N"
         if orf_id.split("|")[0] in transcript_longest_orf_map.keys():
-          longest_orf="longest_orf"
+          longest_orf="Y"
         
         if protein_seq in uniprot.keys():
           if uniprot[protein_seq].split("|")[0]=="sp":
@@ -226,17 +244,40 @@ def main():
             protein_status="unreviewed(TrEMBL)"
           protein_accession=uniprot[protein_seq].split("|")[1]
           protein_description=uniprot[protein_seq].split("|")[2]
-          orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t"+"-\t"+protein_seq+"\t"+longest_orf+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
-          fw_proteomedb_metadata.write(orf_annotation)
+          
+          
+          if args[7]=="canonical":
+            
+            if longest_orf=="Y":
+              orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t"+"-\t"+protein_seq+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
+              longest_orf_seq=protein_seq
+              #longest ORF
+              gene_accession_l.append(gene_id)
+              gene_symbol_l.append(gene_name)
+              transcripts_l.append(transcript)
+              orf_coordinates_l.append(orf_coordinate)
+              fw_proteomedb_metadata_canonical.write(orf_annotation)
+          elif args[7]=="all":
+            orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t"+"-\t"+protein_seq+"\t"+longest_orf+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
+            fw_proteomedb_metadata.write(orf_annotation)
           
         elif protein_seq in refprot.keys():
           protein_status="-"
-          protein_accession=refprot[protein_seq]
-          orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t-\t"+protein_seq+"\t"+longest_orf+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
-          fw_proteomedb_metadata.write(orf_annotation)
-        
-        
-          
+          if args[7]=="canonical":
+            if longest_orf=="Y":
+              orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t"+"-\t"+protein_seq+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
+              longest_orf_seq=protein_seq
+              #longest ORF
+              gene_accession_l.append(gene_id)
+              gene_symbol_l.append(gene_name)
+              transcripts_l.append(transcript)
+              orf_coordinates_l.append(orf_coordinate) 
+              fw_proteomedb_metadata_canonical.write(orf_annotation)
+          elif args[7]=="all":
+            orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t"+"-\t"+protein_seq+"\t"+longest_orf+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
+            fw_proteomedb_metadata.write(orf_annotation)
+  
+
       orf_coordinates=list(set(orf_coordinates))
       transcripts=list(set(transcripts))
       gene_accession=list(set(gene_accession))
@@ -245,17 +286,39 @@ def main():
       orf_transcripts_s=",".join(transcripts)
       orf_cooordinates_s=",".join(orf_coordinates)
       orf_genes_accession_s=",".join(gene_accession)
+      
       if len(gene_symbol)==0:
         gene_symbol.append("-")
       orf_genes_symbol_s=",".join(gene_symbol)
-      fw_proteomedb.write(">"+protein_accession+"|CO="+orf_cooordinates_s+" GA="+orf_genes_accession_s+" GN="+orf_genes_symbol_s+" TA="+orf_transcripts_s+"\n"+protein_seq+"\n")
+      
+      #longest ORF
+      
+      
+      orf_transcripts_l_s=",".join(transcripts_l)
+      orf_cooordinates_l_s=",".join(orf_coordinates_l)
+      orf_genes_accession_l_s=",".join(gene_accession_l)
+      
+      if len(gene_symbol_l)>=2 and "-" in gene_symbol_l:
+        gene_symbol_l.remove('-')
+      orf_genes_symbol_l_s=",".join(gene_symbol_l)
+      
+      
+      
+      if args[7]=="all":
+        fw_proteomedb.write(">"+protein_accession+"|CO="+orf_cooordinates_s+" GA="+orf_genes_accession_s+" GN="+orf_genes_symbol_s+" TA="+orf_transcripts_s+"\n"+protein_seq+"\n")
+      if args[7]=="canonical":
+        if longest_orf_seq==protein_seq:
+          
+          fw_proteomedb_canonial.write(">"+protein_accession+"|CO="+orf_cooordinates_l_s+" GA="+orf_genes_accession_l_s+" GN="+orf_genes_symbol_l_s+" TA="+orf_transcripts_l_s+"\n"+protein_seq+"\n")
+      
+      
         
-    
+    #Novel proteins
     AN=Annotations()
     orf_annotation_map={} #stores ORF annotations k:temparory ORF_id, annotations
     
-    counter=1
-    
+    counter=1 #counter for temparary ORF ids
+
     for i in cdhit_clustering_output:
       if '*' in i.strip():
         longest_seq_orf_id=i.strip().split(">")[1].split("...")[0] #orf_id of Longest representative ORF in cluster
@@ -269,11 +332,9 @@ def main():
         else:
           openprot_id="-"
         
-        longest_orf="-"
-        if longest_seq_orf_id.split("|")[0] in transcript_longest_orf_map.keys():
-          longest_orf="longest_orf"
         
-        for orf_id in unannotated_proteins[protein_seq]:
+        
+        for orf_id in unannotated_proteins[protein_seq]: #accessing all ORFs coordinates for a given protein sequence
           transcript=orf_id.split("|")[0].split("_")[0]
           transcript_biotype=transcript_biotypes[transcript]
           transcript_coordinates=transcript_genome_coordinates[transcript]
@@ -283,6 +344,11 @@ def main():
             gene_name=transcript_gene_name_map[transcript].strip()
           else:
             gene_name="-"
+            
+          longest_orf="N"
+          if orf_id.split("|")[0] in transcript_longest_orf_map.keys():
+            longest_orf="Y"
+          
           
           strand=transcript_strand[transcript]
           orf_coordinate=orf_id.split("|")[1].strip()
@@ -294,8 +360,6 @@ def main():
             if "UTR" in utr_orf: #ORF overlap with UTR region
               orf_annotation=gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tunannotated\t"+utr_orf+"\t"+openprot_id+"\t"+protein_seq+"\t"+longest_orf+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
               orf_annotation_map.setdefault(protein_accession,[]).append(orf_annotation)
-              
-              
       
           elif transcript_biotype !="protein_coding":
             
@@ -307,8 +371,8 @@ def main():
               orf_annotation_map.setdefault(protein_accession,[]).append(orf_annotation)
               
             else:
-              
               orf_annotation=gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tunannotated\tintergenic\t"+openprot_id+"\t"+protein_seq+"\t"+longest_orf+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
+              #print(orf_id.split("|")[0],longest_orf,protein_seq)
               orf_annotation_map.setdefault(protein_accession,[]).append(orf_annotation)
               
         
@@ -318,18 +382,29 @@ def main():
     cdhit_clustering_output.close()
     
 
-    counter1=1
+    counter1=1 #counter for all protein isoforms
+    counter2=1 #counter for canonical proteins
     for orf_id in orf_annotation_map.keys():
       protein_accession="ORF_"+str(counter1)
+      protein_accession_logest_orf="ORF_"+str(counter2)
       transcripts=[]
       gene_accession=[]
       gene_symbol=[]
       orf_coordinates=[]
+      
+      #longest ORF
+      transcripts_l=[]
+      gene_accession_l=[]
+      gene_symbol_l=[]
+      orf_coordinates_l=[]
+      longest_orf_seq=""
 
       for orf_annotations in orf_annotation_map[orf_id]:
         protein_seq=orf_annotations.split("\t")[10].strip()
-        fw_proteomedb_metadata.write(protein_accession+"\t"+orf_annotations)
-        protein_seq=orf_annotations.split("\t")[10].strip()
+        
+        if args[7]=="all":
+          fw_proteomedb_metadata.write(protein_accession+"\t"+orf_annotations)
+        
         gene_id=orf_annotations.split("\t")[0]
         gene_accession.append(gene_id)
         gene_name=orf_annotations.split("\t")[1]
@@ -338,7 +413,34 @@ def main():
         transcripts.append(transcript)
         orf_coordinate=orf_annotations.split("\t")[6]
         orf_coordinates.append(orf_coordinate) #orf genome coordinates
+        longest_orf=orf_annotations.split("\t")[11]
+        orf_type=orf_annotations.split("\t")[8]
         
+        if args[7]=="canonical":
+          if longest_orf=="Y":
+            orf_annotations_list=orf_annotations.split('\t')
+            orf_annotations_list.pop(11)
+            longest_orf_seq=protein_seq
+            fw_proteomedb_metadata_canonical.write(protein_accession_logest_orf+"\t"+"\t".join(orf_annotations_list))
+            
+            #longest ORF
+            gene_accession_l.append(gene_id)
+            gene_symbol_l.append(gene_name)
+            transcripts_l.append(transcript)
+            orf_coordinates_l.append(orf_coordinate) 
+            
+            
+          elif 'UTR' in orf_type and 'CDS:3UTR' not in orf_type :
+            orf_annotations_list=orf_annotations.split('\t')
+            orf_annotations_list.pop(11)
+            longest_orf_seq=protein_seq
+            fw_proteomedb_metadata_canonical.write(protein_accession_logest_orf+"\t"+"\t".join(orf_annotations_list))
+            
+            gene_accession_l.append(gene_id)
+            gene_symbol_l.append(gene_name)
+            transcripts_l.append(transcript)
+            orf_coordinates_l.append(orf_coordinate)
+            
 
         
       orf_coordinates=list(set(orf_coordinates))
@@ -349,13 +451,29 @@ def main():
       orf_transcripts_s=",".join(transcripts)
       orf_cooordinates_s=",".join(orf_coordinates)
       orf_genes_accession_s=",".join(gene_accession)
+      
       if len(gene_symbol)>=2 and "-" in gene_symbol:
         gene_symbol.remove('-')
       orf_genes_symbol_s=",".join(gene_symbol)
+      #longest ORF
+      if len(gene_symbol_l)>=2 and "-" in gene_symbol_l:
+        gene_symbol_l.remove('-')
+        
+      orf_genes_symbol_l_s=",".join(gene_symbol_l)
+      orf_transcripts_l_s=",".join(transcripts_l)
+      orf_cooordinates_l_s=",".join(orf_coordinates_l)
+      orf_genes_accession_l_s=",".join(gene_accession_l)
       
-      fw_proteomedb.write(">"+protein_accession+"|CO="+orf_cooordinates_s+" GA="+orf_genes_accession_s+" GN="+orf_genes_symbol_s+" TA="+orf_transcripts_s+"\n"+protein_seq+"\n")
+      
+      if args[7]=="canonical":
+        if re.match(r'.*\S.*',longest_orf_seq.strip()):
+          fw_proteomedb_canonial.write(">"+protein_accession_logest_orf+"|CO="+orf_cooordinates_l_s+" GA="+orf_genes_accession_l_s+" GN="+orf_genes_symbol_l_s+" TA="+orf_transcripts_l_s+"\n"+protein_seq+"\n")
+          
+          counter2=counter2+1
+      elif args[7]=="all":
+        fw_proteomedb.write(">"+protein_accession+"|CO="+orf_cooordinates_s+" GA="+orf_genes_accession_s+" GN="+orf_genes_symbol_s+" TA="+orf_transcripts_s+"\n"+protein_seq+"\n")
       counter1=counter1+1
-
+  
 
 
 if __name__ == "__main__":
