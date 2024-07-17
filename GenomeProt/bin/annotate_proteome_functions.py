@@ -4,9 +4,8 @@ import peptides as pep
 
 class clusterSequences():
     def SeqClust(self,fasta,out):
-        res = cd_hit(i=fasta,o=out,c=1.0,d=0,sc=1,n=5)
-        df_clstr = read_clstr(out+".clstr")
-        return res
+      res = cd_hit(i=fasta,o=out,c=1.0,d=0,sc=1,n=5,G=1)
+      return res
 class refDb():
     def getDbAnnotations(self,db,openprot_map,ref_prot_map,uniprot_map): #Reference protein sequence database
       fh=open(db)
