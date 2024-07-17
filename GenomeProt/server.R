@@ -13,7 +13,6 @@ fastq_server <- function(input, output, session) {
   fastq_file <- "test"
   
   system(paste0("minimap2 -t ", user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", user_genome, " ", fastq_file, ".fastq | samtools view -bh -F 2308 | samtools sort -@ ", user_threads, " -o ", fastq_file, ".bam"))
-  #system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
   
   # short-reads, call STAR
 
@@ -38,6 +37,8 @@ bambu_server <- function(input, output, session) {
   
   # run gffcompare
   system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  
   system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
   system(paste0("rm gffcmp*"))
   #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " ", "bambu_output/bambu_transcript_annotations.gtf"))
@@ -77,7 +78,6 @@ database_server <- function(input, output, session) {
     filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, referencegtf=reference_gtf)
   }
   
-  # currently calls a function defined in 'functions.R'
   # run filter_custom_gtf, if counts are present, supply them
   get_transcript_seqs(filteredgtf="db_output/proteome_database_transcripts.gtf", organism=input$organism, orf_len=input$min_orf_length, find_UTR_orfs=input$user_find_utr_orfs, referencegtf=reference_gtf)
   
@@ -92,6 +92,7 @@ database_server <- function(input, output, session) {
   # run python script
   system(paste0("source activate py39; python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
   #system(paste0("python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  
   print("Annotated proteome")
   
   # check files exist
