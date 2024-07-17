@@ -1,24 +1,21 @@
 
-
 # inputs: MQ/FragPipe peptides.tsv output, GTF, metadata
 # outputs: BED12/GTF files of peptides, ORFs and transcripts, database of peptides with info on locations etc, summary file of peptides
 
-# required columns in peptides.tsv data
-# c(`Mapped Proteins`, Protein, Peptide)
+suppressMessages({
+  library(data.table)
+  library(ORFik)
+  library(tidyr)
+  library(dplyr)
+  library(stringr)
+  library(GenomicFeatures)
+  library(GenomicRanges)
+  library(rtracklayer)
+  library(stringdist)
+  library(Repitools)
+  library(optparse)
+})
 
-library(data.table)
-library(ORFik)
-library(tidyr)
-library(dplyr)
-library(stringr)
-library(GenomicFeatures)
-library(GenomicRanges)
-library(rtracklayer)
-library(stringdist)
-library(Repitools)
-library(optparse)
-
-#source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/functions.R")
 source("R/functions.R")
 source("global.R")
 
@@ -38,10 +35,10 @@ proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
 
-# proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/peptide.tsv"
+# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/functions.R")
+# proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/peptide_subset.tsv"
 # fasta_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ProteomeDb.fasta"
 # gtf_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ORFome_transcripts.gtf"
-
 
 # ------------- import files ------------- #
 
@@ -59,7 +56,7 @@ md <- import_fasta(fasta_import_file, pd, gtf)
 # extract ORF transcript coordinates to df
 md$orf_tx_id <- paste0(md$protein_name, "_", md$transcript_id)
 
-orf_transcript_coords_df <- md %>% dplyr::select(orf_tx_id, txstart, txend, transcript_id, gene_id)
+orf_transcript_coords_df <- md %>% dplyr::select(orf_tx_id, txstart, txend, transcript_id, gene_id, strand)
 orf_transcript_coords_df <- orf_transcript_coords_df[!(base::duplicated(orf_transcript_coords_df)),]
 
 # make GRanges from df of ORF transcript coordinates
@@ -82,16 +79,12 @@ names(orf_transcript_coords) <- match(orf_tx_names, names(exons_filt))
 
 # original peptides in the GRanges
 orf_ids <- orf_transcript_coords$orf_tx_id
-#orf_gene_ids <- orf_transcript_coords$gene
 
 # ORFik map to genome coordinates
 orf_in_genomic <- ORFik::pmapFromTranscriptF(orf_transcript_coords, exons_filt, removeEmpty = T)
 
-#orf_in_genomic <- mapFromTranscripts(orf_transcript_coords, exons_filt)
-
 # map back to GRangesList, with group information
 orf_in_genomic@unlistData$PID <- orf_ids[groupings(orf_in_genomic)]
-#orf_in_genomic@unlistData$gene <- orf_gene_ids[groupings(orf_in_genomic)]
 
 # add exon_number for GTF export
 orf_in_genomic_gr <- unlist(orf_in_genomic, use.names=F) # convert to GRanges
@@ -109,6 +102,7 @@ peptide_transcript_coords <- extract_peptide_coords(md, orf_transcript_coords_df
 
 # filter peptides for bad mappings
 filtered_peptide_transcript_coords <- subset(peptide_transcript_coords, start(peptide_transcript_coords) != 0)
+filtered_peptide_transcript_coords <- subset(filtered_peptide_transcript_coords, end(peptide_transcript_coords) < filtered_peptide_transcript_coords$txend)
 filtered_peptide_transcript_coords <- subset(filtered_peptide_transcript_coords, (mcols(filtered_peptide_transcript_coords)$txstart != mcols(filtered_peptide_transcript_coords)$pep_start))
 filtered_peptide_transcript_coords <- subset(filtered_peptide_transcript_coords, (mcols(filtered_peptide_transcript_coords)$txend != mcols(filtered_peptide_transcript_coords)$pep_end))
 
@@ -124,6 +118,8 @@ pep_PID_ids <- filtered_peptide_transcript_coords$PID
 pep_gene_ids <- filtered_peptide_transcript_coords$gene_id
 
 # ORFik map to genome coordinates
+
+# causes script to fail
 pep_in_genomic <- ORFik::pmapFromTranscriptF(filtered_peptide_transcript_coords, exons_filt, removeEmpty = F)
 
 # map back to GRangesList, with group information
