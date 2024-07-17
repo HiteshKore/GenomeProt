@@ -11,8 +11,9 @@ run_bambu_function <- function(bam_file_list, gtf, genome) {
 	tx_data <- as.data.frame(apply(tx_data, 2, as.character))
 	tx_data <- tx_data %>% dplyr::filter(novelTranscript == "TRUE")
 	
-	write.csv(tx_data, "bambu_output/novel_isoform_classes.csv", row.names=F, quote=F)
+	write.csv(tx_data, "bambu_output/novel_transcript_classes.csv", row.names=F, quote=F)
 	
-	system(paste0("mv bambu_output/counts_transcript.txt bambu_output/counts_isoform.txt"))
-	system(paste0("mv bambu_output/extended_annotations.gtf bambu_output/bambu_isoform_annotations.gtf"))
+	system(paste0("mv bambu_output/counts_transcript.txt bambu_output/bambu_transcript_counts.txt"))
+	system(paste0("mv bambu_output/extended_annotations.gtf bambu_output/bambu_transcript_annotations.gtf"))
+	
 }

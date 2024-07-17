@@ -2,9 +2,9 @@
 
 # import gtf and filter for minimum transcript counts
 filter_custom_gtf <- function(customgtf, referencegtf, tx_counts=NA, min_count=NA) {
-  # customgtf <- "~/Documents/test_data_db/miguel_subset.gtf"
-  # tx_counts <- "~/Documents/test_data_db/counts.csv"
-  # min_count <- 10
+  # customgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_subset.gtf"
+  # tx_counts <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_counts.csv"
+  # min_count <- 40
   
   # import bambu gtf
   bambu_data <- rtracklayer::import(customgtf)
@@ -61,11 +61,11 @@ filter_custom_gtf <- function(customgtf, referencegtf, tx_counts=NA, min_count=N
 
 # export FASTA of transcript sequences
 get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orfs=FALSE, referencegtf) {
-  # filteredgtf <- "~/Documents/proteome_database_transcripts.gtf"
+  # filteredgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/proteome_database_transcripts.gtf"
   # organism <- "human"
   # orf_len <- 100
-  # find_UTR_orfs <- FALSE
-  # referencegtf <- "~/Documents/miguel_data/gencode.v39.primary_assembly.annotation.gtf"
+  # find_UTR_orfs <- TRUE
+  # referencegtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/gencode.v39.subset.gtf"
   
   # import filtered gtf as a txdb
   txdb <- makeTxDbFromGFF(filteredgtf)
@@ -97,9 +97,9 @@ get_transcript_seqs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   ORFs <- findMapORFs(txs.granges, 
                       tx_seqs, 
                       groupByTx = FALSE, 
-                      longestORF = TRUE, 
+                      longestORF = FALSE, 
                       minimumLength = as.numeric(orf_len), 
-                      startCodon = "ATG",
+                      startCodon = "ATG|CTG",
                       stopCodon = stopDefinition(1))
   
   # unlist GRL
@@ -228,6 +228,19 @@ import_proteomics_data <- function(proteomics_file) {
   # Peptide, Protein, Mapped Proteins
   # optional: Protein Start
   
+  # if its metamorpheus:
+  # Peptide column is called 'Base Sequence', proteins matched are 'Protein Groups'
+  # # Use str_replace to capture groups and replace with a delimiter
+  # # delimits based on TA= (any num chars) followed by a |
+  # split_data <- str_replace_all(data, "(TA=[A-Za-z0-9.]+)\\|", "\\1_SPLIT_")
+  # 
+  # # Split based on the new delimiter
+  # split_data <- str_split(split_data, "_SPLIT_", simplify = TRUE)
+  # 
+  # # Convert to a data frame
+  # df <- as.data.frame(split_data, stringsAsFactors = FALSE)
+  
+  
   #proteomics_file <- "~/Documents/proteogenomics/2024/ben_data/report.pr_matrix.tsv"
   protfile <- fread(proteomics_file)
   
@@ -295,13 +308,15 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   df <- convert_AA_to_df(db)
   
   # format headers into columns
-  df <- df %>%
-    separate(name, into = c("PID"), sep = "\\ |\\,", remove = FALSE) %>%
-    separate(name, into = c("header", "gene_id", "transcript_id", "strand"), sep = "\\ ", remove = FALSE) %>%
-    separate(gene_id, into = c("gene_id"), sep = "\\,", remove = FALSE) %>%
-    separate(strand, into = c("strand"), sep = "\\,", remove = FALSE) %>%
-    separate(PID, into = c("protein_name", "location"), sep = "\\|CO=", remove = FALSE) %>%
-    separate(location, into = c("chromosome", "start", "end"), sep = "\\:|-", remove = FALSE)
+  suppressWarnings({
+    df <- df %>%
+      separate(name, into = c("PID"), sep = "\\ |\\,", remove = FALSE) %>%
+      separate(name, into = c("header", "gene_id", "transcript_id", "strand"), sep = "\\ ", remove = FALSE) %>%
+      separate(gene_id, into = c("gene_id"), sep = "\\,", remove = FALSE) %>%
+      separate(strand, into = c("strand"), sep = "\\,", remove = FALSE) %>%
+      separate(PID, into = c("protein_name", "location"), sep = "\\|CO=", remove = FALSE) %>%
+      separate(location, into = c("chromosome", "start", "end"), sep = "\\:|-", remove = FALSE)
+  })
   
   df <- df %>% 
     dplyr::mutate(across(where(is.character), str_remove_all, pattern = c("GN="))) %>% 
@@ -314,15 +329,29 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   
   # filter for proteins with mapped peptides
   df_expanded <- df_expanded %>% dplyr::filter(PID %in% proteomics_data$PID)
+  df_expanded$start <- as.numeric(df_expanded$start)
+  df_expanded$end <- as.numeric(df_expanded$end)
   
   # get df of orf genomic coords
   orf_genomic_coords_df <- df_expanded %>% dplyr::select(PID, protein_name, chromosome, start, end, strand, transcript_id)
+  
+  orf_genomic_coords_df <- orf_genomic_coords_df %>% 
+    rowwise() %>% 
+    mutate(newstart = min(start,end),
+           newend = max(start,end))
+  
+  orf_genomic_coords_df$start <- orf_genomic_coords_df$newstart
+  orf_genomic_coords_df$end <- orf_genomic_coords_df$newend
+  
+  orf_genomic_coords_df$newstart <- NULL
+  orf_genomic_coords_df$newend <- NULL
   
   # list per transcript
   orf_genomic_coords_list <- split(orf_genomic_coords_df, orf_genomic_coords_df$transcript_id)
   
   create_granges_and_map_to_txs <- function(df_list_obj) {
-    #df_list_obj <- orf_genomic_coords_list["ENSMUST00000025707.9"][[1]]
+    #df_list_obj <- orf_genomic_coords_list[1][[1]]
+    #print(df_list_obj$transcript_id)
     genomic_coords <- df_list_obj %>% dplyr::filter(!is.na(chromosome)) %>% makeGRangesFromDataFrame(
       keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
       seqnames.field="chromosome", start.field="start", end.field="end",
@@ -346,7 +375,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
       dplyr::select(-seqnames, -start, -end, -strand, -width)
       
     return(transcript_coords_df)
-      
+    
   }
   
   orf_transcriptomic_coords_list <- lapply(orf_genomic_coords_list, create_granges_and_map_to_txs)
