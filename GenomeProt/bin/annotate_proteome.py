@@ -8,7 +8,7 @@ import sys
 import os
 import re
 import peptides as pep
-from parse_reference_gtf import *
+from parse_reference_gtf  import *
 from annotate_proteome_functions import *
 
 
@@ -327,6 +327,7 @@ def main():
       orf_coordinates=[]
 
       for orf_annotations in orf_annotation_map[orf_id]:
+        protein_seq=orf_annotations.split("\t")[10].strip()
         fw_proteomedb_metadata.write(protein_accession+"\t"+orf_annotations)
         protein_seq=orf_annotations.split("\t")[10].strip()
         gene_id=orf_annotations.split("\t")[0]
