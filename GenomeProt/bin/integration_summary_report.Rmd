@@ -1,0 +1,350 @@
+---
+title: "GenomeProt Report"
+date: "`r format(Sys.Date())`"
+output: html_document
+layout: single
+---
+
+
+```{r setup, include=FALSE, warning=FALSE}
+library(ggplot2)
+library(DESeq2)
+library(gplots)
+library(dplyr)
+library(RColorBrewer)
+library(data.table)
+options(scipen=999)
+
+df <- fread("../integ_output/peptide_info.csv")
+
+```
+
+### Summary of peptides, transcript isoforms and ORFs
+
+```{r, eval=TRUE, echo=FALSE}
+
+peptotal <- length(unique(df$peptide))
+isototal <- length(unique(df$transcript_id))
+isouniqtotal <- nrow(df %>% group_by(transcript_id) %>% 
+            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1))
+genetotal <- length(unique(df$gene))
+orftotal <- length(unique(df$PID))
+orfuniqtotal <- nrow(df %>% group_by(PID) %>% 
+            dplyr::filter(pep_map_status == "high") %>% 
+            slice_head(n=1))
+
+```
+
+Total peptides: `r paste0(peptotal)`
+
+Total transcript isoforms: `r paste0(isototal)`
+
+Total transcript isoforms identified with at least 1 uniquely mapped peptide: `r paste0(isouniqtotal)`
+
+Total genes: `r paste0(genetotal)`
+
+Total ORFs: `r paste0(orftotal)`
+
+Total ORFs with at least 1 uniquely mapped peptide: `r paste0(orfuniqtotal)`
+
+
+### Peptide-level data
+
+```{r, eval=TRUE, echo=FALSE}
+
+b <- nrow(df %>% group_by(peptide) %>% 
+            dplyr::filter(n()==1 & pep_map_status == "high") %>% 
+            slice_head(n=1))
+c <- nrow(df %>% group_by(peptide) %>% 
+            dplyr::filter(length(unique(PID))==1 & length(unique(gene))==1 & 
+            pep_map_status == "high") %>% 
+            slice_head(n=1))
+d <- nrow(df %>% group_by(peptide) %>% 
+            dplyr::filter(length(unique(PID))>1 & length(unique(gene))==1) %>% 
+            slice_head(n=1))
+e <- nrow(df %>% group_by(peptide) %>% 
+            dplyr::filter(length(unique(PID))>1 & length(unique(gene))>1) %>% 
+            slice_head(n=1))
+f <- nrow(df %>% group_by(peptide) %>% 
+          dplyr::filter(number_exons > 1) %>% 
+          slice_head(n=1))
+g <- 0 # peptides confirming novel splice junctions
+
+# Make stats
+item <- c(
+  "peptides",
+  "peptides mapped to only a single isoform",
+  "peptides mapped to only a single ORF",
+  "peptides mapped to only a single gene",
+  "peptides mapped to multiple ORFs from multiple genes",
+  "peptides spanning splice junctions",
+  "peptides spanning novel splice junctions (not yet calculated)")
+  
+total <- c(peptotal,b,c,d,e,f,g)
+stats <- data.frame(item, total)
+
+knitr::kable(stats, format = "html", col.names=c(" ", ""))
+
+# Export overall stats file
+#write.table(stats, file = paste0(output,"_stats.csv"), sep=",", quote=F, col.names=F, row.names=F)
+
+```
+
+### Transcript isoform-level data
+
+```{r, eval=TRUE, echo=FALSE}
+
+j <- nrow(df %>% group_by(transcript_id) %>% 
+            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1))
+k <- nrow(df %>% group_by(transcript_id) %>% 
+            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(startsWith(transcript_id, "EN")))
+l <- nrow(df %>% group_by(transcript_id) %>% 
+            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")))
+m <- nrow(df %>% group_by(peptide) %>% 
+            dplyr::filter(length(unique(transcript_id))==1) %>% slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")) %>% 
+            group_by(transcript_id) %>% slice_head(n=1))
+n <- nrow(df %>% group_by(transcript_id) %>% 
+            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")) %>% 
+            group_by(PID) %>% dplyr::filter(!startsWith(PID, "ORF")) %>% slice_head(n=1))
+o <- nrow(df %>% group_by(transcript_id) %>% 
+            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")) %>% 
+            group_by(PID) %>% dplyr::filter(startsWith(PID, "ORF")) %>% slice_head(n=1))
+
+# Make stats
+item <- c(
+  "isoforms",
+  "isoforms identified with high confidence peptides",
+  "known isoforms identified with high confidence peptides",
+  "novel isoforms identified with high confidence peptides",
+  "novel isoforms distinguished with uniquely mapping peptides",
+  "novel isoforms encoding known ORFs identified with high confidence peptides",
+  "novel isoforms encoding novel ORFs identified with high confidence peptides")
+
+total <- c(isototal,j,k,l,m,n,o)
+stats <- data.frame(item, total)
+
+knitr::kable(stats, format = "html", col.names=c(" ", ""))
+# Export overall stats file
+#write.table(stats, file = paste0(output,"_stats.csv"), sep=",", quote=F, col.names=F, row.names=F)
+
+dist_nov_iso <- df %>% group_by(peptide) %>% 
+  dplyr::filter(length(unique(transcript_id))==1) %>% slice_head(n=1) %>% 
+  ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")) %>% 
+  group_by(transcript_id) %>% slice_head(n=1)
+
+```
+
+
+
+List of novel isoforms distinguished with uniquely mapping peptides: `r paste0(unique(c(dist_nov_iso$transcript_id)))`
+
+
+### ORF-level data
+
+```{r, eval=TRUE, echo=FALSE}
+
+# ORFs distinguished seems very low, only 4k
+
+g <- nrow(df %>% group_by(PID) %>% 
+            dplyr::filter(pep_map_status == "high") %>% 
+            slice_head(n=1))
+h <- nrow(df %>% group_by(PID) %>% 
+            dplyr::filter(pep_map_status == "high") %>% 
+            slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(!startsWith(PID, "ORF")))
+i <- nrow(df %>% group_by(PID) %>% 
+            dplyr::filter(pep_map_status == "high") %>% 
+            slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(startsWith(PID, "ORF")))
+
+# Make stats
+item <- c(
+  "ORFs",
+  "ORFs identified with high confidence peptides",
+  "known ORFs identified with high confidence peptides",
+  "novel ORFs identified with high confidence peptides")
+
+total <- c(orftotal,g,h,i)
+stats <- data.frame(item, total)
+
+knitr::kable(stats, format = "html", col.names=c(" ", ""))
+# Export overall stats file
+#write.table(stats, file = paste0(output,"_stats.csv"), sep=",", quote=F, col.names=F, row.names=F)
+
+
+```
+
+
+### Other
+
+```{r, eval=TRUE, echo=FALSE}
+
+
+
+
+```
+
+### Figures
+
+#### Peptides by mapping type
+
+```{r, eval=TRUE, echo=FALSE}
+
+plot1 <- data.frame(
+  metric = c("peptides", "peptides - 1 gene", "peptides - 1 ORF"),
+  total = c(peptotal, d, c)
+  )
+
+plot1$metric <- factor(plot1$metric, 
+                       levels=c("peptides", "peptides - 1 gene", "peptides - 1 ORF"))
+
+ggplot(plot1) +
+  geom_bar(aes(x=metric, y=total, fill=metric), stat="identity") +
+  scale_fill_manual(
+    values = c("peptides" = "#D3D3D3", "peptides - 1 gene" = "#818589", "peptides - 1 ORF" = "orangered2")
+    ) +
+  ylab("Total") +
+  xlab("Category") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+
+```
+
+
+#### Peptides (mapped to 1 ORF) by localisation
+
+```{r, eval=TRUE, echo=FALSE}
+
+summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+  group_by(localisation) %>% 
+  summarise(total = n()) %>% 
+  dplyr::filter(total > 5)
+
+ggplot(summary_df) +
+  geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
+  ylab("Total") +
+  xlab("Localisation within transcript") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+```
+
+
+#### Peptides (mapped to 1 ORF) by transcript biotype
+
+```{r, eval=TRUE, echo=FALSE}
+
+summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+  group_by(transcript_biotype) %>% 
+  summarise(total = n()) %>% 
+  dplyr::filter(total > 5)
+
+ggplot(summary_df) +
+  geom_bar(aes(x=transcript_biotype, y=total, fill=transcript_biotype), stat="identity") +
+  ylab("Total") +
+  xlab("Transcript biotype") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+```
+
+
+#### Peptides (mapped to 1 ORF) by exon count
+
+```{r, eval=TRUE, echo=FALSE}
+
+summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+  group_by(number_exons) %>% 
+  summarise(total = n())
+
+ggplot(summary_df) +
+  geom_bar(aes(x=number_exons, y=total, fill=number_exons), stat="identity") +
+  ylab("Total") +
+  xlab("Number of exons peptide spans") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+```
+
+#### ORFs (with at least 1 uniquely mapped peptide) by type
+
+```{r, eval=TRUE, echo=FALSE}
+
+summary_df <- df %>% group_by(PID) %>% 
+            dplyr::filter(pep_map_status == "high") %>% 
+            slice_head(n=1) %>% ungroup() %>% 
+            group_by(localisation) %>% 
+            summarise(total = n())
+
+ggplot(summary_df) +
+  geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
+  ylab("Total") +
+  xlab("ORF localisation") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+```
+
+
+#### Novel ORFs (with at least 1 uniquely mapped peptide) by localisation
+
+```{r, eval=TRUE, echo=FALSE}
+
+summary_df <- df %>% group_by(PID) %>% 
+            dplyr::filter(pep_map_status == "high") %>% 
+            slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(startsWith(PID, "ORF")) %>% 
+            group_by(localisation) %>% 
+            summarise(total = n())
+
+ggplot(summary_df) +
+  geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
+  ylab("Total") +
+  xlab("ORF localisation") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+```
+
+
+
+#### Novel ORFs (with at least 1 uniquely mapped peptide) by transcript biotype
+
+```{r, eval=TRUE, echo=FALSE}
+
+summary_df <- df %>% group_by(PID) %>% 
+            dplyr::filter(pep_map_status == "high") %>% 
+            slice_head(n=1) %>% 
+            ungroup() %>% dplyr::filter(startsWith(PID, "ORF")) %>% 
+            group_by(transcript_biotype) %>% 
+            summarise(total = n())
+
+ggplot(summary_df) +
+  geom_bar(aes(x=transcript_biotype, y=total, fill=transcript_biotype), stat="identity") +
+  ylab("Total") +
+  xlab("Transcript biotype") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+```
+
+
+#### Plot of correlation between peptide intensity and isoform expression
+
+```{r, eval = TRUE, echo=FALSE}
+
+plot(pressure)
+
+```
+
+
+
+
+
+

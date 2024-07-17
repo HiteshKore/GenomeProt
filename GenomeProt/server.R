@@ -145,19 +145,22 @@ proteomics_server <- function(input, output, session) {
 integration_server <- function(input, output, session) {
 
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
+  
   system("mkdir integ_output")
   
   # file handling for different proteomics pipelines
   
-  system(paste0("Rscript bin/map_peptides_generate_outputs_test.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
+  system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
   
-  # add report script
+  library(rmarkdown)
+  rmarkdown::render(input = "bin/integration_summary_report.Rmd",
+                    output_file = "../integ_output/summary_report.html",
+                    output_format = "html_document")
   
   # check files exist
-  if (file.exists("integ_output/peptide_info.csv")) {
+  if (file.exists("integ_output/peptide_info.csv") && file.exists("integ_output/summary_report.html")) {
     # create a zip file with results
-    # add report HTML
-    files_to_zip_int <- c("integ_output/peptide_info.csv", "integ_output/combined_annotations.gtf", "integ_output/peptides.bed12", "integ_output/ORFs.bed12", "integ_output/transcripts.bed12")
+    files_to_zip_int <- c("integ_output/summary_report.html", "integ_output/peptide_info.csv", "integ_output/combined_annotations.gtf", "integ_output/peptides.bed12", "integ_output/ORFs.bed12", "integ_output/transcripts.bed12")
     zipfile_path_int <- "integ_output/integration_results.zip"
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
   }  
