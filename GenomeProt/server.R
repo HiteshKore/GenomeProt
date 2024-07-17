@@ -13,7 +13,6 @@ fastq_server <- function(input, output, session) {
   fastq_file <- "test"
   
   system(paste0("minimap2 -t ", user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", user_genome, " ", fastq_file, ".fastq | samtools view -bh -F 2308 | samtools sort -@ ", user_threads, " -o ", fastq_file, ".bam"))
-  #system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
   
   # short-reads, call STAR
 
@@ -38,6 +37,8 @@ bambu_server <- function(input, output, session) {
   
   # run gffcompare
   system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  
   system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
   system(paste0("rm gffcmp*"))
   #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " ", "bambu_output/bambu_transcript_annotations.gtf"))
@@ -77,7 +78,6 @@ database_server <- function(input, output, session) {
     filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, referencegtf=reference_gtf)
   }
   
-  # currently calls a function defined in 'functions.R'
   # run filter_custom_gtf, if counts are present, supply them
   get_transcript_seqs(filteredgtf="db_output/proteome_database_transcripts.gtf", organism=input$organism, orf_len=input$min_orf_length, find_UTR_orfs=input$user_find_utr_orfs, referencegtf=reference_gtf)
   
@@ -92,6 +92,7 @@ database_server <- function(input, output, session) {
   # run python script
   system(paste0("source activate py39; python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
   #system(paste0("python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  
   print("Annotated proteome")
   
   # check files exist
@@ -145,19 +146,22 @@ proteomics_server <- function(input, output, session) {
 integration_server <- function(input, output, session) {
 
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
+  
   system("mkdir integ_output")
   
   # file handling for different proteomics pipelines
   
-  system(paste0("Rscript bin/map_peptides_generate_outputs_test.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
+  system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
   
-  # add report script
+  library(rmarkdown)
+  rmarkdown::render(input = "bin/integration_summary_report.Rmd",
+                    output_file = "../integ_output/summary_report.html",
+                    output_format = "html_document")
   
   # check files exist
-  if (file.exists("integ_output/peptide_info.csv")) {
+  if (file.exists("integ_output/peptide_info.csv") && file.exists("integ_output/summary_report.html")) {
     # create a zip file with results
-    # add report HTML
-    files_to_zip_int <- c("integ_output/peptide_info.csv", "integ_output/combined_annotations.gtf", "integ_output/peptides.bed12", "integ_output/ORFs.bed12", "integ_output/transcripts.bed12")
+    files_to_zip_int <- c("integ_output/summary_report.html", "integ_output/peptide_info.csv", "integ_output/combined_annotations.gtf", "integ_output/peptides.bed12", "integ_output/ORFs.bed12", "integ_output/transcripts.bed12")
     zipfile_path_int <- "integ_output/integration_results.zip"
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
   }  
