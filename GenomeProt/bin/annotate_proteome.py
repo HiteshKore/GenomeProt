@@ -187,11 +187,11 @@ def main():
     
     #annotations
     if  args[7]=="all":
-      fw_proteomedb=open(outdir+"ProteomeDb_comprehensive.fasta","w")
-      fw_proteomedb_metadata=open(outdir+"ProteomeDb_comprehensive_metadata.txt","w")
+      fw_proteomedb=open(outdir+"proteome_database.fasta","w")
+      fw_proteomedb_metadata=open(outdir+"proteome_database_metadata.txt","w")
     elif args[7]=="canonical":
-      fw_proteomedb_canonial=open(outdir+"ProteomeDb_canonical.fasta","w")
-      fw_proteomedb_metadata_canonical=open(outdir+"ProteomeDb_canonical_metadata.txt","w")
+      fw_proteomedb_canonial=open(outdir+"proteome_database.fasta","w")
+      fw_proteomedb_metadata_canonical=open(outdir+"proteome_database_metadata.txt","w")
     
     # Create a tab-separated format string
     if args[7]=="all":
