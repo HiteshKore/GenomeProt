@@ -27,7 +27,7 @@ peptotal <- length(unique(df$peptide))
 isototal <- length(unique(df$transcript_id))
 isouniqtotal <- nrow(df %>% group_by(transcript_id) %>% 
             dplyr::filter(pep_map_status == "high") %>% slice_head(n=1))
-genetotal <- length(unique(df$gene))
+genetotal <- length(unique(df$gene_id))
 orftotal <- length(unique(df$PID))
 orfuniqtotal <- nrow(df %>% group_by(PID) %>% 
             dplyr::filter(pep_map_status == "high") %>% 
@@ -56,14 +56,14 @@ b <- nrow(df %>% group_by(peptide) %>%
             dplyr::filter(n()==1 & pep_map_status == "high") %>% 
             slice_head(n=1))
 c <- nrow(df %>% group_by(peptide) %>% 
-            dplyr::filter(length(unique(PID))==1 & length(unique(gene))==1 & 
+            dplyr::filter(length(unique(PID))==1 & length(unique(gene_id))==1 & 
             pep_map_status == "high") %>% 
             slice_head(n=1))
 d <- nrow(df %>% group_by(peptide) %>% 
-            dplyr::filter(length(unique(PID))>1 & length(unique(gene))==1) %>% 
+            dplyr::filter(length(unique(PID))>1 & length(unique(gene_id))==1) %>% 
             slice_head(n=1))
 e <- nrow(df %>% group_by(peptide) %>% 
-            dplyr::filter(length(unique(PID))>1 & length(unique(gene))>1) %>% 
+            dplyr::filter(length(unique(PID))>1 & length(unique(gene_id))>1) %>% 
             slice_head(n=1))
 f <- nrow(df %>% group_by(peptide) %>% 
           dplyr::filter(number_exons > 1) %>% 
@@ -221,17 +221,17 @@ ggplot(plot1) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
-  group_by(localisation) %>% 
-  summarise(total = n()) %>% 
-  dplyr::filter(total > 5)
-
-ggplot(summary_df) +
-  geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
-  ylab("Total") +
-  xlab("Localisation within transcript") +
-  theme_bw() +
-  theme(legend.position = "none")
+# summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+#   group_by(localisation) %>% 
+#   summarise(total = n()) %>% 
+#   dplyr::filter(total > 5)
+# 
+# ggplot(summary_df) +
+#   geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
+#   ylab("Total") +
+#   xlab("Localisation within transcript") +
+#   theme_bw() +
+#   theme(legend.position = "none")
 
 ```
 
@@ -240,17 +240,17 @@ ggplot(summary_df) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
-  group_by(transcript_biotype) %>% 
-  summarise(total = n()) %>% 
-  dplyr::filter(total > 5)
-
-ggplot(summary_df) +
-  geom_bar(aes(x=transcript_biotype, y=total, fill=transcript_biotype), stat="identity") +
-  ylab("Total") +
-  xlab("Transcript biotype") +
-  theme_bw() +
-  theme(legend.position = "none")
+# summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+#   group_by(transcript_biotype) %>% 
+#   summarise(total = n()) %>% 
+#   dplyr::filter(total > 5)
+# 
+# ggplot(summary_df) +
+#   geom_bar(aes(x=transcript_biotype, y=total, fill=transcript_biotype), stat="identity") +
+#   ylab("Total") +
+#   xlab("Transcript biotype") +
+#   theme_bw() +
+#   theme(legend.position = "none")
 
 ```
 
@@ -259,16 +259,16 @@ ggplot(summary_df) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
-  group_by(number_exons) %>% 
-  summarise(total = n())
-
-ggplot(summary_df) +
-  geom_bar(aes(x=number_exons, y=total, fill=number_exons), stat="identity") +
-  ylab("Total") +
-  xlab("Number of exons peptide spans") +
-  theme_bw() +
-  theme(legend.position = "none")
+# summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+#   group_by(number_exons) %>% 
+#   summarise(total = n())
+# 
+# ggplot(summary_df) +
+#   geom_bar(aes(x=number_exons, y=total, fill=number_exons), stat="identity") +
+#   ylab("Total") +
+#   xlab("Number of exons peptide spans") +
+#   theme_bw() +
+#   theme(legend.position = "none")
 
 ```
 
@@ -276,18 +276,18 @@ ggplot(summary_df) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-summary_df <- df %>% group_by(PID) %>% 
-            dplyr::filter(pep_map_status == "high") %>% 
-            slice_head(n=1) %>% ungroup() %>% 
-            group_by(localisation) %>% 
-            summarise(total = n())
-
-ggplot(summary_df) +
-  geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
-  ylab("Total") +
-  xlab("ORF localisation") +
-  theme_bw() +
-  theme(legend.position = "none")
+# summary_df <- df %>% group_by(PID) %>% 
+#             dplyr::filter(pep_map_status == "high") %>% 
+#             slice_head(n=1) %>% ungroup() %>% 
+#             group_by(localisation) %>% 
+#             summarise(total = n())
+# 
+# ggplot(summary_df) +
+#   geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
+#   ylab("Total") +
+#   xlab("ORF localisation") +
+#   theme_bw() +
+#   theme(legend.position = "none")
 
 ```
 
@@ -296,19 +296,19 @@ ggplot(summary_df) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-summary_df <- df %>% group_by(PID) %>% 
-            dplyr::filter(pep_map_status == "high") %>% 
-            slice_head(n=1) %>% 
-            ungroup() %>% dplyr::filter(startsWith(PID, "ORF")) %>% 
-            group_by(localisation) %>% 
-            summarise(total = n())
-
-ggplot(summary_df) +
-  geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
-  ylab("Total") +
-  xlab("ORF localisation") +
-  theme_bw() +
-  theme(legend.position = "none")
+# summary_df <- df %>% group_by(PID) %>% 
+#             dplyr::filter(pep_map_status == "high") %>% 
+#             slice_head(n=1) %>% 
+#             ungroup() %>% dplyr::filter(startsWith(PID, "ORF")) %>% 
+#             group_by(localisation) %>% 
+#             summarise(total = n())
+# 
+# ggplot(summary_df) +
+#   geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
+#   ylab("Total") +
+#   xlab("ORF localisation") +
+#   theme_bw() +
+#   theme(legend.position = "none")
 
 ```
 
@@ -318,19 +318,19 @@ ggplot(summary_df) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-summary_df <- df %>% group_by(PID) %>% 
-            dplyr::filter(pep_map_status == "high") %>% 
-            slice_head(n=1) %>% 
-            ungroup() %>% dplyr::filter(startsWith(PID, "ORF")) %>% 
-            group_by(transcript_biotype) %>% 
-            summarise(total = n())
-
-ggplot(summary_df) +
-  geom_bar(aes(x=transcript_biotype, y=total, fill=transcript_biotype), stat="identity") +
-  ylab("Total") +
-  xlab("Transcript biotype") +
-  theme_bw() +
-  theme(legend.position = "none")
+# summary_df <- df %>% group_by(PID) %>% 
+#             dplyr::filter(pep_map_status == "high") %>% 
+#             slice_head(n=1) %>% 
+#             ungroup() %>% dplyr::filter(startsWith(PID, "ORF")) %>% 
+#             group_by(transcript_biotype) %>% 
+#             summarise(total = n())
+# 
+# ggplot(summary_df) +
+#   geom_bar(aes(x=transcript_biotype, y=total, fill=transcript_biotype), stat="identity") +
+#   ylab("Total") +
+#   xlab("Transcript biotype") +
+#   theme_bw() +
+#   theme(legend.position = "none")
 
 ```
 
