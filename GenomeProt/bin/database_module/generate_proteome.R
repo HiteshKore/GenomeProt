@@ -23,10 +23,9 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
     counts <- fread(tx_counts)
     
     # filter for counts greater than or equal to min_count in any numeric column
-    #counts_filt <- counts %>% dplyr::filter(if_any(where(is.numeric), ~ . >= min_count))
     counts_filt <- counts %>% 
       mutate(total = rowSums(across(where(is.numeric)), na.rm = TRUE)) %>% 
-      dplyr::filter(total > min_count)
+      dplyr::filter(total > as.numeric(min_count))
     
     # extract txnames
     tx_ids <- counts_filt$TXNAME
@@ -80,9 +79,6 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   
   # get nt sequence as df
   #fasta_export_nucleotides <- data.frame(transcript = names(tx_seqs), sequence = tx_seqs, row.names=NULL)
-  
-  # export transcript seqs
-  # write_tsv(fasta_export_nucleotides, "db_output/ORFome_transcripts_nt.txt")
   #writeXStringSet(tx_seqs, "db_output/ORFome_transcripts_nt.fasta")
   
   # ORFik to find ORFs
@@ -124,13 +120,8 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
   
   if (find_UTR_orfs == TRUE) {
-    #referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
     
-    #ref_txdb <- makeTxDbFromGFF(referencegtf)
     ref_txdb <- makeTxDbFromGFF("db_output/ref_transcripts_in_data.gtf")
-    
-    #utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
-    #utrs3_filtered <- utrs3[names(utrs3) %in% names(txs)]
     
     utrs5 <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs5_filtered <- utrs5[names(utrs5) %in% names(txs)]
@@ -239,7 +230,7 @@ find_orfs <- opt$uorfs
 # make output directory
 system("mkdir db_output")
 
-# run filter_custom_gtf, if counts are present, supply them
+# run filter_custom_gtf, check if counts are present
 if (!is.null(tx_count_path)) {
   filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, tx_counts=tx_count_path, min_count=minimum_tx_count)
 } else {

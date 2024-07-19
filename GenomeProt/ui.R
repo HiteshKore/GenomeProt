@@ -144,7 +144,7 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "db_generation", 
               h2("Generate a custom proteogenomics database"),
-              h5("Creates an amino acid FASTA of all ORFs in your data to use as input for MaxQuant/FragPipe etc."),
+              h5("Creates an amino acid FASTA of all ORFs in your data to use as input for MaxQuant/MSFragger etc."),
               fluidRow(
                 column(6,
                        fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),

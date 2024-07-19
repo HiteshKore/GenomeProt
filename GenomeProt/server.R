@@ -320,7 +320,6 @@ server <- function(input, output, session) {
       
       # when samples don't match
       sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
-      #sample_names <- intersect(colnames(countsp), colnames(countst))
 
       print("Samples with peptide intensities and transcript counts:")
       print(sample_names)
@@ -389,10 +388,10 @@ server <- function(input, output, session) {
     
     if (!is.null(input$user_vis_tx_count_file)) {
       print("counts")
-      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot[1], data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
+      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
     } else {
       print("no counts")
-      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot[1], data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import)
+      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import)
     }
     
     # print the plot
