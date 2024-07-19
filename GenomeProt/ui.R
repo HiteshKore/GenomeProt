@@ -144,7 +144,7 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "db_generation", 
               h2("Generate a custom proteogenomics database"),
-              h5("Creates an amino acid FASTA of all ORFs in your data to use as input for MaxQuant/FragPipe etc."),
+              h5("Creates an amino acid FASTA of all ORFs in your data to use as input for MaxQuant/MSFragger etc."),
               fluidRow(
                 column(6,
                        fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
@@ -156,7 +156,7 @@ ui <- dashboardPage(
                        numericInput("min_orf_length", 
                                     label = "ORF length (amino acids):", 
                                     value = 30),
-                       checkboxInput("user_find_utr_orfs", label = "Find 5' UTR 'uORFs' in reference transcripts",
+                       checkboxInput("user_find_utr_orfs", label = "Find upstream open reading frames (uORFs) in 5' UTRs of reference transcripts",
                                      value = FALSE, width = NULL),
                        fileInput("user_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        numericInput("minimum_tx_count", 
