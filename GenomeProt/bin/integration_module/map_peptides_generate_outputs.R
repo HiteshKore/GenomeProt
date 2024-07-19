@@ -16,8 +16,8 @@ suppressMessages({
   library(optparse)
 })
 
-source("R/functions.R")
 source("global.R")
+source("R/integration_functions.R")
 
 option_list = list(
   make_option(c("-p", "--proteomics"), type="character", default=NULL,
@@ -30,6 +30,8 @@ option_list = list(
 
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
+
+system("mkdir integ_output")
 
 proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
