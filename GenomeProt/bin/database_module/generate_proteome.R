@@ -152,7 +152,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
                 length = sum(width),
                 strand = strand[1]) %>% 
       ungroup() %>% 
-      dplyr::filter(length < 90) %>% # length of 90 means ORFs<30 AA
+      dplyr::filter(length < (as.numeric(orf_len)*3)-3) %>% # length ORFs < 30 AA
       dplyr::select(-length)
     
     utrORFs <- utrORFs[names(utrORFs) %in% utr_orf_genome_coordinates$names]
