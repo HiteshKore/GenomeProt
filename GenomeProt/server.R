@@ -75,7 +75,7 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
+  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output canonical"))
   system(paste0("python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
   
   print("Annotated proteome")
@@ -315,10 +315,19 @@ server <- function(input, output, session) {
     if (!is.null(input$user_vis_tx_count_file)) {
       
       print("Counts detected")
+      # import counts
       data_storage$countst <- fread(input$user_vis_tx_count_file$datapath)
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
       
-      # when samples don't match
+      # rename as per bambu counts output
+      data_storage$countst$transcript_id <- data_storage$countst$TXNAME
+      data_storage$countst$gene_id <- data_storage$countst$GENEID
+      
+      # filter GTF transcripts for those with counts
+      data_storage$res_tx_import <- data_storage$res_tx_import %>% 
+        dplyr::filter(transcript_id %in% data_storage$countst$transcript_id)
+      
+      # match samples in both counts files
       sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
 
       print("Samples with peptide intensities and transcript counts:")
@@ -335,7 +344,7 @@ server <- function(input, output, session) {
         dplyr::group_by(Peptide) %>% 
         slice_max(sum) %>% dplyr::ungroup() %>% dplyr::select(-sum)
       
-      # VSN
+      # VSN for normalisation 
       countsp_matrix <- as.matrix(data_storage$countsp[,-1])
       rownames(countsp_matrix) <- data_storage$countsp$Peptide
       
@@ -347,11 +356,12 @@ server <- function(input, output, session) {
       data_storage$countspm <- reshape2::melt(vsnp, id.vars = c("peptide"),
                                               variable.name = "sample_id", value.name = "count")
       
+      # set levels for plotting
       data_storage$countspm$sample_id <- factor(as.character(data_storage$countspm$sample_id), level =  sample_names)
       
       data_storage$countstm <- reshape2::melt(data_storage$countst, id.vars = c("transcript_id"),
                                               variable.name = "sample_id", value.name = "count")
-      
+      # set levels for plotting
       data_storage$countstm$sample_id <- factor(as.character(data_storage$countstm$sample_id), level =  sample_names)
       
     } 
@@ -377,6 +387,7 @@ server <- function(input, output, session) {
     
     updateSelectInput(session, "gene_selector", choices = genes_available)
     session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # re-enable submit button
+    
   })
   
   observeEvent(input$gene_selector, {
@@ -387,10 +398,8 @@ server <- function(input, output, session) {
     print(data_storage$gene_to_plot)
     
     if (!is.null(input$user_vis_tx_count_file)) {
-      print("counts")
       data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
     } else {
-      print("no counts")
       data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import)
     }
     
@@ -400,6 +409,7 @@ server <- function(input, output, session) {
     })
     
     shinyjs::enable("vis_download_button")
+    
   })
   
   # download handler for the plot
