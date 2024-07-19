@@ -1,4 +1,5 @@
 
+
 # define visualisation function
 plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcounts=NA, min_intron_len=500) {
   
@@ -44,11 +45,11 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
     
     
     # filter for selected gene
-    orf_res$transcript_id <- orf_res$tx_id
+    #orf_res$transcript_id <- orf_res$tx_id
     orf_res$ORF_id <- NULL
     
     orf_res <- orf_res %>% 
-      dplyr::filter(tx_id %in% pep_res$tx_id) %>% 
+      dplyr::filter(transcript_id %in% pep_res$tx_id) %>% 
       mutate(type = "CDS",
              feature_type = "Transcripts",
              gene_id = gene_name,
@@ -107,6 +108,7 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
     } else {
       
       # add quantitative heatmap info
+      
       # filter transcript counts for gene of interest
       txcounts <- txcounts %>%
         dplyr::filter(transcript_id %in% tx_gtf_to_plot$transcript_id)
@@ -159,6 +161,7 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
       
       pep_vis_plot <- gtf_pep_output + gtf_tx_output + 
         plot_layout(nrow = 2, ncol = 1, heights = c(n_pep, n_tx))
+      pep_vis_plot
       
     } else {
       
@@ -194,7 +197,7 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
       
       pep_vis_plot <- gtf_pep_output + pepcounts_output + gtf_tx_output + txcounts_output + 
         plot_layout(nrow = 2, ncol = 2, widths = c(1.5, 1), heights = c(n_pep, n_tx))
-      
+      pep_vis_plot 
     }
   return(pep_vis_plot)
 }

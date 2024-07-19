@@ -1,5 +1,7 @@
 suppressPackageStartupMessages({
   library(devtools)
+  library(rmarkdown)
+  library(bambu)
   library(data.table)
   library(dplyr)
   library(tidyr)
@@ -26,8 +28,8 @@ suppressPackageStartupMessages({
   library(optparse)
 })
 
-options(shiny.maxRequestSize = 2097152000) # 2GB
+options(shiny.maxRequestSize = 107374182400) # 2GB
 
-source("R/functions.R")
+source("R/integration_functions.R")
 source("R/visualisation_function.R")
 source("R/run_bambu_function.R")

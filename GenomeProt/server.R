@@ -4,7 +4,6 @@ library(shinyjs)
 # internal server functions
 fastq_server <- function(input, output, session) {
   
-  
   renderTable(input$user_fastq_files)
   
   # call minimap2 script and wait for BAM output
@@ -13,7 +12,6 @@ fastq_server <- function(input, output, session) {
   fastq_file <- "test"
   
   system(paste0("minimap2 -t ", user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", user_genome, " ", fastq_file, ".fastq | samtools view -bh -F 2308 | samtools sort -@ ", user_threads, " -o ", fastq_file, ".bam"))
-  #system(paste0("Rscript bin/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
   
   # short-reads, call STAR
 
@@ -22,8 +20,7 @@ fastq_server <- function(input, output, session) {
 bambu_server <- function(input, output, session) {
   
   req(input$user_bam_files, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)  # required
-
-  library(bambu)
+  
   # create list of BAMs
   bam_file_list <- Rsamtools::BamFileList(as.vector(input$user_bam_files$datapath))
   # get original names
@@ -37,10 +34,11 @@ bambu_server <- function(input, output, session) {
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
   
   # run gffcompare
-  system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  
   system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
   system(paste0("rm gffcmp*"))
-  #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " ", "bambu_output/bambu_transcript_annotations.gtf"))
   
   # check files exist
   if (file.exists("bambu_output/bambu_transcript_annotations.gtf") && file.exists("bambu_output/gffcompare.tmap.txt")) {
@@ -57,41 +55,29 @@ bambu_server <- function(input, output, session) {
 
 database_server <- function(input, output, session) {
   
-  req(input$user_gtf_file, input$user_ref_gtf_file)  # GTF is required
-  
-  gtf_path <- input$user_gtf_file$datapath
-  reference_gtf <- input$user_ref_gtf_file$datapath
-  
-  system("mkdir db_output")
+  req(input$user_gtf_file, input$user_ref_gtf_file)  # GTFs required
   
   if (!is.null(input$user_tx_count_file)) {
-    tx_count_path <- input$user_tx_count_file$datapath
+    system(paste0("Rscript bin/database_module/generate_proteome.R -g ", input$user_gtf_file$datapath, " -r ", input$user_ref_gtf_file$datapath, " -c ", input$user_tx_count_file$datapath, 
+                  " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_orfs))
   } else {
-    tx_count_path <- NULL
+    system(paste0("Rscript bin/database_module/generate_proteome.R -g ", input$user_gtf_file$datapath, " -r ", input$user_ref_gtf_file$datapath, 
+                  " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_orfs))
   }
   
-  # run filter_custom_gtf, if counts are present, supply them
-  if (!is.null(tx_count_path)) {
-    filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, referencegtf=reference_gtf, tx_counts=tx_count_path, min_count=input$minimum_tx_count)
-  } else {
-    filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, referencegtf=reference_gtf)
-  }
+  print("Generated ORFs")
   
-  # currently calls a function defined in 'functions.R'
-  # run filter_custom_gtf, if counts are present, supply them
-  get_transcript_seqs(filteredgtf="db_output/proteome_database_transcripts.gtf", organism=input$organism, orf_len=input$min_orf_length, find_UTR_orfs=input$user_find_utr_orfs, referencegtf=reference_gtf)
-  
+  # set reference protein database
   if (input$organism == "human") {
     ref_proteome <- "data/openprot_uniprotDb_hs.txt"
   } else if (input$organism == "mouse") {
     ref_proteome <- "data/openprot_uniprotDb_mm.txt"
   }
   
-  gtf_type <- "GENCODE"
-  
   # run python script
-  system(paste0("source activate py39; python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
-  #system(paste0("python bin/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf ", gtf_type))
+  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output canonical"))
+  system(paste0("python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
+  
   print("Annotated proteome")
   
   # check files exist
@@ -107,10 +93,6 @@ database_server <- function(input, output, session) {
 proteomics_server <- function(input, output, session) {
   
   req(input$user_mm_data, input$user_mm_fasta)
-  
-  #mass_spec_data <- as.vector(input$user_mm_data$datapath)
-  #print(mass_spec_data)
-  #print(input$user_mm_data$name)
   
   # get directory path
   dir_path <- dirname(input$user_mm_data$datapath[1])
@@ -130,8 +112,8 @@ proteomics_server <- function(input, output, session) {
   # 'MaxThreadsToUsePerFile = 3'
   # with user set threads
   
-  system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
-  #system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  #system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
   
   # check files exist
   if (file.exists("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv") && file.exists("proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")) {
@@ -145,19 +127,19 @@ proteomics_server <- function(input, output, session) {
 integration_server <- function(input, output, session) {
 
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
-  system("mkdir integ_output")
   
-  # file handling for different proteomics pipelines
+  # run rscript
+  system(paste0("Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
   
-  system(paste0("Rscript bin/map_peptides_generate_outputs_test.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
-  
-  # add report script
+  # create report
+  rmarkdown::render(input = "bin/integration_module/integration_summary_report.Rmd",
+                    output_file = "../../integ_output/summary_report.html",
+                    output_format = "html_document")
   
   # check files exist
-  if (file.exists("integ_output/peptide_info.csv")) {
+  if (file.exists("integ_output/peptide_info.csv") && file.exists("integ_output/summary_report.html")) {
     # create a zip file with results
-    # add report HTML
-    files_to_zip_int <- c("integ_output/peptide_info.csv", "integ_output/combined_annotations.gtf", "integ_output/peptides.bed12", "integ_output/ORFs.bed12", "integ_output/transcripts.bed12")
+    files_to_zip_int <- c("integ_output/summary_report.html", "integ_output/peptide_info.csv", "integ_output/combined_annotations.gtf", "integ_output/peptides.bed12", "integ_output/ORFs.bed12", "integ_output/transcripts.bed12")
     zipfile_path_int <- "integ_output/integration_results.zip"
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
   }  
@@ -333,12 +315,20 @@ server <- function(input, output, session) {
     if (!is.null(input$user_vis_tx_count_file)) {
       
       print("Counts detected")
+      # import counts
       data_storage$countst <- fread(input$user_vis_tx_count_file$datapath)
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
       
-      # when samples don't match
+      # rename as per bambu counts output
+      data_storage$countst$transcript_id <- data_storage$countst$TXNAME
+      data_storage$countst$gene_id <- data_storage$countst$GENEID
+      
+      # filter GTF transcripts for those with counts
+      data_storage$res_tx_import <- data_storage$res_tx_import %>% 
+        dplyr::filter(transcript_id %in% data_storage$countst$transcript_id)
+      
+      # match samples in both counts files
       sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
-      #sample_names <- intersect(colnames(countsp), colnames(countst))
 
       print("Samples with peptide intensities and transcript counts:")
       print(sample_names)
@@ -354,7 +344,7 @@ server <- function(input, output, session) {
         dplyr::group_by(Peptide) %>% 
         slice_max(sum) %>% dplyr::ungroup() %>% dplyr::select(-sum)
       
-      # VSN
+      # VSN for normalisation 
       countsp_matrix <- as.matrix(data_storage$countsp[,-1])
       rownames(countsp_matrix) <- data_storage$countsp$Peptide
       
@@ -366,11 +356,12 @@ server <- function(input, output, session) {
       data_storage$countspm <- reshape2::melt(vsnp, id.vars = c("peptide"),
                                               variable.name = "sample_id", value.name = "count")
       
+      # set levels for plotting
       data_storage$countspm$sample_id <- factor(as.character(data_storage$countspm$sample_id), level =  sample_names)
       
       data_storage$countstm <- reshape2::melt(data_storage$countst, id.vars = c("transcript_id"),
                                               variable.name = "sample_id", value.name = "count")
-      
+      # set levels for plotting
       data_storage$countstm$sample_id <- factor(as.character(data_storage$countstm$sample_id), level =  sample_names)
       
     } 
@@ -396,6 +387,7 @@ server <- function(input, output, session) {
     
     updateSelectInput(session, "gene_selector", choices = genes_available)
     session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # re-enable submit button
+    
   })
   
   observeEvent(input$gene_selector, {
@@ -406,11 +398,9 @@ server <- function(input, output, session) {
     print(data_storage$gene_to_plot)
     
     if (!is.null(input$user_vis_tx_count_file)) {
-      print("counts")
-      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot[1], data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
+      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import, data_storage$countstm, data_storage$countspm, min_intron_len=1000)
     } else {
-      print("no counts")
-      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot[1], data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import)
+      data_storage$plot_obj <- plot_gene(data_storage$gene_to_plot, data_storage$res_tx_import, data_storage$res_pep_import, data_storage$res_ORF_import)
     }
     
     # print the plot
@@ -419,6 +409,7 @@ server <- function(input, output, session) {
     })
     
     shinyjs::enable("vis_download_button")
+    
   })
   
   # download handler for the plot

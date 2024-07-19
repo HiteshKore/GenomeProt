@@ -1,26 +1,23 @@
 
-
 # inputs: MQ/FragPipe peptides.tsv output, GTF, metadata
 # outputs: BED12/GTF files of peptides, ORFs and transcripts, database of peptides with info on locations etc, summary file of peptides
 
-# required columns in peptides.tsv data
-# c(`Mapped Proteins`, Protein, Peptide)
+suppressMessages({
+  library(data.table)
+  library(ORFik)
+  library(tidyr)
+  library(dplyr)
+  library(stringr)
+  library(GenomicFeatures)
+  library(GenomicRanges)
+  library(rtracklayer)
+  library(stringdist)
+  library(Repitools)
+  library(optparse)
+})
 
-library(data.table)
-library(ORFik)
-library(tidyr)
-library(dplyr)
-library(stringr)
-library(GenomicFeatures)
-library(GenomicRanges)
-library(rtracklayer)
-library(stringdist)
-library(Repitools)
-library(optparse)
-
-#source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/functions.R")
-source("R/functions.R")
 source("global.R")
+source("R/integration_functions.R")
 
 option_list = list(
   make_option(c("-p", "--proteomics"), type="character", default=NULL,
@@ -34,14 +31,21 @@ option_list = list(
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
+system("mkdir integ_output")
+
 proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
 
-# proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/peptide.tsv"
+# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/functions.R")
+# proteomics_import_file <- "~/Documents/integration_bugs/peptides.txt"
+# fasta_import_file <- "~/Documents/integration_bugs/ProteomeDb.fasta"
+# gtf_import_file <- "~/Documents/integration_bugs/ORFome_transcripts.gtf"
+# 
+# 
+# proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/peptide_subset.tsv"
 # fasta_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ProteomeDb.fasta"
 # gtf_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ORFome_transcripts.gtf"
-
 
 # ------------- import files ------------- #
 
@@ -59,7 +63,8 @@ md <- import_fasta(fasta_import_file, pd, gtf)
 # extract ORF transcript coordinates to df
 md$orf_tx_id <- paste0(md$protein_name, "_", md$transcript_id)
 
-orf_transcript_coords_df <- md %>% dplyr::select(orf_tx_id, txstart, txend, transcript_id, gene_id)
+# get just unique orf and transcript for mapping
+orf_transcript_coords_df <- md %>% dplyr::select(orf_tx_id, txstart, txend, transcript_id, gene_id, strand)
 orf_transcript_coords_df <- orf_transcript_coords_df[!(base::duplicated(orf_transcript_coords_df)),]
 
 # make GRanges from df of ORF transcript coordinates
@@ -82,16 +87,12 @@ names(orf_transcript_coords) <- match(orf_tx_names, names(exons_filt))
 
 # original peptides in the GRanges
 orf_ids <- orf_transcript_coords$orf_tx_id
-#orf_gene_ids <- orf_transcript_coords$gene
 
 # ORFik map to genome coordinates
 orf_in_genomic <- ORFik::pmapFromTranscriptF(orf_transcript_coords, exons_filt, removeEmpty = T)
 
-#orf_in_genomic <- mapFromTranscripts(orf_transcript_coords, exons_filt)
-
 # map back to GRangesList, with group information
 orf_in_genomic@unlistData$PID <- orf_ids[groupings(orf_in_genomic)]
-#orf_in_genomic@unlistData$gene <- orf_gene_ids[groupings(orf_in_genomic)]
 
 # add exon_number for GTF export
 orf_in_genomic_gr <- unlist(orf_in_genomic, use.names=F) # convert to GRanges
@@ -105,26 +106,23 @@ orf_in_genomic <- split(orf_in_genomic_gr, ~ mcols(orf_in_genomic_gr)$PID)
 
 # peptides
 # use ORF transcript coords to determine peptide transcript coords
-peptide_transcript_coords <- extract_peptide_coords(md, orf_transcript_coords_df)
-
-# filter peptides for bad mappings
-filtered_peptide_transcript_coords <- subset(peptide_transcript_coords, start(peptide_transcript_coords) != 0)
-filtered_peptide_transcript_coords <- subset(filtered_peptide_transcript_coords, (mcols(filtered_peptide_transcript_coords)$txstart != mcols(filtered_peptide_transcript_coords)$pep_start))
-filtered_peptide_transcript_coords <- subset(filtered_peptide_transcript_coords, (mcols(filtered_peptide_transcript_coords)$txend != mcols(filtered_peptide_transcript_coords)$pep_end))
+peptide_transcript_coords <- extract_peptide_coords(md)
 
 # map to genomic coords
-peptide_tx_names <- as.character(seqnames(filtered_peptide_transcript_coords)) # get tx names
+peptide_tx_names <- as.character(seqnames(peptide_transcript_coords)) # get tx names
 
 # match names of transcripts, return index of match
-names(filtered_peptide_transcript_coords) <- match(peptide_tx_names, names(exons_filt)) 
+names(peptide_transcript_coords) <- match(peptide_tx_names, names(exons_filt)) 
 
 # original peptides in the GRanges
-pep_ids <- filtered_peptide_transcript_coords$peptide
-pep_PID_ids <- filtered_peptide_transcript_coords$PID
-pep_gene_ids <- filtered_peptide_transcript_coords$gene_id
+pep_ids <- peptide_transcript_coords$peptide
+pep_PID_ids <- peptide_transcript_coords$PID
+pep_gene_ids <- peptide_transcript_coords$gene_id
 
 # ORFik map to genome coordinates
-pep_in_genomic <- ORFik::pmapFromTranscriptF(filtered_peptide_transcript_coords, exons_filt, removeEmpty = F)
+
+# causes script to fail
+pep_in_genomic <- ORFik::pmapFromTranscriptF(peptide_transcript_coords, exons_filt, removeEmpty = F)
 
 # map back to GRangesList, with group information
 pep_in_genomic@unlistData$peptide <- pep_ids[groupings(pep_in_genomic)]
@@ -152,16 +150,14 @@ pep_in_genomic <- split(pep_in_genomic_gr, ~ names(pep_in_genomic_gr))
 
 # ------------- export ------------- #
 
-# PEPTIDES
 # export bed12 of peptides
 ORFik::export.bed12(pep_in_genomic, "integ_output/peptides.bed12", rgb = 0)
 
-# ORFS
 # export bed12 of ORFs
 # should we change it so that only unique ORFs are exported, not every ORF per transcript?
 ORFik::export.bed12(orf_in_genomic, "integ_output/ORFs.bed12", rgb = 0)
 
-# export GTF of ORFs
+# format GTF of ORFs
 orf_in_genomic_gr$source <- c("custom")
 orf_in_genomic_gr$type <- c("CDS")
 orf_in_genomic_gr$phase <- 0
@@ -170,20 +166,15 @@ orf_in_genomic_gr$transcript_id <- names(orf_in_genomic_gr)
 names(orf_in_genomic_gr) <- NULL
 orf_in_genomic_gr$group_id <- "ORFs"
 
-#export(orf_in_genomic_gr, "integ_output/ORFs.gtf", format="gtf")
-
-# TRANSCRIPTS
-# export GTF of all transcripts that had mapped peptides
+# format GTF of all transcripts that had mapped peptides
 gtf_for_exporting <- import(gtf_import_file, format="gtf")
 gtf_filtered <- gtf_for_exporting[mcols(gtf_for_exporting)$transcript_id %in% md$transcript]
 gtf_filtered$group_id <- "transcripts"
-#export(gtf_filtered, "integ_output/transcripts.gtf", format="gtf")
 
 tx_in_genomic <- split(gtf_filtered, ~ gtf_filtered$transcript_id)
+
 # export bed12 of transcripts
 ORFik::export.bed12(tx_in_genomic, "integ_output/transcripts.bed12", rgb = 0)
-
-
 
 # ---------------------------------------- #
 
@@ -196,6 +187,7 @@ results_pept_df <- pep_in_genomic_gr %>% as_tibble()
 results_pept_df <- separate(results_pept_df, txname, into = c("transcript_id", "peptide"), sep = "_", remove = TRUE)
 results_pept_df$gene_id <- results_pept_df$gene
 results_pept_df$gene <- NULL
+
 # group by peptide and transcript to summarise based on how many exons peptide spans
 results_pept_df_unique <- results_pept_df %>% 
   dplyr::group_by(peptide, transcript_id) %>% 
@@ -207,11 +199,6 @@ results_pept_df_unique <- results_pept_df %>%
 # merge results with metadata
 metadata_to_merge <- md %>% 
   dplyr::select(PID, peptide, transcript_id, gene_id)
-
-# merge results with metadata
-# missing localisaiton etc
-# metadata_to_merge <- md %>% 
-#   dplyr::select(PID, peptide, transcript_id, gene_id, localisation, transcript_biotype, orf_type)
 
 peptide_result <- merge(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "gene_id", "transcript_id"), all.x=T, all.y=F)
 
@@ -263,11 +250,6 @@ peptide_result <- peptide_result %>%
     TRUE ~ "other")) %>% 
   dplyr::ungroup() %>% dplyr::select(-iso_map_status_1)
 
-# summary(factor(peptide_result$single_mapped_protein))
-# summary(factor(peptide_result$pep_map_status))
-# summary(factor(peptide_result$orf_map_status))
-# summary(factor(peptide_result$iso_map_status))
-
 # include orf_map_status and pep_map_status in GTF mcols
 results_pept_df$pep_map_status <- NULL
 results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id", "seqnames"), all.x=T, all.y=F)
@@ -286,22 +268,13 @@ pep_in_genomic_gr_export$source <- "custom"
 pep_in_genomic_gr_export$type <- "exon"
 pep_in_genomic_gr_export$group_id <- "peptides"
 
-# export GTF of peptides
-#export(pep_in_genomic_gr_export, "integ_output/peptides.gtf", format="gtf")
-
-
-
 # export summary data
 write.csv(peptide_result, "integ_output/peptide_info.csv", row.names=F, quote=F)
-
 
 # export annotations for vis
 
 combined <- c(pep_in_genomic_gr_export, orf_in_genomic_gr, gtf_filtered)
 export(combined, "integ_output/combined_annotations.gtf", format="gtf")
-
-
-
 
 # ---------------------------------------- #
 
