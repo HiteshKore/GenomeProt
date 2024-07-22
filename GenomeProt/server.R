@@ -75,8 +75,8 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output canonical"))
-  system(paste0("python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
+  system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
+  #system(paste0("python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
   
   print("Annotated proteome")
   
@@ -320,8 +320,12 @@ server <- function(input, output, session) {
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
       
       # rename as per bambu counts output
+      if ("TXNAME"  %in% colnames(data_storage$countst) & "GENEID" %in% colnames(data_storage$countst)) {
       data_storage$countst$transcript_id <- data_storage$countst$TXNAME
-      data_storage$countst$gene_id <- data_storage$countst$GENEID
+      data_storage$countst$GENEID <- NULL
+      } else if ("TXNAME" %in% colnames(data_storage$countst)) {
+        data_storage$countst$transcript_id <- data_storage$countst$TXNAME
+      }
       
       # filter GTF transcripts for those with counts
       data_storage$res_tx_import <- data_storage$res_tx_import %>% 
@@ -418,7 +422,7 @@ server <- function(input, output, session) {
       paste0(data_storage$gene_to_plot, "_", Sys.Date(), ".pdf")
     },
     content = function(file) {
-      pdf(file)
+      pdf(file, h=10, w=20)
       print(data_storage$plot_obj)
       dev.off()
     }
