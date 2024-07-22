@@ -5,7 +5,7 @@ source("global.R")
 
 # import gtf and filter for minimum transcript counts
 filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
-  # customgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_subset.gtf"
+  # customgtf <- "~/Documents/isolamp_gtfs/reformatted_combined_22_7.gtf"
   # tx_counts <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_counts.csv"
   # min_count <- 40
   
@@ -53,11 +53,11 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
 
 # export FASTA of transcript sequences
 get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orfs=FALSE, referencegtf) {
-  # filteredgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/proteome_database_transcripts.gtf"
+  # filteredgtf <- "~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/db_output/proteome_database_transcripts.gtf"
   # organism <- "human"
-  # orf_len <- 100
-  # find_UTR_orfs <- TRUE
-  # referencegtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/gencode.v39.subset.gtf"
+  # orf_len <- 30
+  # find_UTR_orfs <- FALSE
+  # referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
   
   # import filtered gtf as a txdb
   txdb <- makeTxDbFromGFF(filteredgtf)
@@ -85,7 +85,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   ORFs <- findMapORFs(txs.granges, 
                       tx_seqs, 
                       groupByTx = FALSE, 
-                      longestORF = FALSE, 
+                      longestORF = TRUE, 
                       minimumLength = as.numeric(orf_len), 
                       startCodon = "ATG",
                       stopCodon = stopDefinition(1))
