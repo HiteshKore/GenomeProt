@@ -41,6 +41,16 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
   okstrand <- c("+", "-")
   bambu_data <- bambu_data[strand(bambu_data) %in% okstrand]
   
+  # ensure any known transcripts in the database were also observed in the reference
+  # ref_transcripts <- rtracklayer::import(referencegtf)
+  # 
+  # bambu_data_filtered <- bambu_data[
+  #   !grepl("^BambuTx", mcols(bambu_data)$transcript_id) & 
+  #     mcols(bambu_data)$transcript_id %in% mcols(ref_transcripts)$transcript_id
+  # ]
+  # 
+  # bambu_data <- bambu_data_filtered
+  
   # remove extra mcols
   mcols(bambu_data) <- mcols(bambu_data)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "exon_number")]
   
@@ -117,6 +127,8 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   
   ref_transcripts <- rtracklayer::import(referencegtf)
   ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
+  
+  # need to add if statement, what if no reference transcripts are found in the data?
   export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
   
   if (find_UTR_orfs == TRUE) {

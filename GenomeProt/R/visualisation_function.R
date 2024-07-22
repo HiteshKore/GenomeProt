@@ -4,7 +4,7 @@
 plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcounts=NA, min_intron_len=500) {
   
   # test vars
-  # gene_name <- "ENSMUSG00000000441"
+  # gene_name <- "ENSG00000167460"
   # tx_res <- res_tx_import
   # pep_res <- res_pep_import
   # orf_res <- res_ORF_import
@@ -60,7 +60,9 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
         TRUE ~ NA)) %>% 
       ungroup() %>% 
       separate(ORF_id, into="ORF_id", sep="\\|") %>%
-      separate(ORF_id, into="ORF_id", sep="\\_") %>%
+      separate(ORF_id, into="ORF_id", sep="\\_EN") %>%
+      separate(ORF_id, into="ORF_id", sep="\\_Bambu") %>%
+      separate(ORF_id, into="ORF_id", sep="\\_denovo") %>%
       dplyr::select(seqnames,start,end,strand,type,gene_id,transcript_id,feature_type,peptide_type,exon_number,ORF_id)
     
     # filter for exons only in transcripts gtf
@@ -87,6 +89,8 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
     
     pep_gtf_to_plot <- gtf_to_plot %>% 
       dplyr::filter(feature_type == "Peptides")
+    
+    pep_gtf_to_plot <- pep_gtf_to_plot[!(base::duplicated(pep_gtf_to_plot)),]
     
     tx_gtf_to_plot <- gtf_to_plot %>% 
       dplyr::filter(feature_type == "Transcripts")
@@ -154,14 +158,13 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
             axis.text.x = element_blank(),
             axis.ticks.x = element_blank()) +
       scale_fill_manual(values = c("low" = "#D3D3D3", "medium" = "grey16", "high" = "orangered2", "Transcripts" = "#9FC9FB")) +
-      geom_text_repel(aes(x = start, label = unique(ORF_id)), size = 3, nudge_y = 0.5, min.segment.length = Inf)
+      geom_text_repel(aes(x = start, label = ORF_id), size = 3, nudge_y = 0.5, min.segment.length = Inf)
     
     # return peptide and transcript tracks if no quant data is provided
     if (missing(txcounts) & missing(pepcounts)) {
       
       pep_vis_plot <- gtf_pep_output + gtf_tx_output + 
         plot_layout(nrow = 2, ncol = 1, heights = c(n_pep, n_tx))
-      pep_vis_plot
       
     } else {
       
@@ -197,7 +200,6 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
       
       pep_vis_plot <- gtf_pep_output + pepcounts_output + gtf_tx_output + txcounts_output + 
         plot_layout(nrow = 2, ncol = 2, widths = c(1.5, 1), heights = c(n_pep, n_tx))
-      pep_vis_plot 
     }
   return(pep_vis_plot)
 }
