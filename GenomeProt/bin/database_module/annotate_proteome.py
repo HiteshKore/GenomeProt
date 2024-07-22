@@ -192,7 +192,7 @@ def main():
     elif args[7]=="canonical":
       fw_proteomedb_canonial=open(outdir+"proteome_database.fasta","w")
       fw_proteomedb_metadata_canonical=open(outdir+"proteome_database_metadata.txt","w")
-    
+      
     # Create a tab-separated format string
     if args[7]=="all":
       fw_proteomedb_metadata.write("accession\tgene\tgene_symbol\ttranscript\tstrand\ttranscript_biotype\ttranscript_coordinates\torf_genomic_coordinates\torf_type\tlocalisation\topenprot_id\tprotein_sequence\tlongest_orf_in_transcript\tuniprot_status\tmolecular_weight(kDA)\tisoelectric_point\thydrophobicity\taliphatic_index\n")
@@ -243,9 +243,10 @@ def main():
           elif uniprot[protein_seq].split("|")[0]=="tr":
             protein_status="unreviewed(TrEMBL)"
           protein_accession=uniprot[protein_seq].split("|")[1]
+          
           protein_description=uniprot[protein_seq].split("|")[2]
           
-          
+  
           if args[7]=="canonical":
             
             if longest_orf=="Y":
@@ -259,13 +260,18 @@ def main():
               fw_proteomedb_metadata_canonical.write(orf_annotation)
           elif args[7]=="all":
             orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t"+"-\t"+protein_seq+"\t"+longest_orf+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
+            
             fw_proteomedb_metadata.write(orf_annotation)
           
         elif protein_seq in refprot.keys():
           protein_status="-"
+          protein_accession=refprot[protein_seq]
+          
           if args[7]=="canonical":
             if longest_orf=="Y":
               orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t"+"-\t"+protein_seq+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
+              
+  
               longest_orf_seq=protein_seq
               #longest ORF
               gene_accession_l.append(gene_id)
@@ -276,7 +282,7 @@ def main():
           elif args[7]=="all":
             orf_annotation=protein_accession+"\t"+gene_id+"\t"+gene_name+"\t"+transcript+"\t"+strand+"\t"+transcript_biotype+"\t"+transcript_coordinates+"\t"+orf_coordinate+"\tannotated\tCDS\t"+"-\t"+protein_seq+"\t"+longest_orf+"\t"+protein_status+"\t"+protein_seq_properties[protein_seq]+"\n"
             fw_proteomedb_metadata.write(orf_annotation)
-  
+
 
       orf_coordinates=list(set(orf_coordinates))
       transcripts=list(set(transcripts))
@@ -312,7 +318,7 @@ def main():
           fw_proteomedb_canonial.write(">"+protein_accession+"|CO="+orf_cooordinates_l_s+" GA="+orf_genes_accession_l_s+" GN="+orf_genes_symbol_l_s+" TA="+orf_transcripts_l_s+"\n"+protein_seq+"\n")
       
       
-        
+
     #Novel proteins
     AN=Annotations()
     orf_annotation_map={} #stores ORF annotations k:temparory ORF_id, annotations
@@ -473,7 +479,7 @@ def main():
       elif args[7]=="all":
         fw_proteomedb.write(">"+protein_accession+"|CO="+orf_cooordinates_s+" GA="+orf_genes_accession_s+" GN="+orf_genes_symbol_s+" TA="+orf_transcripts_s+"\n"+protein_seq+"\n")
       counter1=counter1+1
-  
+
 
 
 if __name__ == "__main__":

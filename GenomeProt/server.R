@@ -75,8 +75,8 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
-  system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
-  #system(paste0("python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
+  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
+  system(paste0("python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf GENCODE db_output all"))
   
   print("Annotated proteome")
   
