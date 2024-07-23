@@ -43,9 +43,9 @@ gtf_import_file <- opt$gtf
 # gtf_import_file <- "~/Documents/integration_bugs/ORFome_transcripts.gtf"
 # 
 # 
-# proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/peptide_subset.tsv"
-# fasta_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ProteomeDb.fasta"
-# gtf_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ORFome_transcripts.gtf"
+proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/peptide_subset.tsv"
+fasta_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ProteomeDb.fasta"
+gtf_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ORFome_transcripts.gtf"
 
 # ------------- import files ------------- #
 
@@ -171,7 +171,13 @@ gtf_for_exporting <- import(gtf_import_file, format="gtf")
 gtf_filtered <- gtf_for_exporting[mcols(gtf_for_exporting)$transcript_id %in% md$transcript]
 gtf_filtered$group_id <- "transcripts"
 
-tx_in_genomic <- split(gtf_filtered, ~ gtf_filtered$transcript_id)
+# reformat exons for bed12
+gtf_as_bed12 <- gtf_filtered[mcols(gtf_filtered)$type == "exon"]
+
+names(gtf_as_bed12) <- paste0(gtf_as_bed12$transcript_id, "_", gtf_as_bed12$gene_id)
+
+# convert to grl
+tx_in_genomic <- split(gtf_as_bed12, ~ names(gtf_as_bed12))
 
 # export bed12 of transcripts
 ORFik::export.bed12(tx_in_genomic, "integ_output/transcripts.bed12", rgb = 0)

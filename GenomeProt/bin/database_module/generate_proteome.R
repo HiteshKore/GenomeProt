@@ -43,9 +43,20 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
   
   # remove extra mcols
   mcols(bambu_data) <- mcols(bambu_data)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "exon_number")]
+  bambu_exons <- bambu_data[bambu_data$type == "exon"]
+  bambu_transcripts <- bambu_data[bambu_data$type == "transcript"]
+  
+  # sort by chr and locations
+  bambu_exons <- sortSeqlevels(bambu_exons)
+  bambu_transcripts <- sortSeqlevels(bambu_transcripts)
+  
+  bambu_exons <- sort(bambu_exons)
+  bambu_transcripts <- sort(bambu_transcripts)
+  
+  bambu_export <- c(bambu_transcripts, bambu_exons)
   
   # export filtered gtf
-  export(bambu_data, "db_output/proteome_database_transcripts.gtf", format="gtf")
+  export(bambu_export, "db_output/proteome_database_transcripts.gtf", format="gtf")
   
   print("Exported filtered GTF")
   
@@ -53,11 +64,11 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
 
 # export FASTA of transcript sequences
 get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orfs=FALSE, referencegtf) {
-  # filteredgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/proteome_database_transcripts.gtf"
+  # filteredgtf <- "~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/ric_db_output/proteome_database_transcripts.gtf"
   # organism <- "human"
-  # orf_len <- 100
-  # find_UTR_orfs <- TRUE
-  # referencegtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/gencode.v39.subset.gtf"
+  # orf_len <- 30
+  # find_UTR_orfs <- FALSE
+  # referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
   
   # import filtered gtf as a txdb
   txdb <- makeTxDbFromGFF(filteredgtf)
@@ -85,7 +96,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   ORFs <- findMapORFs(txs.granges, 
                       tx_seqs, 
                       groupByTx = FALSE, 
-                      longestORF = FALSE, 
+                      longestORF = TRUE, 
                       minimumLength = as.numeric(orf_len), 
                       startCodon = "ATG",
                       stopCodon = stopDefinition(1))
@@ -114,12 +125,19 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   orf_aa_seq_df_genomic_coordinates$names <- NULL
   
   combined <- orf_aa_seq_df_genomic_coordinates
-  
-  ref_transcripts <- rtracklayer::import(referencegtf)
-  ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
-  export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
-  
-  if (find_UTR_orfs == TRUE) {
+
+  if (find_UTR_orfs == FALSE) {
+    
+    ref_transcripts <- rtracklayer::import(referencegtf)
+    export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
+    
+  } else if (find_UTR_orfs == TRUE) {
+    
+    ref_transcripts <- rtracklayer::import(referencegtf)
+    ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
+    
+    # need to add if statement, what if no reference transcripts are found in the data?
+    export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
     
     ref_txdb <- makeTxDbFromGFF("db_output/ref_transcripts_in_data.gtf")
     
