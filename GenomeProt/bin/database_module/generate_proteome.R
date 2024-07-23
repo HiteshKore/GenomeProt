@@ -5,7 +5,7 @@ source("global.R")
 
 # import gtf and filter for minimum transcript counts
 filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
-  # customgtf <- "~/Documents/isolamp_gtfs/reformatted_combined_22_7.gtf"
+  # customgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_subset.gtf"
   # tx_counts <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_counts.csv"
   # min_count <- 40
   
@@ -41,21 +41,22 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
   okstrand <- c("+", "-")
   bambu_data <- bambu_data[strand(bambu_data) %in% okstrand]
   
-  # ensure any known transcripts in the database were also observed in the reference
-  # ref_transcripts <- rtracklayer::import(referencegtf)
-  # 
-  # bambu_data_filtered <- bambu_data[
-  #   !grepl("^BambuTx", mcols(bambu_data)$transcript_id) & 
-  #     mcols(bambu_data)$transcript_id %in% mcols(ref_transcripts)$transcript_id
-  # ]
-  # 
-  # bambu_data <- bambu_data_filtered
-  
   # remove extra mcols
   mcols(bambu_data) <- mcols(bambu_data)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "exon_number")]
+  bambu_exons <- bambu_data[bambu_data$type == "exon"]
+  bambu_transcripts <- bambu_data[bambu_data$type == "transcript"]
+  
+  # sort by chr and locations
+  bambu_exons <- sortSeqlevels(bambu_exons)
+  bambu_transcripts <- sortSeqlevels(bambu_transcripts)
+  
+  bambu_exons <- sort(bambu_exons)
+  bambu_transcripts <- sort(bambu_transcripts)
+  
+  bambu_export <- c(bambu_transcripts, bambu_exons)
   
   # export filtered gtf
-  export(bambu_data, "db_output/proteome_database_transcripts.gtf", format="gtf")
+  export(bambu_export, "db_output/proteome_database_transcripts.gtf", format="gtf")
   
   print("Exported filtered GTF")
   
@@ -63,11 +64,11 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
 
 # export FASTA of transcript sequences
 get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orfs=FALSE, referencegtf) {
-  # filteredgtf <- "~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/db_output/proteome_database_transcripts.gtf"
+  # filteredgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/proteome_database_transcripts.gtf"
   # organism <- "human"
   # orf_len <- 30
   # find_UTR_orfs <- FALSE
-  # referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
+  # referencegtf <- "~/Documents/gencode_annotations/ensembl.m39.110.gtf"
   
   # import filtered gtf as a txdb
   txdb <- makeTxDbFromGFF(filteredgtf)
