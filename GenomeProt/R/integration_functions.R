@@ -21,7 +21,20 @@ import_proteomics_data <- function(proteomics_file) {
   
   
   #proteomics_file <- "~/Documents/proteogenomics/2024/ben_data/report.pr_matrix.tsv"
+  
+  # import proteomics
   protfile <- fread(proteomics_file)
+  
+  # ensure compatibility
+  if (c("Peptide") %in% colnames(protfile)) {
+    # skip
+  } else if (c("Peptide Sequence") %in% colnames(protfile)) {
+    protfile$Peptide <- protfile$`Peptide Sequence`
+    protfile$`Peptide Sequence` <- NULL
+  } else if (c("Stripped.Sequence") %in% colnames(protfile)) {
+    protfile$Peptide <- protfile$Stripped.Sequence
+    protfile$Stripped.Sequence <- NULL
+  }
   
   if (c("Protein Start") %in% colnames(protfile)) {
     protfile <- protfile %>% dplyr::select(Peptide, Protein, `Protein Start`, `Mapped Proteins`)
