@@ -64,11 +64,11 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
 
 # export FASTA of transcript sequences
 get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orfs=FALSE, referencegtf) {
-  # filteredgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/proteome_database_transcripts.gtf"
+  # filteredgtf <- "~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/ric_db_output/proteome_database_transcripts.gtf"
   # organism <- "human"
   # orf_len <- 30
   # find_UTR_orfs <- FALSE
-  # referencegtf <- "~/Documents/gencode_annotations/ensembl.m39.110.gtf"
+  # referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
   
   # import filtered gtf as a txdb
   txdb <- makeTxDbFromGFF(filteredgtf)
@@ -125,14 +125,19 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_orf
   orf_aa_seq_df_genomic_coordinates$names <- NULL
   
   combined <- orf_aa_seq_df_genomic_coordinates
-  
-  ref_transcripts <- rtracklayer::import(referencegtf)
-  ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
-  
-  # need to add if statement, what if no reference transcripts are found in the data?
-  export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
-  
-  if (find_UTR_orfs == TRUE) {
+
+  if (find_UTR_orfs == FALSE) {
+    
+    ref_transcripts <- rtracklayer::import(referencegtf)
+    export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
+    
+  } else if (find_UTR_orfs == TRUE) {
+    
+    ref_transcripts <- rtracklayer::import(referencegtf)
+    ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
+    
+    # need to add if statement, what if no reference transcripts are found in the data?
+    export(ref_transcripts, "db_output/ref_transcripts_in_data.gtf", format="gtf")
     
     ref_txdb <- makeTxDbFromGFF("db_output/ref_transcripts_in_data.gtf")
     
