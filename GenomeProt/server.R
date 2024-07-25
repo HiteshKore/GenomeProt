@@ -11,7 +11,7 @@ fastq_server <- function(input, output, session) {
   # Check if the output directory exists
   if (dir.exists(outdir_bam)) {
     system(paste0("rm -rf ", outdir_bam,"*"))
-
+    
     
   } else {
     system(paste0("mkdir ",outdir_bam))
@@ -71,7 +71,7 @@ fastq_server <- function(input, output, session) {
     zip(zipfile = zipfile_path, files = bam_files)
   }
   
-
+  
 }
 
 bambu_server <- function(input, output, session) {
@@ -91,12 +91,9 @@ bambu_server <- function(input, output, session) {
   
   # run bambu function
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
- 
+  
   # run gffcompare
-<<<<<<< HEAD
   #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
-=======
-  system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   
   #system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
@@ -112,7 +109,7 @@ bambu_server <- function(input, output, session) {
   
   # if short-reads are supplied this won't work
   # short-read data should skip isoform identification and just perform quantification, then filter based on counts
-
+  
 }
 
 database_server <- function(input, output, session) {
@@ -165,7 +162,7 @@ proteomics_server <- function(input, output, session) {
   
   # new file paths
   new_file_paths <- file.path(dir_path, mass_spec_names)
-
+  
   # rename files
   file.rename(input$user_mm_data$datapath, new_file_paths)
   
@@ -187,7 +184,7 @@ proteomics_server <- function(input, output, session) {
 }
 
 integration_server <- function(input, output, session) {
-
+  
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
   
   # run rscript
@@ -247,10 +244,10 @@ server <- function(input, output, session) {
     }
   )
   
-
+  
   
   #END FASTQ MODULE
- 
+  
   
   # IDENTIFY ISOFORMS MODULE
   file_available_bambu <- reactiveVal(FALSE)
@@ -299,7 +296,7 @@ server <- function(input, output, session) {
   observeEvent(input$proteomics_submit_button, { 
     session$sendCustomMessage("disableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # disable submit button
     proteomics_server(input, output, session)
-
+    
     # check if the zip file is created
     if (file.exists("proteomics_output/proteomics_results.zip")) {
       file_available_mm(TRUE)
@@ -426,8 +423,8 @@ server <- function(input, output, session) {
       
       # rename as per bambu counts output
       if ("TXNAME"  %in% colnames(data_storage$countst) & "GENEID" %in% colnames(data_storage$countst)) {
-      data_storage$countst$transcript_id <- data_storage$countst$TXNAME
-      data_storage$countst$GENEID <- NULL
+        data_storage$countst$transcript_id <- data_storage$countst$TXNAME
+        data_storage$countst$GENEID <- NULL
       } else if ("TXNAME" %in% colnames(data_storage$countst)) {
         data_storage$countst$transcript_id <- data_storage$countst$TXNAME
       }
@@ -438,7 +435,7 @@ server <- function(input, output, session) {
       
       # match samples in both counts files
       sample_names <- intersect(colnames(data_storage$countsp), colnames(data_storage$countst))
-
+      
       print("Samples with peptide intensities and transcript counts:")
       print(sample_names)
       
@@ -490,7 +487,7 @@ server <- function(input, output, session) {
     # 
     # data_storage$genes_available <- gene_names$ensembl_gene_id
     # names(data_storage$genes_available) <- gene_names$hgnc_symbol
-
+    
     # change back from names?
     #updateSelectInput(session, "gene_selector", choices = names(data_storage$genes_available))
     
