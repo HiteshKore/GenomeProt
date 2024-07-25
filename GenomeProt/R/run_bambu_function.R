@@ -1,10 +1,19 @@
 
-run_bambu_function <- function(bam_file_list, gtf, genome) { 
+run_bambu_function <- function(bam_file_list, gtf, organism) { 
 
   system(paste0("mkdir bambu_output"))
   
+  if (organism=="mouse") {
+    library(BSgenome.Mmusculus.UCSC.mm39)
+    genomedb <- BSgenome.Mmusculus.UCSC.mm39
+    
+  } else if (organism=="human") {
+    library(BSgenome.Hsapiens.UCSC.hg38)
+    genomedb <- BSgenome.Hsapiens.UCSC.hg38
+  }
+  
 	bambuAnnotations <- prepareAnnotations(gtf)
-	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genome)
+	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb)
 	writeBambuOutput(se, path = "bambu_output")
 	
 	tx_data <- as.data.frame(mcols(se))
