@@ -109,13 +109,11 @@ ui <- dashboardPage(
               h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
               fluidRow(
                 column(4,
-                       selectInput("organism", label = "Organism:", 
-                                   choices = list("human" = "human", "mouse" = "mouse"), 
-                                   selected = "human"),
+                       # change to long-read and short-read if the minimap2 commands are the same
                        selectInput("sequencing_type", label = "Sequencing platform:", 
-                                   choices = list("nanopore", "pacbio", "short-read"), 
-                                   selected = "nanopore"),
-                       numericInput("user_threads", label = "Threads:", value = 1),
+                                   choices = list("long-read"),
+                                   selected = "long-read"),
+                       numericInput("user_threads", label = "CPUs:", value = 1),
                        fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
                        actionButton("map_fastqs_submit_button", "Submit", class = "btn btn-primary")
@@ -132,7 +130,6 @@ ui <- dashboardPage(
               h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
               fluidRow(
                 column(4,
-                       #selectInput("organism", label = "Organism:", choices = list("human" = "human", "mouse" = "mouse"), selected = "human"),
                        fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
