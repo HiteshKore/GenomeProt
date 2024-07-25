@@ -115,12 +115,15 @@ ui <- dashboardPage(
                        selectInput("sequencing_type", label = "Sequencing platform:", 
                                    choices = list("nanopore", "pacbio", "short-read"), 
                                    selected = "nanopore"),
+                       numericInput("user_threads", label = "Threads:", value = 1),
+                       fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
                        actionButton("map_fastqs_submit_button", "Submit", class = "btn btn-primary")
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
-                       downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:70%;") # initially disabled
+                       downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:70%;"), # initially disabled
+                       div(id = "fastq-loading-container", class = "loading-container", div(class = "spinner"))
                 )
               )
       ),

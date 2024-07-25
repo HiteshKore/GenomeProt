@@ -4,16 +4,73 @@ library(shinyjs)
 # internal server functions
 fastq_server <- function(input, output, session) {
   
-  renderTable(input$user_fastq_files)
   
-  # call minimap2 script and wait for BAM output
-  user_threads <- 12
-  user_genome <- "genome.fa" 
-  fastq_file <- "test"
+  req(input$user_threads,input$user_reference_genome$datapath,input$user_fastq_files$datapath)  # required
   
-  system(paste0("minimap2 -t ", user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", user_genome, " ", fastq_file, ".fastq | samtools view -bh -F 2308 | samtools sort -@ ", user_threads, " -o ", fastq_file, ".bam"))
+  outdir_bam="fastq_output/"
+  # Check if the output directory exists
+  if (dir.exists(outdir_bam)) {
+    system(paste0("rm -rf ", outdir_bam,"*"))
+
+    
+  } else {
+    system(paste0("mkdir ",outdir_bam))
+  }
   
-  # short-reads, call STAR
+  
+  
+  #create dataframe with sample details and add prefix column 
+  user_fastq_files_df <- input$user_fastq_files %>%mutate(file_prefix = str_replace_all(name, c("\\.fastq\\.gz$" = "", "\\.fastq$" = "")))
+  
+  #generate index
+  
+  index_file=paste0("fastq_output/",str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")),".mmi")
+  
+  minimap2_index_command=paste0("minimap2 -k 14 -d ",index_file," ", input$user_reference_genome$datapath)
+  print(minimap2_index_command)
+  system(minimap2_index_command)
+  
+  if (input$sequencing_type=="nanopore" && file.exists(index_file))
+  {
+    
+    
+    
+    for (i in 1:nrow(user_fastq_files_df)) {
+      fastq_file <- user_fastq_files_df$datapath[i]
+      file_prefix <- user_fastq_files_df$file_prefix[i]
+      
+      minimap2_command=paste0("minimap2 -t ", input$user_threads, " -ax splice --sam-hit-only --secondary=no ",index_file," ",fastq_file, "| samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam,file_prefix,".bam")
+      print(minimap2_command)
+      system(minimap2_command)
+      
+    }
+    
+    
+    
+  }else if (input$sequencing_type=="pacbio" && file.exists(index_file)) {
+    
+    
+    for (i in 1:nrow(user_fastq_files_df)) {
+      fastq_file <- user_fastq_files_df$datapath[i]
+      file_prefix <- user_fastq_files_df$file_prefix[i]
+      
+      minimap2_command=paste0("minimap2 -t ", input$user_threads, " -ax splice:hq -uf --sam-hit-only --secondary=no ",index_file," ",fastq_file, "| samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam,file_prefix,".bam")
+      
+      print(minimap2_command)
+      system(minimap2_command)
+    }
+    
+  }
+  
+  # check bam files exist
+  bam_files <- list.files(path = outdir_bam, "\\.bam$", full.names = TRUE)
+  
+  if (length(bam_files)>0) {
+    #   # create a zip file with results
+    zipfile_path <- paste0(outdir_bam,"bam_results.zip")
+    zip(zipfile = zipfile_path, files = bam_files)
+  }
+  
 
 }
 
@@ -23,22 +80,24 @@ bambu_server <- function(input, output, session) {
   
   # create list of BAMs
   bam_file_list <- Rsamtools::BamFileList(as.vector(input$user_bam_files$datapath))
+  print(bam_file_list)
   # get original names
   bam_file_names <- as.vector(input$user_bam_files$name)
   # remove bam extension
   bam_file_names <- str_remove(bam_file_names,".bam")
   # rename list to original names
   names(bam_file_list) <- bam_file_names
+  print(bam_file_list)
   
   # run bambu function
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
-  
+ 
   # run gffcompare
   #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
-  system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   
-  system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
-  system(paste0("rm gffcmp*"))
+  #system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
+  #system(paste0("rm gffcmp*"))
   
   # check files exist
   if (file.exists("bambu_output/bambu_transcript_annotations.gtf") && file.exists("bambu_output/gffcompare.tmap.txt")) {
@@ -148,6 +207,47 @@ integration_server <- function(input, output, session) {
 
 # shiny app server
 server <- function(input, output, session) {
+  # check if the zip file is created
+  file_available_bam <- reactiveVal(FALSE)
+  
+  #MAP FASTQ MODULE
+  observeEvent(input$map_fastqs_submit_button, { 
+    
+    session$sendCustomMessage("disableButton", list(id = "map_fastqs_submit_button", spinnerId = "fastq-loading-container")) # disable submit button
+    fastq_server(input, output, session)
+    if (file.exists("fastq_output/bam_results.zip")) {
+      file_available_bam(TRUE)
+      
+    }
+  })
+  
+  
+  
+  # enable download once files are available
+  observe({
+    if (file_available_bam()) {
+      shinyjs::enable("map_fastqs_download_button")
+      shinyjs::runjs("document.getElementById('map_fastqs_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "map_fastqs_submit_button", spinnerId = "fastq-loading-container")) # re-enable submit button
+      
+    }
+  })
+  
+  # download handler for the database results.zip file
+  output$map_fastqs_download_button <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_bam_results.zip")
+    },
+    content = function(file) {
+      file.copy("fastq_output/bam_results.zip", file)
+      
+    }
+  )
+  
+
+  
+  #END FASTQ MODULE
+ 
   
   # IDENTIFY ISOFORMS MODULE
   file_available_bambu <- reactiveVal(FALSE)
@@ -179,6 +279,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       file.copy("bambu_output/bambu_results.zip", file)
+      
     }
   )
   
@@ -189,6 +290,7 @@ server <- function(input, output, session) {
   
   # create reactive value for the database zip
   file_available_mm <- reactiveVal(FALSE)
+  
   
   # run database function when submit is pressed
   observeEvent(input$proteomics_submit_button, { 
