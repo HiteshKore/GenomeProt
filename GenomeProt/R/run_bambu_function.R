@@ -4,7 +4,7 @@ run_bambu_function <- function(bam_file_list, gtf, genome) {
   system(paste0("mkdir bambu_output"))
   
 	bambuAnnotations <- prepareAnnotations(gtf)
-	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genome, NDR = 1)
+	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genome)
 	writeBambuOutput(se, path = "bambu_output")
 	
 	tx_data <- as.data.frame(mcols(se))
