@@ -4,73 +4,52 @@ library(shinyjs)
 # internal server functions
 fastq_server <- function(input, output, session) {
   
-  
   req(input$user_threads,input$user_reference_genome$datapath,input$user_fastq_files$datapath)  # required
   
   outdir_bam="fastq_output/"
-  # Check if the output directory exists
+  # check if the output directory exists
   if (dir.exists(outdir_bam)) {
-    system(paste0("rm -rf ", outdir_bam,"*"))
-    
-    
+    system(paste0("rm -rf ", outdir_bam, "*"))
   } else {
-    system(paste0("mkdir ",outdir_bam))
+    system(paste0("mkdir ", outdir_bam))
   }
   
+  # create dataframe with sample details and add prefix column 
+  user_fastq_files_df <- input$user_fastq_files %>% 
+    mutate(file_prefix = str_replace_all(name, c("\\.fastq\\.gz$" = "", "\\.fastq$" = "")))
   
+  # map reads
+  if (input$sequencing_type=="long-read") {
   
-  #create dataframe with sample details and add prefix column 
-  user_fastq_files_df <- input$user_fastq_files %>%mutate(file_prefix = str_replace_all(name, c("\\.fastq\\.gz$" = "", "\\.fastq$" = "")))
-  
-  #generate index
-  
-  index_file=paste0("fastq_output/",str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")),".mmi")
-  
-  minimap2_index_command=paste0("minimap2 -k 14 -d ",index_file," ", input$user_reference_genome$datapath)
-  print(minimap2_index_command)
-  system(minimap2_index_command)
-  
-  if (input$sequencing_type=="nanopore" && file.exists(index_file))
-  {
+    # generate index
+    index_file <- paste0("fastq_output/", str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")), ".mmi")
     
-    
-    
+    minimap2_index_command <- paste0("minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
+    #minimap2_index_command <- paste0("source activate IsoLamp; minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
+    print(minimap2_index_command)
+    system(minimap2_index_command)
+  
     for (i in 1:nrow(user_fastq_files_df)) {
       fastq_file <- user_fastq_files_df$datapath[i]
       file_prefix <- user_fastq_files_df$file_prefix[i]
       
-      minimap2_command=paste0("minimap2 -t ", input$user_threads, " -ax splice --sam-hit-only --secondary=no ",index_file," ",fastq_file, "| samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam,file_prefix,".bam")
-      print(minimap2_command)
-      system(minimap2_command)
-      
-    }
-    
-    
-    
-  }else if (input$sequencing_type=="pacbio" && file.exists(index_file)) {
-    
-    
-    for (i in 1:nrow(user_fastq_files_df)) {
-      fastq_file <- user_fastq_files_df$datapath[i]
-      file_prefix <- user_fastq_files_df$file_prefix[i]
-      
-      minimap2_command=paste0("minimap2 -t ", input$user_threads, " -ax splice:hq -uf --sam-hit-only --secondary=no ",index_file," ",fastq_file, "| samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam,file_prefix,".bam")
+      minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, file_prefix, ".bam")
+      #minimap2_command <- paste0("source activate IsoLamp; minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, file_prefix, ".bam")
       
       print(minimap2_command)
       system(minimap2_command)
     }
-    
+
   }
   
   # check bam files exist
   bam_files <- list.files(path = outdir_bam, "\\.bam$", full.names = TRUE)
   
   if (length(bam_files)>0) {
-    #   # create a zip file with results
-    zipfile_path <- paste0(outdir_bam,"bam_results.zip")
+    # create a zip file with results
+    zipfile_path <- paste0(outdir_bam, "bam_results.zip")
     zip(zipfile = zipfile_path, files = bam_files)
   }
-  
   
 }
 
@@ -93,6 +72,7 @@ bambu_server <- function(input, output, session) {
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
   
   # run gffcompare
+  
   #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   
@@ -207,21 +187,20 @@ integration_server <- function(input, output, session) {
 
 # shiny app server
 server <- function(input, output, session) {
+  
+  # MAP FASTQ MODULE
+  
   # check if the zip file is created
   file_available_bam <- reactiveVal(FALSE)
   
-  #MAP FASTQ MODULE
   observeEvent(input$map_fastqs_submit_button, { 
     
     session$sendCustomMessage("disableButton", list(id = "map_fastqs_submit_button", spinnerId = "fastq-loading-container")) # disable submit button
     fastq_server(input, output, session)
     if (file.exists("fastq_output/bam_results.zip")) {
       file_available_bam(TRUE)
-      
     }
   })
-  
-  
   
   # enable download once files are available
   observe({
@@ -229,7 +208,6 @@ server <- function(input, output, session) {
       shinyjs::enable("map_fastqs_download_button")
       shinyjs::runjs("document.getElementById('map_fastqs_download_button').style.backgroundColor = '#4CAF50';")
       session$sendCustomMessage("enableButton", list(id = "map_fastqs_submit_button", spinnerId = "fastq-loading-container")) # re-enable submit button
-      
     }
   })
   
@@ -240,16 +218,14 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       file.copy("fastq_output/bam_results.zip", file)
-      
     }
   )
   
-  
-  
-  #END FASTQ MODULE
+  # END FASTQ MODULE
   
   
   # IDENTIFY ISOFORMS MODULE
+  
   file_available_bambu <- reactiveVal(FALSE)
   
   observeEvent(input$bambu_submit_button, { 
