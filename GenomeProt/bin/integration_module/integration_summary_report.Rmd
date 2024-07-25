@@ -15,7 +15,7 @@ library(RColorBrewer)
 library(data.table)
 options(scipen=999)
 
-df <- fread("../integ_output/peptide_info.csv")
+df <- fread("../../integ_output/peptide_info.csv")
 
 ```
 
