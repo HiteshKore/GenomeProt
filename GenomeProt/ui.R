@@ -130,7 +130,9 @@ ui <- dashboardPage(
               h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
               fluidRow(
                 column(4,
-                       fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       selectInput("bambu_organism", label = "Organism:", 
+                                   choices = list("human" = "human", "mouse" = "mouse"), 
+                                   selected = "human"),
                        fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
                        actionButton("bambu_submit_button", "Submit", class = "btn btn-primary")
@@ -195,7 +197,7 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "integration", 
               h2("Integrate proteomics results with transcriptomics"),
-              h5("Creates GTFs of peptides, ORFs and transcripts"),
+              h5("Creates BED12s and GTFs of peptides, ORFs and transcripts for visualisation and produces summary data"),
               fluidRow(
                 column(4,
                        fileInput("user_proteomics_file", "Upload proteomics results:", NULL, buttonLabel = "Browse...", multiple = FALSE),
