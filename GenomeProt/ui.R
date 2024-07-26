@@ -12,8 +12,8 @@ ui <- dashboardPage(
   # tabs
   dashboardSidebar(
     sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
-                menuItem("Map FASTQs", tabName = "map_fastqs", icon = icon("dna")),
-                menuItem("Identify isoforms", tabName = "run_bambu", icon = icon("magnifying-glass")),
+                #menuItem("Map FASTQs", tabName = "map_fastqs", icon = icon("dna")),
+                #menuItem("Identify isoforms", tabName = "run_bambu", icon = icon("magnifying-glass")),
                 menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
                 menuItem("Analyse MS proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
                 menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
@@ -104,67 +104,127 @@ ui <- dashboardPage(
                 )
               )
       ),
-      tabItem(tabName = "map_fastqs", 
-              h2("Map FASTQ files to the genome"),
-              h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
-              fluidRow(
-                column(4,
-                       # change to long-read and short-read if the minimap2 commands are the same
-                       selectInput("sequencing_type", label = "Sequencing platform:", 
-                                   choices = list("long-read"),
-                                   selected = "long-read"),
-                       numericInput("user_threads", label = "CPUs:", value = 1),
-                       fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
-                       actionButton("map_fastqs_submit_button", "Submit", class = "btn btn-primary")
-                ),
-                column(6,
-                       HTML("<h3>Download your results:</h3>"),
-                       downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:70%;"), # initially disabled
-                       div(id = "fastq-loading-container", class = "loading-container", div(class = "spinner"))
-                )
-              )
-      ),
-      tabItem(tabName = "run_bambu", 
-              h2("Perform isoform discovery on BAM files with Bambu"),
-              h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
-              fluidRow(
-                column(4,
-                       selectInput("bambu_organism", label = "Organism:", 
-                                   choices = list("human" = "human", "mouse" = "mouse"), 
-                                   selected = "human"),
-                       fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
-                       actionButton("bambu_submit_button", "Submit", class = "btn btn-primary")
-                ),
-                column(6,
-                       HTML("<h3>Download your results:</h3>"),
-                       downloadButton("bambu_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
-                       div(id = "bambu-loading-container", class = "loading-container", div(class = "spinner"))
-                )
-              )
-      ),
+      
+      # tabItem(tabName = "map_fastqs", 
+      #         h2("Map FASTQ files to the genome"),
+      #         h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
+      #         fluidRow(
+      #           column(4,
+      #                  #
+      #           ),
+      #           column(6,
+      #                  HTML("<h3>Download your results:</h3>"),
+      #                  downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:70%;"), # initially disabled
+      #                  div(id = "fastq-loading-container", class = "loading-container", div(class = "spinner"))
+      #           )
+      #         )
+      # ),
+      # tabItem(tabName = "run_bambu", 
+      #         h2("Perform isoform discovery on BAM files with Bambu"),
+      #         h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
+      #         fluidRow(
+      #           column(4,
+      #                  #
+      #           ),
+      #           column(6,
+      #                  HTML("<h3>Download your results:</h3>"),
+      #                  downloadButton("bambu_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
+      #                  div(id = "bambu-loading-container", class = "loading-container", div(class = "spinner"))
+      #           )
+      #         )
+      # ),
+      
       tabItem(tabName = "db_generation", 
               h2("Generate a custom proteogenomics database"),
               h5("Creates an amino acid FASTA of all ORFs in your data to use as input for MaxQuant/MSFragger etc."),
               fluidRow(
                 column(6,
-                       fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_ref_gtf_file", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       selectInput("organism", label = "Organism:", 
-                                   choices = list("human" = "human", "mouse" = "mouse"), 
-                                   selected = "human"),
-                       #selectInput("startcodon", label = "Start codon:", choices = list("ATG" = "ATG", "ATG+CTG" = "ATG+CTG"), selected = "ATG"),
-                       numericInput("min_orf_length", 
-                                    label = "ORF length (amino acids):", 
-                                    value = 30),
-                       checkboxInput("user_find_utr_orfs", label = "Find short upstream open reading frames (uORFs) in 5' UTRs of reference transcripts",
-                                     value = FALSE, width = NULL),
-                       fileInput("user_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       numericInput("minimum_tx_count", 
-                                    label = "Minimum expression threshold (sum per transcript):", 
-                                    value = 5),
-                       actionButton("db_submit_button", "Submit", class = "btn btn-primary")
+                       radioButtons("input_type", h3("Input:"),
+                                      choices = c("FASTQs" = "map_fastqs",
+                                                  "BAMs" = "run_bambu",
+                                                  "GTF" = "db_generation")),
+                       
+                       
+                       conditionalPanel(
+                         condition = "input.input_type == 'map_fastqs'",
+                         h3("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
+                         selectInput("sequencing_type", label = "Sequencing platform:", 
+                                     choices = list("long-read", "short-read"),
+                                     selected = "long-read"),
+                         numericInput("user_threads", label = "CPUs:", value = 1),
+                         selectInput("bambu_organism", label = "Organism:", 
+                                     choices = list("human" = "human", "mouse" = "mouse"), 
+                                     selected = "human"),
+                         numericInput("min_orf_length", 
+                                      label = "ORF length (amino acids):", 
+                                      value = 30),
+                         h5(tags$b("Find short (10 to (ORF length) amino acids) open reading frames in UTRs of reference transcripts:")),
+                         checkboxInput("user_find_utr_5_orfs", label = "Upstream open reading frames (uORFs)",
+                                       value = FALSE, width = NULL),
+                         checkboxInput("user_find_utr_3_orfs", label = "Downstream open reading frames (dORFs)",
+                                       value = FALSE, width = NULL),
+                         numericInput("minimum_tx_count", 
+                                      label = "Minimum expression threshold (sum per transcript):", 
+                                      value = 5),
+                         fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                         fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                         fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
+                         actionButton("map_fastqs_submit_button", "Submit", class = "btn btn-primary")
+                       ),
+                       
+                       
+                       conditionalPanel(
+                         condition = "input.input_type == 'run_bambu'",
+                         h3("Identify (in long-reads) and quantify isoforms, and generate the database"),
+                         selectInput("sequencing_type", label = "Sequencing platform:", 
+                                     choices = list("long-read", "short-read"),
+                                     selected = "long-read"),
+                         numericInput("user_threads", label = "CPUs:", value = 1),
+                         selectInput("bambu_organism", label = "Organism:", 
+                                     choices = list("human" = "human", "mouse" = "mouse"), 
+                                     selected = "human"),
+                         numericInput("min_orf_length", 
+                                      label = "ORF length (amino acids):", 
+                                      value = 30),
+                         h5(tags$b("Find short (10 to (ORF length) amino acids) open reading frames in UTRs of reference transcripts:")),
+                         checkboxInput("user_find_utr_5_orfs", label = "Upstream open reading frames (uORFs)",
+                                       value = FALSE, width = NULL),
+                         checkboxInput("user_find_utr_3_orfs", label = "Downstream open reading frames (dORFs)",
+                                       value = FALSE, width = NULL),
+                         numericInput("minimum_tx_count", 
+                                      label = "Minimum expression threshold (sum per transcript):", 
+                                      value = 5),
+                         fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                         fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
+                         actionButton("bambu_submit_button", "Submit", class = "btn btn-primary")
+                       ),
+                       
+                       
+    
+                       conditionalPanel(
+                         condition = "input.input_type == 'db_generation'",
+                         h3("Generate the database with a GTF"),
+                         selectInput("organism", label = "Organism:", 
+                                     choices = list("human" = "human", "mouse" = "mouse"), 
+                                     selected = "human"),
+                         numericInput("min_orf_length", 
+                                      label = "ORF length (amino acids):", 
+                                      value = 30),
+                         h5(tags$b("Find short (10 to (ORF length) amino acids) open reading frames in UTRs of reference transcripts:")),
+                         checkboxInput("user_find_utr_5_orfs", label = "Upstream open reading frames (uORFs)",
+                                       value = FALSE, width = NULL),
+                         checkboxInput("user_find_utr_3_orfs", label = "Downstream open reading frames (dORFs)",
+                                       value = FALSE, width = NULL),
+                         numericInput("minimum_tx_count", 
+                                      label = "Minimum expression threshold (sum per transcript):", 
+                                      value = 5),
+                         fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                         fileInput("user_ref_gtf_file", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                         fileInput("user_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                         actionButton("db_submit_button", "Submit", class = "btn btn-primary")
+                       )
+                       
+                       
                 ),
                 column(6,
                        HTML("<h3>Download your results:</h3>"),

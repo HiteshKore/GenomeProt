@@ -47,8 +47,8 @@ fastq_server <- function(input, output, session) {
   
   if (length(bam_files)>0) {
     # create a zip file with results
-    zipfile_path <- paste0(outdir_bam, "bam_results.zip")
-    zip(zipfile = zipfile_path, files = bam_files)
+    # zipfile_path <- paste0(outdir_bam, "bam_results.zip")
+    # zip(zipfile = zipfile_path, files = bam_files)
   }
   
 }
@@ -82,9 +82,9 @@ bambu_server <- function(input, output, session) {
   # check files exist
   if (file.exists("bambu_output/bambu_transcript_annotations.gtf") && file.exists("bambu_output/gffcompare.tmap.txt")) {
     # create a zip file with results
-    files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt")
-    zipfile_path <- "bambu_output/bambu_results.zip"
-    zip(zipfile = zipfile_path, files = files_to_zip)
+    # files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt")
+    # zipfile_path <- "bambu_output/bambu_results.zip"
+    # zip(zipfile = zipfile_path, files = files_to_zip)
   }
   
   # if short-reads are supplied this won't work
@@ -96,6 +96,7 @@ database_server <- function(input, output, session) {
   
   req(input$user_gtf_file, input$user_ref_gtf_file)  # GTFs required
   
+  # add dORFs
   if (!is.null(input$user_tx_count_file)) {
     system(paste0("Rscript bin/database_module/generate_proteome.R -g ", input$user_gtf_file$datapath, " -r ", input$user_ref_gtf_file$datapath, " -c ", input$user_tx_count_file$datapath, 
                   " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_orfs))
@@ -107,6 +108,7 @@ database_server <- function(input, output, session) {
   print("Generated ORFs")
   
   # set reference protein database
+  # add more species
   if (input$organism == "human") {
     ref_proteome <- "data/openprot_uniprotDb_hs.txt"
   } else if (input$organism == "mouse") {
@@ -119,10 +121,18 @@ database_server <- function(input, output, session) {
   
   print("Annotated proteome")
   
-  # check files exist
+  # zip results
   if (file.exists("db_output/proteome_database.fasta") && file.exists("db_output/proteome_database_transcripts.gtf")) {
-    # create a zip file with results
-    files_to_zip <- c("db_output/proteome_database.fasta", "db_output/proteome_database_metadata.txt", "db_output/proteome_database_transcripts.gtf")
+    if (input$input_type == "map_fastqs") {
+      # check bam files exist
+      bam_files <- list.files(path = "fastq_output/", "\\.bam$", full.names = TRUE)
+      files_to_zip <- c(bam_files, "bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt", "db_output/proteome_database.fasta", "db_output/proteome_database_metadata.txt", "db_output/proteome_database_transcripts.gtf")
+    } else if (input$input_type == "run_bambu") {
+      files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt", "db_output/proteome_database.fasta", "db_output/proteome_database_metadata.txt", "db_output/proteome_database_transcripts.gtf")
+    } else if (input$input_type == "db_generation") {
+      # create a zip file with results
+      files_to_zip <- c("db_output/proteome_database.fasta", "db_output/proteome_database_metadata.txt", "db_output/proteome_database_transcripts.gtf")
+    }
     zipfile_path <- "db_output/database_results.zip"
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
@@ -131,36 +141,36 @@ database_server <- function(input, output, session) {
 
 proteomics_server <- function(input, output, session) {
   
-  req(input$user_mm_data, input$user_mm_fasta)
-  
-  # get directory path
-  dir_path <- dirname(input$user_mm_data$datapath[1])
-  print(dir_path)
-  
-  mass_spec_names <- c(input$user_mm_data$name)
-  print(mass_spec_names)
-  
-  # new file paths
-  new_file_paths <- file.path(dir_path, mass_spec_names)
-  
-  # rename files
-  file.rename(input$user_mm_data$datapath, new_file_paths)
-  
-  # copy config files
-  # replace all lines:
-  # 'MaxThreadsToUsePerFile = 3'
-  # with user set threads
-  
-  #system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
-  system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
-  
-  # check files exist
-  if (file.exists("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv") && file.exists("proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")) {
-    # create a zip file with results
-    files_to_zip <- c("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv", "proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")
-    zipfile_path <- "proteomics_output/proteomics_results.zip"
-    zip(zipfile = zipfile_path, files = files_to_zip)
-  }
+  # req(input$user_mm_data, input$user_mm_fasta)
+  # 
+  # # get directory path
+  # dir_path <- dirname(input$user_mm_data$datapath[1])
+  # print(dir_path)
+  # 
+  # mass_spec_names <- c(input$user_mm_data$name)
+  # print(mass_spec_names)
+  # 
+  # # new file paths
+  # new_file_paths <- file.path(dir_path, mass_spec_names)
+  # 
+  # # rename files
+  # file.rename(input$user_mm_data$datapath, new_file_paths)
+  # 
+  # # copy config files
+  # # replace all lines:
+  # # 'MaxThreadsToUsePerFile = 3'
+  # # with user set threads
+  # 
+  # #system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  # system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  # 
+  # # check files exist
+  # if (file.exists("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv") && file.exists("proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")) {
+  #   # create a zip file with results
+  #   files_to_zip <- c("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv", "proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")
+  #   zipfile_path <- "proteomics_output/proteomics_results.zip"
+  #   zip(zipfile = zipfile_path, files = files_to_zip)
+  # }
 }
 
 integration_server <- function(input, output, session) {
@@ -196,10 +206,17 @@ server <- function(input, output, session) {
   observeEvent(input$map_fastqs_submit_button, { 
     
     session$sendCustomMessage("disableButton", list(id = "map_fastqs_submit_button", spinnerId = "fastq-loading-container")) # disable submit button
+    
+    # run functions
     fastq_server(input, output, session)
+    bambu_server(input, output, session)
+    database_server(input, output, session)
+    
+    # observe files
     if (file.exists("fastq_output/bam_results.zip")) {
       file_available_bam(TRUE)
     }
+    
   })
   
   # enable download once files are available
@@ -230,12 +247,14 @@ server <- function(input, output, session) {
   
   observeEvent(input$bambu_submit_button, { 
     session$sendCustomMessage("disableButton", list(id = "bambu_submit_button", spinnerId = "bambu-loading-container")) # disable submit button
+    
+    # run functions
     bambu_server(input, output, session)
+    database_server(input, output, session)
     
     # check if the zip file is created
     if (file.exists("bambu_output/bambu_results.zip")) {
       file_available_bambu(TRUE)
-      
     }
   })
   
@@ -264,39 +283,39 @@ server <- function(input, output, session) {
   
   # PROTEOMICS MODULE
   
-  # create reactive value for the database zip
-  file_available_mm <- reactiveVal(FALSE)
-  
-  
-  # run database function when submit is pressed
-  observeEvent(input$proteomics_submit_button, { 
-    session$sendCustomMessage("disableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # disable submit button
-    proteomics_server(input, output, session)
-    
-    # check if the zip file is created
-    if (file.exists("proteomics_output/proteomics_results.zip")) {
-      file_available_mm(TRUE)
-    }
-  })
-  
-  # enable download once files are available
-  observe({
-    if (file_available_mm()) {
-      shinyjs::enable("proteomics_download_button")
-      shinyjs::runjs("document.getElementById('proteomics_download_button').style.backgroundColor = '#4CAF50';")
-      session$sendCustomMessage("enableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # re-enable submit button
-    }
-  })
-  
-  # download handler for the database results.zip file
-  output$proteomics_download_button <- downloadHandler(
-    filename = function() {
-      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_proteomics_results.zip")
-    },
-    content = function(file) {
-      file.copy("proteomics_output/proteomics_results.zip", file)
-    }
-  )
+  # # create reactive value for the database zip
+  # file_available_mm <- reactiveVal(FALSE)
+  # 
+  # 
+  # # run database function when submit is pressed
+  # observeEvent(input$proteomics_submit_button, { 
+  #   session$sendCustomMessage("disableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # disable submit button
+  #   proteomics_server(input, output, session)
+  #   
+  #   # check if the zip file is created
+  #   if (file.exists("proteomics_output/proteomics_results.zip")) {
+  #     file_available_mm(TRUE)
+  #   }
+  # })
+  # 
+  # # enable download once files are available
+  # observe({
+  #   if (file_available_mm()) {
+  #     shinyjs::enable("proteomics_download_button")
+  #     shinyjs::runjs("document.getElementById('proteomics_download_button').style.backgroundColor = '#4CAF50';")
+  #     session$sendCustomMessage("enableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # re-enable submit button
+  #   }
+  # })
+  # 
+  # # download handler for the database results.zip file
+  # output$proteomics_download_button <- downloadHandler(
+  #   filename = function() {
+  #     paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_proteomics_results.zip")
+  #   },
+  #   content = function(file) {
+  #     file.copy("proteomics_output/proteomics_results.zip", file)
+  #   }
+  # )
   
   # END PROTEOMICS MODULE
   
