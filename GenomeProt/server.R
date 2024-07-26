@@ -24,8 +24,8 @@ fastq_server <- function(input, output, session) {
     # generate index
     index_file <- paste0("fastq_output/", str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")), ".mmi")
     
-    minimap2_index_command <- paste0("minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
-    #minimap2_index_command <- paste0("source activate IsoLamp; minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
+    #minimap2_index_command <- paste0("minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
+    minimap2_index_command <- paste0("source activate IsoLamp; minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
     print(minimap2_index_command)
     system(minimap2_index_command)
   
@@ -33,8 +33,8 @@ fastq_server <- function(input, output, session) {
       fastq_file <- user_fastq_files_df$datapath[i]
       file_prefix <- user_fastq_files_df$file_prefix[i]
       
-      minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, file_prefix, ".bam")
-      #minimap2_command <- paste0("source activate IsoLamp; minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, file_prefix, ".bam")
+      #minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, file_prefix, ".bam")
+      minimap2_command <- paste0("source activate IsoLamp; minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, file_prefix, ".bam")
       
       print(minimap2_command)
       system(minimap2_command)
@@ -55,7 +55,7 @@ fastq_server <- function(input, output, session) {
 
 bambu_server <- function(input, output, session) {
   
-  req(input$user_bam_files, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)  # required
+  req(input$user_bam_files, input$user_reference_gtf$datapath, input$bambu_organism)  # required
   
   # create list of BAMs
   bam_file_list <- Rsamtools::BamFileList(as.vector(input$user_bam_files$datapath))
@@ -69,15 +69,15 @@ bambu_server <- function(input, output, session) {
   print(bam_file_list)
   
   # run bambu function
-  run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$user_reference_genome$datapath)
+  run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$organism)
   
   # run gffcompare
   
-  #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   #system(paste0("gffcompare -r ", input$user_reference_genome$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   
-  #system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
-  #system(paste0("rm gffcmp*"))
+  system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
+  system(paste0("rm gffcmp*"))
   
   # check files exist
   if (file.exists("bambu_output/bambu_transcript_annotations.gtf") && file.exists("bambu_output/gffcompare.tmap.txt")) {
@@ -114,8 +114,8 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf db_output all"))
-  system(paste0("python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf db_output all"))
+  system(paste0("source activate py39; python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf db_output all"))
+  #system(paste0("python bin/database_module/annotate_proteome.py db_output/ref_transcripts_in_data.gtf ", ref_proteome, " db_output/ORFome_aa.txt db_output/proteome_database_transcripts.gtf db_output all"))
   
   print("Annotated proteome")
   
@@ -151,8 +151,8 @@ proteomics_server <- function(input, output, session) {
   # 'MaxThreadsToUsePerFile = 3'
   # with user set threads
   
-  #system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
-  system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
+  #system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
   
   # check files exist
   if (file.exists("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv") && file.exists("proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")) {
@@ -363,7 +363,7 @@ server <- function(input, output, session) {
   })
   
   # download handler 
-  output$downloadResultsIntegration <- downloadHandler(
+  output$integ_download_button <- downloadHandler(
     filename = function() {
       paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_integration_results.zip")
     },
