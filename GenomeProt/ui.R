@@ -12,10 +12,9 @@ ui <- dashboardPage(
   # tabs
   dashboardSidebar(
     sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
-                menuItem("Map FASTQs", tabName = "map_fastqs", icon = icon("dna")),
-                menuItem("Identify isoforms", tabName = "run_bambu", icon = icon("magnifying-glass")),
                 menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
-                menuItem("Analyse MS proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
+                # commenting out proteomics for now
+                #menuItem("Analyse MS proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
                 menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
                 menuItem("Visualise results", tabName = "visualisation", icon = icon("chart-bar"))
     )
@@ -104,66 +103,56 @@ ui <- dashboardPage(
                 )
               )
       ),
-      tabItem(tabName = "map_fastqs", 
-              h2("Map FASTQ files to the genome"),
-              h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
-              fluidRow(
-                column(4,
-                       # change to long-read and short-read if the minimap2 commands are the same
-                       selectInput("sequencing_type", label = "Sequencing platform:", 
-                                   choices = list("long-read"),
-                                   selected = "long-read"),
-                       numericInput("user_threads", label = "CPUs:", value = 1),
-                       fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
-                       actionButton("map_fastqs_submit_button", "Submit", class = "btn btn-primary")
-                ),
-                column(6,
-                       HTML("<h3>Download your results:</h3>"),
-                       downloadButton("map_fastqs_download_button", "Download BAM file(s)", disabled = TRUE, style = "width:70%;"), # initially disabled
-                       div(id = "fastq-loading-container", class = "loading-container", div(class = "spinner"))
-                )
-              )
-      ),
-      tabItem(tabName = "run_bambu", 
-              h2("Perform isoform discovery on BAM files with Bambu"),
-              h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
-              fluidRow(
-                column(4,
-                       selectInput("bambu_organism", label = "Organism:", 
-                                   choices = list("human" = "human", "mouse" = "mouse"), 
-                                   selected = "human"),
-                       fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
-                       actionButton("bambu_submit_button", "Submit", class = "btn btn-primary")
-                ),
-                column(6,
-                       HTML("<h3>Download your results:</h3>"),
-                       downloadButton("bambu_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
-                       div(id = "bambu-loading-container", class = "loading-container", div(class = "spinner"))
-                )
-              )
-      ),
+      
       tabItem(tabName = "db_generation", 
               h2("Generate a custom proteogenomics database"),
               h5("Creates an amino acid FASTA of all ORFs in your data to use as input for MaxQuant/MSFragger etc."),
               fluidRow(
                 column(6,
-                       fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_ref_gtf_file", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        selectInput("organism", label = "Organism:", 
                                    choices = list("human" = "human", "mouse" = "mouse"), 
                                    selected = "human"),
-                       #selectInput("startcodon", label = "Start codon:", choices = list("ATG" = "ATG", "ATG+CTG" = "ATG+CTG"), selected = "ATG"),
                        numericInput("min_orf_length", 
                                     label = "ORF length (amino acids):", 
                                     value = 30),
-                       checkboxInput("user_find_utr_orfs", label = "Find short upstream open reading frames (uORFs) in 5' UTRs of reference transcripts",
+                       h5(tags$b("Find short (10 to 'ORF length' amino acids) ORFs in UTRs of reference transcripts:")),
+                       checkboxInput("user_find_utr_5_orfs", label = "Upstream 5' ORFs",
                                      value = FALSE, width = NULL),
-                       fileInput("user_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       checkboxInput("user_find_utr_3_orfs", label = "Downstream 3' ORFs",
+                                     value = FALSE, width = NULL),
                        numericInput("minimum_tx_count", 
                                     label = "Minimum expression threshold (sum per transcript):", 
                                     value = 5),
+                       fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       radioButtons("input_type", h5(tags$b("Select input type:")),
+                                      choices = c("FASTQs" = "fastq_input",
+                                                  "BAMs" = "bam_input",
+                                                  "GTF" = "gtf_input")),
+                       conditionalPanel(
+                         condition = "input.input_type == 'fastq_input'",
+                         #h5("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
+                         selectInput("sequencing_type", label = "Sequencing platform:", 
+                                     choices = list("long-read", "short-read"),
+                                     selected = "long-read"),
+                         numericInput("user_threads", label = "CPUs:", value = 1),
+                         fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                         fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
+                       ),
+                       conditionalPanel(
+                         condition = "input.input_type == 'bam_input'",
+                         #h5("Identify (in long-reads) and quantify isoforms, and generate the database"),
+                         selectInput("sequencing_type", label = "Sequencing platform:", 
+                                     choices = list("long-read", "short-read"),
+                                     selected = "long-read"),
+                         numericInput("user_threads", label = "CPUs:", value = 1),
+                         fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
+                       ),
+                       conditionalPanel(
+                         condition = "input.input_type == 'gtf_input'",
+                         #h5("Generate the database with a GTF"),
+                         fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                         fileInput("user_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE)
+                       ),
                        actionButton("db_submit_button", "Submit", class = "btn btn-primary")
                 ),
                 column(6,
@@ -173,33 +162,33 @@ ui <- dashboardPage(
                 )
               )
       ),
-      tabItem(tabName = "analyse_proteomics", 
-              h2("Run MetaMorpheus with your custom proteogenomics database to analyse MS proteomics data"),
-              h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
-              fluidRow(
-                column(4,
-                       selectInput("protease", label = "Protease:", 
-                                   choices = list("trypsin" = "trypsin"), 
-                                   selected = "trypsin"),
-                       numericInput("mm_cpu", 
-                                    label = "CPUs", 
-                                    value = 1),
-                       fileInput("user_mm_fasta", "Upload 'proteome_database.fasta'", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_mm_data", "Upload mzML/raw file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
-                       actionButton("proteomics_submit_button", "Submit", class = "btn btn-primary")
-                ),
-                column(6,
-                       HTML("<h3>Download your results:</h3>"),
-                       downloadButton("proteomics_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
-                       div(id = "proteomics-loading-container", class = "loading-container", div(class = "spinner"))
-                )
-              )
-      ),
+      # tabItem(tabName = "analyse_proteomics", 
+      #         h2("Run MetaMorpheus with your custom proteogenomics database to analyse MS proteomics data"),
+      #         h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
+      #         fluidRow(
+      #           column(4,
+      #                  selectInput("protease", label = "Protease:", 
+      #                              choices = list("trypsin" = "trypsin"), 
+      #                              selected = "trypsin"),
+      #                  numericInput("mm_cpu", 
+      #                               label = "CPUs", 
+      #                               value = 1),
+      #                  fileInput("user_mm_fasta", "Upload 'proteome_database.fasta'", NULL, buttonLabel = "Browse...", multiple = FALSE),
+      #                  fileInput("user_mm_data", "Upload mzML/raw file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
+      #                  actionButton("proteomics_submit_button", "Submit", class = "btn btn-primary")
+      #           ),
+      #           column(6,
+      #                  HTML("<h3>Download your results:</h3>"),
+      #                  downloadButton("proteomics_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
+      #                  div(id = "proteomics-loading-container", class = "loading-container", div(class = "spinner"))
+      #           )
+      #         )
+      # ),
       tabItem(tabName = "integration", 
               h2("Integrate proteomics results with transcriptomics"),
               h5("Creates BED12s and GTFs of peptides, ORFs and transcripts for visualisation and produces summary data"),
               fluidRow(
-                column(4,
+                column(6,
                        fileInput("user_proteomics_file", "Upload proteomics results:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_fasta_file", "Upload 'proteome_database.fasta':", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_post_gtf_file", "Upload 'proteome_database_transcripts.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),

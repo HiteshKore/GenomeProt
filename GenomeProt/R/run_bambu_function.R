@@ -1,5 +1,5 @@
 
-run_bambu_function <- function(bam_file_list, gtf, organism) { 
+run_bambu_function <- function(bam_file_list, gtf, organism, threads=1) { 
 
   system(paste0("mkdir bambu_output"))
   
@@ -13,7 +13,7 @@ run_bambu_function <- function(bam_file_list, gtf, organism) {
   }
   
 	bambuAnnotations <- prepareAnnotations(gtf)
-	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb)
+	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb, ncore=as.integer(threads))
 	writeBambuOutput(se, path = "bambu_output")
 	
 	tx_data <- as.data.frame(mcols(se))
