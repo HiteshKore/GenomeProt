@@ -46,14 +46,12 @@ RUN conda init bash
 RUN conda install -c "bioconda/label/cf201901" cd-hit
 RUN conda install -c bioconda gffread
 RUN conda install -c bioconda gffcompare
-RUN conda install -c forge metamorpheus
 
 RUN pip install biopython==1.77
 RUN pip install py-cdhit
 RUN pip install peptides
 
 FROM rocker/r-ver:4.3.2
-
 FROM bioconductor/bioconductor_docker:devel
 
 # install R packages required 
@@ -79,6 +77,7 @@ RUN R -e 'install.packages(c(\
               "optparse"), \
               repos="https://packagemanager.rstudio.com/cran/__linux__/focal/2021-04-23")'
 
+
 # Bioconductor
 RUN R -e 'BiocManager::install(ask = F)' && R -e 'BiocManager::install(c("rtracklayer", \
               "ORFik", \
@@ -91,6 +90,7 @@ RUN R -e 'BiocManager::install(ask = F)' && R -e 'BiocManager::install(c("rtrack
               "Biostrings", \
               "SummarizedExperiment", \
               "Rsamtools", \
+              "mygene", \
               "vsn", \
               "patchwork", ask = F))'
 

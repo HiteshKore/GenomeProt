@@ -14,6 +14,7 @@ suppressMessages({
   library(stringdist)
   library(Repitools)
   library(optparse)
+  library(mygene)
 })
 
 source("global.R")
@@ -284,5 +285,19 @@ export(combined, "integ_output/combined_annotations.gtf", format="gtf")
 
 # ---------------------------------------- #
 
+
+# add gene names #
+
+# gtf_import <- rtracklayer::import("~/Documents/GenomeProt_tmp/demo_datasets/6_vis_module/combined_annotations.gtf", format="gtf") %>% as_tibble() %>% 
+#   separate(gene_id, into = c("gene_id"), sep = "\\.") %>% dplyr::filter(!is.na(gene_id))
+# 
+# ensg_ids <- as.vector(unique(gtf_import$gene_id))
+# 
+# gene_ids <- queryMany(ensg_ids, scopes="ensembl.gene", fields="symbol", species="human",  returnall=TRUE)
+# 
+# gene_df <- as.data.frame(gene_ids[["response"]])
+
+
+#
 
 
