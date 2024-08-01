@@ -27,8 +27,8 @@ fastq_server <- function(input, output, session) {
     # generate index
     index_file <- paste0(outdir_bam, "/", str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")), ".mmi")
     
-    minimap2_index_command <- paste0("minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
-    #minimap2_index_command <- paste0("source activate IsoLamp; minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
+    #minimap2_index_command <- paste0("minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
+    minimap2_index_command <- paste0("source activate IsoLamp; minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
     print(minimap2_index_command)
     system(minimap2_index_command)
   
@@ -36,8 +36,8 @@ fastq_server <- function(input, output, session) {
       fastq_file <- user_fastq_files_df$datapath[i]
       file_prefix <- user_fastq_files_df$file_prefix[i]
       
-      minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, file_prefix, ".bam")
-      #minimap2_command <- paste0("source activate IsoLamp; minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
+      #minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
+      minimap2_command <- paste0("source activate IsoLamp; minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
       
       print(minimap2_command)
       system(minimap2_command)
@@ -50,6 +50,8 @@ fastq_server <- function(input, output, session) {
 }
 
 bambu_server <- function(input, output, session) {
+  
+  outdir_bam="mapping_output"
   
   if (input$input_type == "bam_input") {
     
@@ -89,8 +91,8 @@ bambu_server <- function(input, output, session) {
   
   # run gffcompare
   
-  #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
-  system(paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
+  #system(paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   
   system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
   system(paste0("rm gffcmp*"))
@@ -128,8 +130,8 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
-  system(paste0("python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
+  system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
+  #system(paste0("python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
   
   print("Annotated proteome")
   
@@ -412,7 +414,12 @@ server <- function(input, output, session) {
     } 
     
     # update genes available
-    genes_available <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
+    ensembl_ids <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
+    
+    genes_list <- data_storage$res_tx_import %>% 
+      dplyr::filter(gene_id %in% ensembl_ids)
+    
+    genes_available <- unique(genes_list$gene_name)
     
     updateSelectInput(session, "gene_selector", choices = genes_available)
     

@@ -38,15 +38,15 @@ proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
 
-# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/functions.R")
+# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/integration_functions.R")
 # proteomics_import_file <- "~/Documents/integration_bugs/peptides.txt"
 # fasta_import_file <- "~/Documents/integration_bugs/ProteomeDb.fasta"
 # gtf_import_file <- "~/Documents/integration_bugs/ORFome_transcripts.gtf"
 # 
 # 
-# proteomics_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/integration_module/human/peptide.tsv"
-# fasta_import_file <- "~/Documents/GenomeProt_tmp/test_datasets/integration_module/proteome_database.fasta"
-# gtf_import_file <- "~/Documents/GenomeProt_tmp/test_datasets/integration_module/proteome_database_transcripts.gtf"
+# proteomics_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/5_integration_module/peptide.tsv"
+# fasta_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/5_integration_module/proteome_database.fasta"
+# gtf_import_file <- "~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/database_output/proteome_database_transcripts.gtf"
 
 # ------------- import files ------------- #
 
@@ -285,19 +285,5 @@ export(combined, "integ_output/combined_annotations.gtf", format="gtf")
 
 # ---------------------------------------- #
 
-
-# add gene names #
-
-# gtf_import <- rtracklayer::import("~/Documents/GenomeProt_tmp/demo_datasets/6_vis_module/combined_annotations.gtf", format="gtf") %>% as_tibble() %>% 
-#   separate(gene_id, into = c("gene_id"), sep = "\\.") %>% dplyr::filter(!is.na(gene_id))
-# 
-# ensg_ids <- as.vector(unique(gtf_import$gene_id))
-# 
-# gene_ids <- queryMany(ensg_ids, scopes="ensembl.gene", fields="symbol", species="human",  returnall=TRUE)
-# 
-# gene_df <- as.data.frame(gene_ids[["response"]])
-
-
-#
 
 
