@@ -36,7 +36,7 @@ fastq_server <- function(input, output, session) {
       fastq_file <- user_fastq_files_df$datapath[i]
       file_prefix <- user_fastq_files_df$file_prefix[i]
       
-      minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, file_prefix, ".bam")
+      minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
       #minimap2_command <- paste0("source activate IsoLamp; minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh -F 2308 | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
       
       print(minimap2_command)
@@ -50,6 +50,8 @@ fastq_server <- function(input, output, session) {
 }
 
 bambu_server <- function(input, output, session) {
+  
+  outdir_bam="mapping_output"
   
   if (input$input_type == "bam_input") {
     
@@ -412,7 +414,12 @@ server <- function(input, output, session) {
     } 
     
     # update genes available
-    genes_available <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
+    ensembl_ids <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
+    
+    genes_list <- data_storage$res_tx_import %>% 
+      dplyr::filter(gene_id %in% ensembl_ids)
+    
+    genes_available <- unique(genes_list$gene_name)
     
     updateSelectInput(session, "gene_selector", choices = genes_available)
     
