@@ -43,9 +43,9 @@ gtf_import_file <- opt$gtf
 # gtf_import_file <- "~/Documents/integration_bugs/ORFome_transcripts.gtf"
 # 
 # 
-proteomics_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/peptide_subset.tsv"
-fasta_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ProteomeDb.fasta"
-gtf_import_file <- "~/Documents/proteogenomics/2024/miguel_tx_and_proteomics/ORFome_transcripts.gtf"
+# proteomics_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/integration_module/human/peptide.tsv"
+# fasta_import_file <- "~/Documents/GenomeProt_tmp/test_datasets/integration_module/proteome_database.fasta"
+# gtf_import_file <- "~/Documents/GenomeProt_tmp/test_datasets/integration_module/proteome_database_transcripts.gtf"
 
 # ------------- import files ------------- #
 

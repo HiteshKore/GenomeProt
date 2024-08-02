@@ -20,7 +20,7 @@ import_proteomics_data <- function(proteomics_file) {
   # df <- as.data.frame(split_data, stringsAsFactors = FALSE)
   
   
-  #proteomics_file <- "~/Documents/proteogenomics/2024/ben_data/report.pr_matrix.tsv"
+  #proteomics_file <- "~/Documents/GenomeProt_tmp/demo_datasets/integration_module/human/peptide.tsv"
   
   # import proteomics
   protfile <- fread(proteomics_file)
