@@ -16,7 +16,7 @@ import subprocess
 def main():
   args=sys.argv
   if len(args) != 8:
-        print("Usage: python3 annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all>")
+        print("Usage: python3 annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length_min>")
         sys.exit(1)
   else:
     
