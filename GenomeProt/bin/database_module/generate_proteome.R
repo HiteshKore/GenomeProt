@@ -36,7 +36,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
   
   # remove scaffolds and weird chromosomes
   bambu_data <- bambu_data[grep("chr", seqnames(bambu_data))]
-
+  
   # keep rows without _ or . in the chromosomes
   keep_rows <- !grepl("[._]", seqnames(bambu_data))
   
@@ -77,7 +77,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
   bambu_data_gr <- makeGRangesFromDataFrame(bambu_merged,
                                             keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
                                             seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
-                                            starts.in.df.are.0based=FALSE, na.rm=TRUE)
+                                            starts.in.df.are.0based=FALSE)
   
   # remove extra mcols
   mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name", "exon_number")]
@@ -164,7 +164,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   orf_aa_seq_df_genomic_coordinates$names <- NULL
   
   combined <- orf_aa_seq_df_genomic_coordinates
-
+  
   if (find_UTR_5_orfs == FALSE & find_UTR_3_orfs == FALSE) {
     
     ref_transcripts <- rtracklayer::import(referencegtf)
@@ -455,6 +455,5 @@ if (!is.null(tx_count_path)) {
 
 # run orfik to find ORFs
 get_transcript_orfs(filteredgtf="database_output/proteome_database_transcripts.gtf", organism=organism, orf_len=min_orf_length, find_UTR_5_orfs=find_5_orfs, find_UTR_3_orfs=find_3_orfs, referencegtf=reference_gtf)
-
 
 
