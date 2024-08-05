@@ -4,7 +4,7 @@
 source("global.R")
 
 # import gtf and filter for minimum transcript counts
-filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
+filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
   # customgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_subset.gtf"
   # tx_counts <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_counts.csv"
   # min_count <- 40
@@ -34,17 +34,55 @@ filter_custom_gtf <- function(customgtf, tx_counts=NA, min_count=NA) {
     
   } 
   
-  # remove scaffolds etc
+  # remove scaffolds and weird chromosomes
   bambu_data <- bambu_data[grep("chr", seqnames(bambu_data))]
+
+  # keep rows without _ or . in the chromosomes
+  keep_rows <- !grepl("[._]", seqnames(bambu_data))
+  
+  # subset the GRanges
+  bambu_data <- bambu_data[keep_rows]
   
   # filter based on strand
   okstrand <- c("+", "-")
   bambu_data <- bambu_data[strand(bambu_data) %in% okstrand]
   
+  # get gene names
+  
+  # convert to tibble
+  bambu_df <- bambu_data %>% as_tibble()
+  
+  # remove version numbers for search
+  bambu_df <- bambu_df %>% separate(gene_id, into="ensg_id", sep="\\.", remove = FALSE)
+  
+  # use mygene to search for gene names
+  gene_query <- queryMany(unique(bambu_df$ensg_id), scopes="ensembl.gene", fields="symbol", species=as.character(organism),  returnall=TRUE)
+  
+  # make df
+  gene_df <- as.data.frame(gene_query[["response"]])
+  
+  # if there was no name found, use original ID
+  gene_df <- gene_df %>% 
+    mutate(gene_name = case_when(
+      is.na(symbol) ~ query,
+      !is.na(symbol) ~ symbol
+    )) %>% 
+    dplyr::select(query, gene_name)
+  
+  # merge results 
+  bambu_merged <- merge(bambu_df, gene_df, by.x="ensg_id", by.y="query", all.x=T, all.y=F)
+  bambu_merged$ensg_id <- NULL
+  
+  # make GRanges including new names
+  bambu_data_gr <- makeGRangesFromDataFrame(bambu_merged,
+                                            keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
+                                            seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
+                                            starts.in.df.are.0based=FALSE, na.rm=TRUE)
+  
   # remove extra mcols
-  mcols(bambu_data) <- mcols(bambu_data)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "exon_number")]
-  bambu_exons <- bambu_data[bambu_data$type == "exon"]
-  bambu_transcripts <- bambu_data[bambu_data$type == "transcript"]
+  mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name", "exon_number")]
+  bambu_exons <- bambu_data_gr[bambu_data_gr$type == "exon"]
+  bambu_transcripts <- bambu_data_gr[bambu_data_gr$type == "transcript"]
   
   # sort by chr and locations
   bambu_exons <- sortSeqlevels(bambu_exons)
@@ -410,9 +448,9 @@ system("mkdir database_output")
 
 # run filter_custom_gtf, check if counts are present
 if (!is.null(tx_count_path)) {
-  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, tx_counts=tx_count_path, min_count=minimum_tx_count)
+  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, tx_counts=tx_count_path, min_count=minimum_tx_count)
 } else {
-  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path)
+  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism)
 }
 
 # run orfik to find ORFs

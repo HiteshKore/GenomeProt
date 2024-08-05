@@ -1,10 +1,10 @@
 
 
 # define visualisation function
-plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcounts=NA, min_intron_len=500) {
+plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcounts=NA, min_intron_len=500) {
   
   # test vars
-  # gene_name <- "ENSG00000167460"
+  # gene_symbol <- "ARHGEF40"
   # tx_res <- res_tx_import
   # pep_res <- res_pep_import
   # orf_res <- res_ORF_import
@@ -12,14 +12,18 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
   # txcounts <- countstm
   # pepcounts <- countspm
   
-  if (!(gene_name %in% tx_res$gene_id)) {
+  if (!(gene_symbol %in% tx_res$gene_name)) {
     print("Provided gene was not found in data")
     stop()
   }
   
+    tx_res <- tx_res %>% 
+      dplyr::filter(!is.na(gene_name), gene_name == gene_symbol)
+    
+    ensg_id <- tx_res$gene_id[1]
+      
     # filter for selected gene
     tx_res <- tx_res %>% 
-      dplyr::filter(!is.na(gene_id), gene_id == gene_name) %>% 
       mutate(feature_type = "Transcripts",
              peptide_type = "Transcripts",
              ORF_id = NA) %>% 
@@ -28,7 +32,7 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
     # filter for selected gene
     pep_res$transcript_id <- pep_res$peptide
     pep_res <- pep_res %>% 
-      dplyr::filter(!is.na(gene_id), gene_id == gene_name) %>% 
+      dplyr::filter(!is.na(gene_id), gene_id == ensg_id) %>% 
       separate(naming, into="tx_id", sep="_")
     
     pep_res <- pep_res %>% 
@@ -41,22 +45,19 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
       ungroup() %>% 
       separate(ORF_id, into="ORF_id", sep="\\|") %>% 
       dplyr::select(seqnames,start,end,strand,type,gene_id,transcript_id,tx_id,feature_type,peptide_type,exon_number,ORF_id)
-    
-    
-    
+
     # filter for selected gene
-    #orf_res$transcript_id <- orf_res$tx_id
     orf_res$ORF_id <- NULL
     
     orf_res <- orf_res %>% 
       dplyr::filter(transcript_id %in% pep_res$tx_id) %>% 
       mutate(type = "CDS",
              feature_type = "Transcripts",
-             gene_id = gene_name,
+             gene_id = ensg_id,
              peptide_type = "Transcripts") %>% 
       group_by(transcript_id) %>% 
       mutate(ORF_id = case_when(
-        exon_number == 1 ~ PID,
+        as.numeric(exon_number) == 1 ~ paste0(PID),
         TRUE ~ NA)) %>% 
       ungroup() %>% 
       separate(ORF_id, into="ORF_id", sep="\\|") %>%
@@ -135,7 +136,7 @@ plot_gene <- function(gene_name, tx_res, pep_res, orf_res, txcounts=NA, pepcount
       geom_range(aes(fill = peptide_type), show.legend = FALSE, height = 0.5) +
       geom_range(data = gtf_cds, height = 0.75, fill = "#295D9B") +
       ylab("") +
-      xlab(paste0(unique(tx_gtf_to_plot$seqnames), " ", unique(tx_gtf_to_plot$gene_id))) +
+      xlab(paste0(unique(tx_gtf_to_plot$seqnames), " ", gene_symbol)) +
       theme_bw() +
       theme(strip.background = element_blank(),
             strip.text.y = element_blank()) +
