@@ -130,8 +130,11 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
+
   #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
   system(paste0("python bin/database_module/annotate_proteome.py ",input$user_reference_gtf$datapath ," ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type ," ", input$min_orf_length))
+  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all ", input$min_orf_length))
+  system(paste0("python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all ", input$min_orf_length))
   
   print("Annotated proteome")
   
