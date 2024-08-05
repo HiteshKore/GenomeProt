@@ -14,6 +14,7 @@ suppressMessages({
   library(stringdist)
   library(Repitools)
   library(optparse)
+  library(mygene)
 })
 
 source("global.R")
@@ -37,15 +38,15 @@ proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
 
-# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/functions.R")
+# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/integration_functions.R")
 # proteomics_import_file <- "~/Documents/integration_bugs/peptides.txt"
 # fasta_import_file <- "~/Documents/integration_bugs/ProteomeDb.fasta"
 # gtf_import_file <- "~/Documents/integration_bugs/ORFome_transcripts.gtf"
 # 
 # 
-# proteomics_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/integration_module/human/peptide.tsv"
-# fasta_import_file <- "~/Documents/GenomeProt_tmp/test_datasets/integration_module/proteome_database.fasta"
-# gtf_import_file <- "~/Documents/GenomeProt_tmp/test_datasets/integration_module/proteome_database_transcripts.gtf"
+# proteomics_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/5_integration_module/peptide.tsv"
+# fasta_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/5_integration_module/proteome_database.fasta"
+# gtf_import_file <- "~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/database_output/proteome_database_transcripts.gtf"
 
 # ------------- import files ------------- #
 
