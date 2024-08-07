@@ -12,7 +12,8 @@ import re
 import peptides as pep
 from parse_reference_gtf  import *
   from annotate_proteome_functions import *
-  import subprocess
+from annotate_proteome_functions import *
+import subprocess
 
 
 def main():
