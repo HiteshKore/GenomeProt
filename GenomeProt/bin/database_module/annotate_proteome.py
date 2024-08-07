@@ -512,6 +512,8 @@ def main():
     
     if os.path.isfile(outdir+"cdhit_out"):
       subprocess.run(['rm', '-rf', outdir+"cdhit_out*"], check=True)
+      subprocess.run(['rm', '-rf', outdir+"cdhit_out"], check=True)
+      subprocess.run(['rm', '-rf', outdir+"cdhit_out.clstr"], check=True)
   
 
 

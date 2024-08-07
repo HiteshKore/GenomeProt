@@ -154,19 +154,6 @@ ui <- dashboardPage(
                          fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
                        ),
                        conditionalPanel(
-                         condition = "input.input_type == 'bam_input'",
-                         #h5("Identify (in long-reads) and quantify isoforms, and generate the database"),
-                         selectInput("sequencing_type", label = "Sequencing platform:", 
-                                     choices = list("long-read", "short-read"),
-                                     selected = "long-read"),
-                         numericInput("user_threads", label = "CPUs:", value = 1),
-                         selectInput("database_type", label = "ORFs to be included in proteomedb:", 
-                                     choices = list("canonical", "all"),
-                                     selected = "all"),
-                         fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
-                       )
-                       ,
-                       conditionalPanel(
                          condition = "input.input_type == 'gtf_input'",
                          #h5("Generate the database with a GTF"),
                          selectInput("database_type", label = "ORFs to be included in proteomedb:", 
