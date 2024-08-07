@@ -12,16 +12,25 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
   # txcounts <- countstm
   # pepcounts <- countspm
   
-  if (!(gene_symbol %in% tx_res$gene_name)) {
-    print("Provided gene was not found in data")
-    stop()
-  }
+  # if (!(gene_symbol %in% tx_res$gene_name)) {
+  #   print("Provided gene was not found in data")
+  #   stop()
+  # }
   
+  if (startsWith(gene_symbol, "ENSG")) {
+    ensg_id <- gene_symbol
+    tx_res <- tx_res %>% 
+      dplyr::filter(!is.na(gene_id), gene_id == gene_symbol)
+  } else if (startsWith(gene_symbol, "Bambu")) {
+    ensg_id <- gene_symbol
+    tx_res <- tx_res %>% 
+      dplyr::filter(!is.na(gene_id), gene_id == gene_symbol)
+  } else {
     tx_res <- tx_res %>% 
       dplyr::filter(!is.na(gene_name), gene_name == gene_symbol)
-    
     ensg_id <- tx_res$gene_id[1]
-      
+  }
+  
     # filter for selected gene
     tx_res <- tx_res %>% 
       mutate(feature_type = "Transcripts",
