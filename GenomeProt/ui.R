@@ -125,9 +125,9 @@ ui <- dashboardPage(
                                     value = 5),
                        fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        radioButtons("input_type", h5(tags$b("Select input type:")),
-                                      choices = c("FASTQs" = "fastq_input",
-                                                  "BAMs" = "bam_input",
-                                                  "GTF" = "gtf_input")),
+                                    choices = c("FASTQs" = "fastq_input",
+                                                "BAMs" = "bam_input",
+                                                "GTF" = "gtf_input")),
                        conditionalPanel(
                          condition = "input.input_type == 'fastq_input'",
                          #h5("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
