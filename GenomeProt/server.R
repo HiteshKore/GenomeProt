@@ -1,3 +1,4 @@
+
 library(shiny)
 library(shinyjs)
 
@@ -23,7 +24,7 @@ fastq_server <- function(input, output, session) {
   
   # map reads
   if (input$sequencing_type == "long-read") {
-  
+    
     # generate index
     index_file <- paste0(outdir_bam, "/", str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")), ".mmi")
     
@@ -31,7 +32,7 @@ fastq_server <- function(input, output, session) {
     #minimap2_index_command <- paste0("source activate IsoLamp; minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
     print(minimap2_index_command)
     system(minimap2_index_command)
-  
+    
     for (i in 1:nrow(user_fastq_files_df)) {
       fastq_file <- user_fastq_files_df$datapath[i]
       file_prefix <- user_fastq_files_df$file_prefix[i]
@@ -42,7 +43,7 @@ fastq_server <- function(input, output, session) {
       print(minimap2_command)
       system(minimap2_command)
     }
-
+    
   } else if (input$sequencing_type == "short-read") {
     # short-read methods
   }
@@ -69,7 +70,7 @@ bambu_server <- function(input, output, session) {
     print(bam_file_list)
     
   } else if (input$input_type == "fastq_input") {
-
+    
     # create list of BAMs
     bam_files <- list.files(path = outdir_bam, "\\.bam$", full.names = TRUE)
     print(bam_files)
@@ -91,8 +92,9 @@ bambu_server <- function(input, output, session) {
   
   # run gffcompare
   #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
-  system(paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
-  
+  command_gff_compare=paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf")
+  print(command_gff_compare)
+  system(command_gff_compare)
   system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
   system(paste0("rm gffcmp*"))
   
@@ -112,11 +114,13 @@ database_server <- function(input, output, session) {
   }
   
   if (!is.null(db_counts_file)) {
-    system(paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, 
-                  " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs))
+    command_generate_proteome=paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs)
+    print(command_generate_proteome)
+    system(command_generate_proteome)
   } else {
-    system(paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, 
-                  " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs))
+    command_generate_proteome=paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs)
+    print(command_generate_proteome)
+    system(command_generate_proteome)
   }
   
   print("Generated ORFs")
@@ -130,9 +134,13 @@ database_server <- function(input, output, session) {
   
   # run python script
 
-  print(paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type, " ", input$min_orf_length))
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type, " ", input$min_orf_length))
-  system(paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type, " ", input$min_orf_length))
+  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
+  command_annotate_proteome=paste0("python bin/database_module/annotate_proteome.py ",input$user_reference_gtf$datapath ," ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type ," ", input$min_orf_length)
+  print(command_annotate_proteome)
+  system(command_annotate_proteome)
+
+
+
   
   print("Annotated proteome")
   
