@@ -91,8 +91,8 @@ bambu_server <- function(input, output, session) {
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$organism, input$user_threads)
   
   # run gffcompare
-  #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
-  command_gff_compare=paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf")
+  #command_gff_compare <- paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf")
+  command_gff_compare <- paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf")
   print(command_gff_compare)
   system(command_gff_compare)
   system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
@@ -114,11 +114,11 @@ database_server <- function(input, output, session) {
   }
   
   if (!is.null(db_counts_file)) {
-    command_generate_proteome=paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs)
+    command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs)
     print(command_generate_proteome)
     system(command_generate_proteome)
   } else {
-    command_generate_proteome=paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs)
+    command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs)
     print(command_generate_proteome)
     system(command_generate_proteome)
   }
@@ -133,21 +133,17 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
-
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
-  command_annotate_proteome=paste0("python bin/database_module/annotate_proteome.py ",input$user_reference_gtf$datapath ," ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type ," ", input$min_orf_length)
+  #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type, " ", input$min_orf_length)
+  command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ",input$user_reference_gtf$datapath ," ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type ," ", input$min_orf_length)
   print(command_annotate_proteome)
   system(command_annotate_proteome)
 
-
-
-  
   print("Annotated proteome")
   
   # zip results
   if (file.exists("database_output/proteome_database.fasta") && file.exists("database_output/proteome_database_transcripts.gtf")) {
     if (input$input_type == "fastq_input") {
-      bam_files <- list.files(path = "mapping_output/", "\\.bam$", full.names = TRUE)
+      bam_files <- list.files(path = "mapping_output", "\\.bam$", full.names = TRUE)
       files_to_zip <- c(bam_files, "bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt", "database_output/proteome_database.fasta", "database_output/proteome_database_metadata.txt", "database_output/proteome_database_transcripts.gtf")
     } else if (input$input_type == "bam_input") {
       files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt", "database_output/proteome_database.fasta", "database_output/proteome_database_metadata.txt", "database_output/proteome_database_transcripts.gtf")
@@ -433,6 +429,27 @@ server <- function(input, output, session) {
     } else {
       genes_available <- unique(genes_list$gene_id)
     }
+    
+    # needs to appear only after submit is pressed
+    # should automatically filter and re-load list
+    
+    # filter genes by high confidence peptide status if check box is selected
+    if (input$high_conf_peptides) {
+      high_conf_peptide_genes <- data_storage$res_pep_import %>%
+        dplyr::filter(pep_map_status == "high")
+      
+      genes_list <- data_storage$res_tx_import %>% 
+        dplyr::filter(gene_id %in% high_conf_peptide_genes$gene_id)
+      
+      if ("gene_name" %in% colnames(genes_list)) {
+        genes_available <- unique(genes_list$gene_name)
+      } else {
+        genes_available <- unique(genes_list$gene_id)
+      }
+      
+    }
+    
+    ##
     
     updateSelectInput(session, "gene_selector", choices = genes_available)
     
