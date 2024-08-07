@@ -90,7 +90,6 @@ bambu_server <- function(input, output, session) {
   run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$organism, input$user_threads)
   
   # run gffcompare
-  
   #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   system(paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
   
@@ -131,10 +130,9 @@ database_server <- function(input, output, session) {
   
   # run python script
 
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
-  system(paste0("python bin/database_module/annotate_proteome.py ",input$user_reference_gtf$datapath ," ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type ," ", input$min_orf_length))
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all ", input$min_orf_length))
-  system(paste0("python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all ", input$min_orf_length))
+  print(paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type, " ", input$min_orf_length))
+  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type, " ", input$min_orf_length))
+  system(paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type, " ", input$min_orf_length))
   
   print("Annotated proteome")
   
@@ -422,7 +420,11 @@ server <- function(input, output, session) {
     genes_list <- data_storage$res_tx_import %>% 
       dplyr::filter(gene_id %in% ensembl_ids)
     
-    genes_available <- unique(genes_list$gene_name)
+    if ("gene_name" %in% colnames(genes_list)) {
+      genes_available <- unique(genes_list$gene_name)
+    } else {
+      genes_available <- unique(genes_list$gene_id)
+    }
     
     updateSelectInput(session, "gene_selector", choices = genes_available)
     
