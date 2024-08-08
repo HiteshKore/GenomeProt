@@ -13,7 +13,7 @@ run_bambu_function <- function(bam_file_list, gtf, organism, threads=1) {
   }
   
 	bambuAnnotations <- prepareAnnotations(gtf)
-	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb, ncore=as.integer(threads))
+	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb)
 	writeBambuOutput(se, path = "bambu_output")
 	
 	tx_data <- as.data.frame(mcols(se))
