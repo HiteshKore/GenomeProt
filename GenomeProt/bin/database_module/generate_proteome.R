@@ -109,6 +109,8 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   # find_UTR_3_orfs <- TRUE
   # referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
   
+  ref_txdb <- makeTxDbFromGFF(referencegtf)
+  
   # import filtered gtf as a txdb
   txdb <- makeTxDbFromGFF(filteredgtf)
   txs <- exonsBy(txdb, by=c("tx","gene"), use.names=TRUE)
@@ -165,20 +167,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   
   combined <- orf_aa_seq_df_genomic_coordinates
   
-  if (find_UTR_5_orfs == FALSE & find_UTR_3_orfs == FALSE) {
-    
-    ref_transcripts <- rtracklayer::import(referencegtf)
-    export(ref_transcripts, "database_output/ref_transcripts_in_data.gtf", format="gtf")
-    
-  } else if (find_UTR_5_orfs == TRUE & find_UTR_3_orfs == FALSE) {
-    
-    ref_transcripts <- rtracklayer::import(referencegtf)
-    ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
-    
-    # need to add if statement, what if no reference transcripts are found in the data?
-    export(ref_transcripts, "database_output/ref_transcripts_in_data.gtf", format="gtf")
-    
-    ref_txdb <- makeTxDbFromGFF("database_output/ref_transcripts_in_data.gtf")
+  if (find_UTR_5_orfs == TRUE & find_UTR_3_orfs == FALSE) {
     
     utrs5 <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs5_filtered <- utrs5[names(utrs5) %in% names(txs)]
@@ -249,14 +238,6 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
     
   } else if (find_UTR_5_orfs == FALSE & find_UTR_3_orfs == TRUE) {
     
-    ref_transcripts <- rtracklayer::import(referencegtf)
-    ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
-    
-    # need to add if statement, what if no reference transcripts are found in the data?
-    export(ref_transcripts, "database_output/ref_transcripts_in_data.gtf", format="gtf")
-    
-    ref_txdb <- makeTxDbFromGFF("database_output/ref_transcripts_in_data.gtf")
-    
     utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs3_filtered <- utrs3[names(utrs3) %in% names(txs)]
     
@@ -325,14 +306,6 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
     combined$tx_id_number <- NULL
     
   } else if (find_UTR_5_orfs == TRUE & find_UTR_3_orfs == TRUE) {
-    
-    ref_transcripts <- rtracklayer::import(referencegtf)
-    ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
-    
-    # need to add if statement, what if no reference transcripts are found in the data?
-    export(ref_transcripts, "database_output/ref_transcripts_in_data.gtf", format="gtf")
-    
-    ref_txdb <- makeTxDbFromGFF("database_output/ref_transcripts_in_data.gtf")
     
     utrs5 <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
