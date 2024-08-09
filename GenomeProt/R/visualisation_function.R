@@ -46,7 +46,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
     
     pep_res <- pep_res %>% 
       mutate(feature_type = "Peptides",
-             peptide_type = pep_map_status) %>% 
+             peptide_type = peptide_status) %>% 
       group_by(transcript_id) %>% 
       mutate(ORF_id = case_when(
         exon_number == 1 ~ PID,
@@ -86,7 +86,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
     
     # factor and set levels
     gtf_to_plot$feature_type <- factor(gtf_to_plot$feature_type, levels=c('Peptides', 'Transcripts'))
-    gtf_to_plot$peptide_type <- factor(gtf_to_plot$peptide_type, levels=c('low', 'medium', 'high', 'Transcripts'))
+    gtf_to_plot$peptide_type <- factor(gtf_to_plot$peptide_type, levels=c('low', 'high', 'Transcripts'))
     
     # add a '*' label when a peptide is uniquely mapped
     gtf_to_plot <- gtf_to_plot %>% 
@@ -149,7 +149,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
       theme_bw() +
       theme(strip.background = element_blank(),
             strip.text.y = element_blank()) +
-      scale_fill_manual(values = c("low" = "#D3D3D3", "medium" = "#818589", "high" = "orangered2", "Transcripts" = "#9FC9FB")) +
+      scale_fill_manual(values = c("low" = "#D3D3D3", "high" = "orangered2", "Transcripts" = "#9FC9FB")) +
       geom_text_repel(aes(x = start, label = ORF_id), size = 3, nudge_y = 0.5, min.segment.length = Inf)
     
     xlimits <- c(layer_scales(gtf_tx_output)$x$range$range)
@@ -167,7 +167,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
             strip.text.y = element_blank(),
             axis.text.x = element_blank(),
             axis.ticks.x = element_blank()) +
-      scale_fill_manual(values = c("low" = "#D3D3D3", "medium" = "grey16", "high" = "orangered2", "Transcripts" = "#9FC9FB")) +
+      scale_fill_manual(values = c("low" = "#D3D3D3", "high" = "orangered2", "Transcripts" = "#9FC9FB")) +
       geom_text_repel(aes(x = start, label = ORF_id), size = 3, nudge_y = 0.5, min.segment.length = Inf)
     
     # return peptide and transcript tracks if no quant data is provided

@@ -436,7 +436,7 @@ server <- function(input, output, session) {
     # filter genes by high confidence peptide status if check box is selected
     if (input$high_conf_peptides) {
       high_conf_peptide_genes <- data_storage$res_pep_import %>%
-        dplyr::filter(pep_map_status == "high")
+        dplyr::filter(peptide_status == "high")
       
       genes_list <- data_storage$res_tx_import %>% 
         dplyr::filter(gene_id %in% high_conf_peptide_genes$gene_id)

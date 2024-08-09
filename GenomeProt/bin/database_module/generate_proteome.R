@@ -105,7 +105,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   # filteredgtf <- "~/Documents/GenomeProt_tmp/demo_datasets/3_db_module/bambu_transcript_annotations.gtf"
   # organism <- "human"
   # orf_len <- 30
-  # find_UTR_5_orfs <- FALSE
+  # find_UTR_5_orfs <- TRUE
   # find_UTR_3_orfs <- TRUE
   # referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
   

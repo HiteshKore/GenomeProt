@@ -26,11 +26,11 @@ df <- fread("../../integ_output/peptide_info.csv")
 peptotal <- length(unique(df$peptide))
 isototal <- length(unique(df$transcript_id))
 isouniqtotal <- nrow(df %>% group_by(transcript_id) %>% 
-            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1))
+            dplyr::filter(peptide_status == "high") %>% slice_head(n=1))
 genetotal <- length(unique(df$gene_id))
 orftotal <- length(unique(df$PID))
 orfuniqtotal <- nrow(df %>% group_by(PID) %>% 
-            dplyr::filter(pep_map_status == "high") %>% 
+            dplyr::filter(peptide_status == "high") %>% 
             slice_head(n=1))
 
 ```
@@ -53,11 +53,11 @@ Total ORFs with at least 1 uniquely mapped peptide: `r paste0(orfuniqtotal)`
 ```{r, eval=TRUE, echo=FALSE}
 
 b <- nrow(df %>% group_by(peptide) %>% 
-            dplyr::filter(n()==1 & pep_map_status == "high") %>% 
+            dplyr::filter(n()==1 & peptide_status == "high") %>% 
             slice_head(n=1))
 c <- nrow(df %>% group_by(peptide) %>% 
             dplyr::filter(length(unique(PID))==1 & length(unique(gene_id))==1 & 
-            pep_map_status == "high") %>% 
+            peptide_status == "high") %>% 
             slice_head(n=1))
 d <- nrow(df %>% group_by(peptide) %>% 
             dplyr::filter(length(unique(PID))>1 & length(unique(gene_id))==1) %>% 
@@ -95,23 +95,23 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 ```{r, eval=TRUE, echo=FALSE}
 
 j <- nrow(df %>% group_by(transcript_id) %>% 
-            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1))
+            dplyr::filter(peptide_status == "high") %>% slice_head(n=1))
 k <- nrow(df %>% group_by(transcript_id) %>% 
-            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1) %>% 
+            dplyr::filter(peptide_status == "high") %>% slice_head(n=1) %>% 
             ungroup() %>% dplyr::filter(startsWith(transcript_id, "EN")))
 l <- nrow(df %>% group_by(transcript_id) %>% 
-            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1) %>% 
+            dplyr::filter(peptide_status == "high") %>% slice_head(n=1) %>% 
             ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")))
 m <- nrow(df %>% group_by(peptide) %>% 
             dplyr::filter(length(unique(transcript_id))==1) %>% slice_head(n=1) %>% 
             ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")) %>% 
             group_by(transcript_id) %>% slice_head(n=1))
 n <- nrow(df %>% group_by(transcript_id) %>% 
-            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1) %>% 
+            dplyr::filter(peptide_status == "high") %>% slice_head(n=1) %>% 
             ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")) %>% 
             group_by(PID) %>% dplyr::filter(!startsWith(PID, "ORF")) %>% slice_head(n=1))
 o <- nrow(df %>% group_by(transcript_id) %>% 
-            dplyr::filter(pep_map_status == "high") %>% slice_head(n=1) %>% 
+            dplyr::filter(peptide_status == "high") %>% slice_head(n=1) %>% 
             ungroup() %>% dplyr::filter(!startsWith(transcript_id, "EN")) %>% 
             group_by(PID) %>% dplyr::filter(startsWith(PID, "ORF")) %>% slice_head(n=1))
 
@@ -151,14 +151,14 @@ List of novel isoforms distinguished with uniquely mapping peptides: `r paste0(u
 # ORFs distinguished seems very low, only 4k
 
 g <- nrow(df %>% group_by(PID) %>% 
-            dplyr::filter(pep_map_status == "high") %>% 
+            dplyr::filter(peptide_status == "high") %>% 
             slice_head(n=1))
 h <- nrow(df %>% group_by(PID) %>% 
-            dplyr::filter(pep_map_status == "high") %>% 
+            dplyr::filter(peptide_status == "high") %>% 
             slice_head(n=1) %>% 
             ungroup() %>% dplyr::filter(!startsWith(PID, "ORF")))
 i <- nrow(df %>% group_by(PID) %>% 
-            dplyr::filter(pep_map_status == "high") %>% 
+            dplyr::filter(peptide_status == "high") %>% 
             slice_head(n=1) %>% 
             ungroup() %>% dplyr::filter(startsWith(PID, "ORF")))
 
@@ -221,7 +221,7 @@ ggplot(plot1) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-# summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+# summary_df <- df %>% dplyr::filter(peptide_status == "high") %>% 
 #   group_by(localisation) %>% 
 #   summarise(total = n()) %>% 
 #   dplyr::filter(total > 5)
@@ -240,7 +240,7 @@ ggplot(plot1) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-# summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+# summary_df <- df %>% dplyr::filter(peptide_status == "high") %>% 
 #   group_by(transcript_biotype) %>% 
 #   summarise(total = n()) %>% 
 #   dplyr::filter(total > 5)
@@ -259,7 +259,7 @@ ggplot(plot1) +
 
 ```{r, eval=TRUE, echo=FALSE}
 
-# summary_df <- df %>% dplyr::filter(pep_map_status == "high") %>% 
+# summary_df <- df %>% dplyr::filter(peptide_status == "high") %>% 
 #   group_by(number_exons) %>% 
 #   summarise(total = n())
 # 
@@ -277,7 +277,7 @@ ggplot(plot1) +
 ```{r, eval=TRUE, echo=FALSE}
 
 # summary_df <- df %>% group_by(PID) %>% 
-#             dplyr::filter(pep_map_status == "high") %>% 
+#             dplyr::filter(peptide_status == "high") %>% 
 #             slice_head(n=1) %>% ungroup() %>% 
 #             group_by(localisation) %>% 
 #             summarise(total = n())
@@ -297,7 +297,7 @@ ggplot(plot1) +
 ```{r, eval=TRUE, echo=FALSE}
 
 # summary_df <- df %>% group_by(PID) %>% 
-#             dplyr::filter(pep_map_status == "high") %>% 
+#             dplyr::filter(peptide_status == "high") %>% 
 #             slice_head(n=1) %>% 
 #             ungroup() %>% dplyr::filter(startsWith(PID, "ORF")) %>% 
 #             group_by(localisation) %>% 
@@ -319,7 +319,7 @@ ggplot(plot1) +
 ```{r, eval=TRUE, echo=FALSE}
 
 # summary_df <- df %>% group_by(PID) %>% 
-#             dplyr::filter(pep_map_status == "high") %>% 
+#             dplyr::filter(peptide_status == "high") %>% 
 #             slice_head(n=1) %>% 
 #             ungroup() %>% dplyr::filter(startsWith(PID, "ORF")) %>% 
 #             group_by(transcript_biotype) %>% 
