@@ -53,7 +53,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
         TRUE ~ NA)) %>% 
       ungroup() %>% 
       separate(ORF_id, into="ORF_id", sep="\\|") %>% 
-      dplyr::select(seqnames,start,end,strand,type,gene_id,transcript_id,tx_id,feature_type,peptide_type,exon_number,ORF_id)
+      dplyr::select(seqnames,start,end,strand,type,gene_id,transcript_id,tx_id,feature_type,peptide_type,exon_number,ORF_id, orf_status)
 
     # filter for selected gene
     orf_res$ORF_id <- NULL
@@ -81,6 +81,9 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
     
     pep_res$tx_id <- NULL
     
+    orf_res$orf_status <- NA
+    gtf_exons$orf_status <- NA
+    
     # combine peptides, transcripts and ORFs
     gtf_to_plot <- rbind(pep_res, orf_res, gtf_exons)
     
@@ -93,7 +96,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
       arrange(peptide_type) %>% 
       mutate(ORF_id = case_when(
         feature_type == "Transcripts" ~ ORF_id,
-        feature_type == "Peptides" & peptide_type == "high" & exon_number == 1 ~ ORF_id,
+        feature_type == "Peptides" & peptide_type == "high" & exon_number == 1 & orf_status == "high" ~ ORF_id,
         feature_type == "Peptides" & peptide_type != "high" & exon_number != 1 ~ NA
       ))
     
