@@ -85,30 +85,21 @@ ui <- dashboardPage(
     ),
     tabItems(
       tabItem(tabName = "welcome",
-              div(class = "jumbotron", style="background-image: url(dna-banner.svg); background-size: cover;", 
-                  HTML("<center><h1>Welcome to GenomeProt</h1></center>"), 
-                  HTML("<center><h3>An integrated proteogenomics data analysis platform</h3></center>"),
-                  HTML("<center><h5>Developed by Hitesh Kore and Josie Gleeson at The University of Melbourne</h5></center>")
-              ),
               fluidRow(
-                column(12, 
+                column(12,
                        div(class = "box box-primary", style = "padding-right: 5%; padding-left: 5%; font-size:110%", 
-                           div(class = "box-body", shiny::includeMarkdown("welcome-page-text.md"))
+                           div(class = "box-body", shiny::includeMarkdown("welcome-page-text.md")),
+                           img(src = "images/workflow.png", width = "100%"),
                        )
-                )
-              ),
-              fluidRow(
-                column(12, 
-                       img(src = "images/LRPG-pipeline.png", width = "100%")
                 )
               )
       ),
-      
       tabItem(tabName = "db_generation", 
               h2("Generate a custom proteogenomics database"),
-              h5("Creates an amino acid FASTA of all ORFs in your data to use as input for MaxQuant/MSFragger etc."),
+              h5("Creates an amino acid FASTA of all ORFs in your data to use as input for FragPipe/MaxQuant etc."),
               fluidRow(
                 column(6,
+                       
                        # Choices
                        radioButtons("sequencing_type", h5(tags$b("Select sequencing type:")),
                                     choices = c("Long-read (ONT, PacBio)" = "long-read", 
@@ -118,7 +109,7 @@ ui <- dashboardPage(
                                                 "BAMs" = "bam_input",
                                                 "GTF (and/or transcript counts)" = "gtf_input")),
                        
-                       # Always present options:
+                       # Constant options
                        selectInput("organism", label = "Organism:", 
                                    choices = list("human" = "human", "mouse" = "mouse"), 
                                    selected = "human"),
@@ -138,7 +129,7 @@ ui <- dashboardPage(
                                     value = 5),
                        fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        
-                       # Static options
+                       # Variable options
                        conditionalPanel(
                          condition = "input.input_type == 'fastq_input'",
                          numericInput("user_threads", label = "CPUs:", value = 1),
