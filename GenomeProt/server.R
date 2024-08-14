@@ -95,6 +95,7 @@ bambu_server <- function(input, output, session) {
   command_gff_compare <- paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf")
   print(command_gff_compare)
   system(command_gff_compare)
+  
   system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
   system(paste0("rm gffcmp*"))
   
@@ -103,14 +104,20 @@ bambu_server <- function(input, output, session) {
 database_server <- function(input, output, session) {
   
   if (input$input_type == "gtf_input") {
+    
     req(input$user_gtf_file, input$user_reference_gtf)  # GTFs required
     db_gtf_file <- input$user_gtf_file$datapath
     db_counts_file <- input$user_tx_count_file$datapath
+    
   } else if ((input$input_type == "bam_input" | input$input_type == "fastq_input") & input$sequencing_type == "long-read") {
+    
     db_gtf_file <- "bambu_output/bambu_transcript_annotations.gtf"
     db_counts_file <- "bambu_output/bambu_transcript_counts.txt"
+    
   } else if ((input$input_type == "bam_input" | input$input_type == "fastq_input") & input$sequencing_type == "short-read") {
+    
     # short-read methods
+    
   }
   
   if (!is.null(db_counts_file)) {
@@ -134,7 +141,7 @@ database_server <- function(input, output, session) {
   
   # run python script
   #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type, " ", input$min_orf_length)
-  command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ",input$user_reference_gtf$datapath ," ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type ," ", input$min_orf_length)
+  command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type , " ", input$min_orf_length)
   print(command_annotate_proteome)
   system(command_annotate_proteome)
 
@@ -222,6 +229,10 @@ server <- function(input, output, session) {
   
   # run database function when submit is pressed
   observeEvent(input$db_submit_button, {
+    
+    # store session ID
+    session_id <- session$token
+    print(paste0("Session: ", session_id))
     
     # disable submit button after it is pressed
     session$sendCustomMessage("disableButton", list(id = "db_submit_button", spinnerId = "db-loading-container"))
