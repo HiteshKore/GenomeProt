@@ -4,7 +4,7 @@
 source("global.R")
 
 # import gtf and filter for minimum transcript counts
-filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
+filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, outdir) {
   # customgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_subset.gtf"
   # tx_counts <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_counts.csv"
   # min_count <- 40
@@ -94,14 +94,14 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
   bambu_export <- c(bambu_transcripts, bambu_exons)
   
   # export filtered gtf
-  export(bambu_export, "database_output/proteome_database_transcripts.gtf", format="gtf")
+  export(bambu_export, paste0(outdir, "/proteome_database_transcripts.gtf"), format="gtf")
   
   print("Exported filtered GTF")
   
 }
 
 # export FASTA of transcript sequences
-get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_orfs=FALSE, find_UTR_3_orfs=FALSE, referencegtf) {
+get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_orfs=FALSE, find_UTR_3_orfs=FALSE, referencegtf, outdir) {
   # filteredgtf <- "~/Documents/hek_wt/database_output_longest_ORF_T/proteome_database_transcripts.gtf"
   # organism <- "human"
   # orf_len <- 30
@@ -234,7 +234,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   combined$tx_id_number <- NULL
   
   # export protein seqs for python script
-  write_tsv(combined, "database_output/ORFome_aa.txt")
+  write_tsv(combined, paste0(outdir, "/ORFome_aa.txt"))
   
   print("Exported ORFik data")
   
@@ -256,7 +256,9 @@ option_list = list(
   make_option(c("-u", "--uorfs"), type="logical", default=NULL,
               help="Find uORFs", metavar="TRUE/FALSE"),
   make_option(c("-d", "--dorfs"), type="logical", default=NULL,
-              help="Find dORFs", metavar="TRUE/FALSE")
+              help="Find dORFs", metavar="TRUE/FALSE"),
+  make_option(c("-s", "--savepath"), type="character", default=NULL,
+              help="Output directory", metavar="character")
 )
 
 opt_parser <- OptionParser(option_list=option_list)
@@ -270,18 +272,16 @@ organism <- opt$organism
 min_orf_length <- opt$length
 find_5_orfs <- opt$uorfs
 find_3_orfs <- opt$dorfs
-
-# make output directory
-system("mkdir database_output")
+output_directory <- opt$savepath
 
 # run filter_custom_gtf, check if counts are present
 if (!is.null(tx_count_path)) {
-  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, tx_counts=tx_count_path, min_count=minimum_tx_count)
+  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, tx_counts=tx_count_path, min_count=minimum_tx_count, outdir=output_directory)
 } else {
-  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism)
+  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, outdir=output_directory)
 }
 
 # run orfik to find ORFs
-get_transcript_orfs(filteredgtf="database_output/proteome_database_transcripts.gtf", organism=organism, orf_len=min_orf_length, find_UTR_5_orfs=find_5_orfs, find_UTR_3_orfs=find_3_orfs, referencegtf=reference_gtf)
+get_transcript_orfs(filteredgtf=paste0(output_directory, "/proteome_database_transcripts.gtf"), organism=organism, orf_len=min_orf_length, find_UTR_5_orfs=find_5_orfs, find_UTR_3_orfs=find_3_orfs, referencegtf=reference_gtf, outdir=output_directory)
 
 

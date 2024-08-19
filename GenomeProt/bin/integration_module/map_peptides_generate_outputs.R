@@ -26,17 +26,18 @@ option_list = list(
   make_option(c("-f", "--fasta"), type="character", default=NULL,
               help="Custom FASTA used for proteomics", metavar="character"),
   make_option(c("-g", "--gtf"), type="character", default=NULL,
-              help="GTF used to generate custom FASTA", metavar="character")
+              help="GTF used to generate custom FASTA", metavar="character"),
+  make_option(c("-s", "--savepath"), type="character", default=NULL,
+              help="Output directory", metavar="character")
 )
 
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
-system("mkdir integ_output")
-
 proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
+output_directory <- opt$savepath
 
 # source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/integration_functions.R")
 # proteomics_import_file <- "~/Documents/linda_data/genomeprot_peptides.txt"
@@ -149,11 +150,11 @@ pep_in_genomic <- split(pep_in_genomic_gr, ~ names(pep_in_genomic_gr))
 # ------------- export ------------- #
 
 # export bed12 of peptides
-ORFik::export.bed12(pep_in_genomic, "integ_output/peptides.bed12", rgb = 0)
+ORFik::export.bed12(pep_in_genomic, paste0(output_directory, "/peptides.bed12"), rgb = 0)
 
 # export bed12 of ORFs
 # should we change it so that only unique ORFs are exported, not every ORF per transcript?
-ORFik::export.bed12(orf_in_genomic, "integ_output/ORFs.bed12", rgb = 0)
+ORFik::export.bed12(orf_in_genomic, paste0(output_directory, "/ORFs.bed12"), rgb = 0)
 
 # format GTF of ORFs
 orf_in_genomic_gr$source <- c("custom")
@@ -178,7 +179,7 @@ names(gtf_as_bed12) <- paste0(gtf_as_bed12$transcript_id, "_", gtf_as_bed12$gene
 tx_in_genomic <- split(gtf_as_bed12, ~ names(gtf_as_bed12))
 
 # export bed12 of transcripts
-ORFik::export.bed12(tx_in_genomic, "integ_output/transcripts.bed12", rgb = 0)
+ORFik::export.bed12(tx_in_genomic, paste0(output_directory, "/transcripts.bed12"), rgb = 0)
 
 # ---------------------------------------- #
 
@@ -275,11 +276,11 @@ pep_in_genomic_gr_export$type <- "exon"
 pep_in_genomic_gr_export$group_id <- "peptides"
 
 # export summary data
-write.csv(peptide_result, "integ_output/peptide_info.csv", row.names=F, quote=F)
+write.csv(peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
 
 # export annotations for vis
 combined <- c(pep_in_genomic_gr_export, orf_in_genomic_gr, gtf_filtered)
-export(combined, "integ_output/combined_annotations.gtf", format="gtf")
+export(combined, paste0(output_directory, "/combined_annotations.gtf"), format="gtf")
 
 # ---------------------------------------- #
 
