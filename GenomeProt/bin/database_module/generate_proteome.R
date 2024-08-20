@@ -32,6 +32,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
     # filter for these transcripts
     bambu_data <- bambu_data[mcols(bambu_data)$transcript_id %in% tx_ids]
     
+    
   } 
   
   # remove scaffolds and weird chromosomes
@@ -43,10 +44,10 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   # subset the GRanges
   bambu_data <- bambu_data[keep_rows]
   
+  
   # filter based on strand
   okstrand <- c("+", "-")
   bambu_data <- bambu_data[strand(bambu_data) %in% okstrand]
-  
   # get gene names
   
   # convert to tibble
@@ -71,6 +72,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   
   # merge results 
   bambu_merged <- merge(bambu_df, gene_df, by.x="ensg_id", by.y="query", all.x=T, all.y=F)
+  
   bambu_merged$ensg_id <- NULL
   
   # make GRanges including new names
@@ -79,9 +81,14 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
                                             seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
                                             starts.in.df.are.0based=FALSE)
   
+  
+  write.table(bambu_data_gr,"mapping_output/bambu_data_gr",sep ="\t",row.names = FALSE)
+  
   # remove extra mcols
   mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name", "exon_number")]
+  
   bambu_exons <- bambu_data_gr[bambu_data_gr$type == "exon"]
+  print(bambu_exons)
   bambu_transcripts <- bambu_data_gr[bambu_data_gr$type == "transcript"]
   
   # sort by chr and locations
