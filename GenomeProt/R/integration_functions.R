@@ -52,6 +52,7 @@ import_proteomics_data <- function(proteomics_file) {
   
   # separate into one row per mapped ORF
   prot_expanded <- separate_rows(protfile, all_mappings, sep = "\\, |\\;")
+  prot_expanded <- prot_expanded[!grepl("\\,chr", prot_expanded$all_mappings),]
   prot_expanded <- prot_expanded %>% 
     dplyr::mutate(across(where(is.character), str_remove_all, pattern = fixed(" "))) %>% 
     dplyr::mutate(PID = str_replace(all_mappings, "\\,", "\\."))
@@ -63,14 +64,17 @@ import_proteomics_data <- function(proteomics_file) {
     prot_expanded <- prot_expanded %>% dplyr::select(PID, Peptide)
   }
   
-  # remove reverse mappings?
-  # should we report on reverse mappings?
-  
   prot_expanded <- prot_expanded %>% 
     dplyr::filter(!startsWith(PID, "rev"))
   
   prot_expanded$peptide <- prot_expanded$Peptide
   prot_expanded$Peptide <- NULL
+  
+  # remove very low confidence peptides (peptides that map to >4 different ORFs)
+  prot_expanded <- prot_expanded %>% 
+    group_by(peptide) %>% 
+    dplyr::filter(length(unique(PID)) < 5) %>% 
+    ungroup()
   
   return(prot_expanded)
   
@@ -80,15 +84,24 @@ import_proteomics_data <- function(proteomics_file) {
 import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   
   # fasta_file <- fasta_import_file
-  # gtf_file <- gtf
+  # gtf_file <- gtf_import_file
   # proteomics_data <- pd
   
-  tx_lengths <- transcriptLengths(gtf_file)
+  # get transcript lengths
+  gtf_txdb <- makeTxDbFromGFF(gtf_file)
+  tx_lengths <- transcriptLengths(gtf_txdb)
   tx_lengths$transcript_id <- tx_lengths$tx_name
   tx_lengths <- tx_lengths %>% dplyr::select(transcript_id, tx_len)
   
+  gtf_import <- rtracklayer::import(gtf_file, format="gtf") %>% 
+    as_tibble() %>% 
+    dplyr::filter(type == "transcript") %>% 
+    dplyr::select(transcript_id, gene_name, strand)
+  
+  tx_data <- merge(tx_lengths, gtf_import, by="transcript_id", all.x=T, all.y=F)
+
   # get transcripts for mapping
-  txs <- exonsBy(gtf_file, by=c("tx"), use.names=T)
+  txs <- exonsBy(gtf_txdb, by=c("tx"), use.names=T)
   
   # import fasta
   db <- readAAStringSet(fasta_file, format="fasta", use.names=TRUE)
@@ -114,23 +127,24 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
     df <- df %>% dplyr::filter(PID %in% proteomics_data$PID)
     
     df <- df %>% 
-      separate(name, into = c("header", "gene_id", "transcript_id", "strand"), sep = "\\ ", remove = FALSE) %>%
+      separate(name, into = c("header", "gene_id", "gene_name", "transcript_id"), sep = "\\ ", remove = FALSE) %>%
       separate(gene_id, into = c("gene_id"), sep = "\\,", remove = FALSE) %>%
-      separate(strand, into = c("strand"), sep = "\\,", remove = FALSE) %>%
       separate(PID, into = c("protein_name", "location"), sep = "\\|CO=", remove = FALSE) %>%
       separate(location, into = c("chromosome", "start", "end"), sep = "\\:|-", remove = FALSE)
   })
   
+  df$gene_name <- NULL
+  
   df <- df %>% 
+    dplyr::mutate(across(where(is.character), str_remove_all, pattern = c("GA="))) %>% 
     dplyr::mutate(across(where(is.character), str_remove_all, pattern = c("GN="))) %>% 
-    dplyr::mutate(across(where(is.character), str_remove_all, pattern = c("TA="))) %>% 
-    dplyr::mutate(across(where(is.character), str_remove_all, pattern = c("ST="))) 
+    dplyr::mutate(across(where(is.character), str_remove_all, pattern = c("TA=")))
   
   # add one row per transcript
   df_expanded <- separate_rows(df, transcript_id, sep = "\\,|\\, ")
   df_expanded <- df_expanded[!(base::duplicated(df_expanded)),]
   
-  df_expanded <- merge(df_expanded, tx_lengths, by="transcript_id", all.x=T, all.y=F)
+  df_expanded <- merge(df_expanded, tx_data, by="transcript_id", all.x=T, all.y=F)
   
   df_expanded$start <- as.numeric(df_expanded$start)
   df_expanded$end <- as.numeric(df_expanded$end)
@@ -211,7 +225,6 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   }
   
   # apply to df
-  #orf_genomic_coords_df_subset <- orf_genomic_coords_df[1:5000,]
   orf_transcriptomic_coords <- apply_conversion_to_df(txs_unlisted, orf_genomic_coords_df)
   
   # ORFs that could not be mapped to transcripts are returned with -1 starts
@@ -275,6 +288,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
       TRUE ~ mapped_pep_start
     ))
   } else {
+    metadata <- metadata %>% dplyr::filter(mapped_pep_start != -1 & !is.na(mapped_pep_start))
     metadata$pep_start <- metadata$mapped_pep_start
   }
   

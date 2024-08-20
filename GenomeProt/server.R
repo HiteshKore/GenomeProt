@@ -7,14 +7,23 @@ fastq_server <- function(input, output, session) {
   
   req(input$user_reference_genome$datapath, input$user_reference_gtf$datapath, input$user_fastq_files$datapath)  # required
   
-  outdir_bam="mapping_output"
+  # store session ID
+  session_id <- session$token
+  outdir_bam <- paste0(session_id, "/mapping_output")
+  system(paste0("mkdir ", outdir_bam))
   
-  # check if the output directory exists
-  if (dir.exists(outdir_bam)) {
-    system(paste0("rm -rf ", outdir_bam, "/*"))
-  } else {
-    system(paste0("mkdir ", outdir_bam))
-  }
+  # optionally export genome from R
+  # set organism
+  # if (organism == "mouse") {
+  #   library(BSgenome.Mmusculus.UCSC.mm39)
+  #   genomedb <- BSgenome.Mmusculus.UCSC.mm39::Mmusculus
+  # } else if (organism == "human") {
+  #   library(BSgenome.Hsapiens.UCSC.hg38)
+  #   genomedb <- BSgenome.Hsapiens.UCSC.hg38
+  # }
+  # 
+  # getSeq(bs, c("chr1","chr2"))
+  # export(genomedb, "genome.fasta.gz", verbose=T, compress=T, format="fasta")
   
   # create dataframe with sample details and add prefix column 
   user_fastq_files_df <- input$user_fastq_files %>% 
@@ -52,7 +61,12 @@ fastq_server <- function(input, output, session) {
 
 bambu_server <- function(input, output, session) {
   
-  outdir_bam="mapping_output"
+  # store session ID
+  session_id <- session$token
+  outdir_bam <- paste0(session_id, "/mapping_output")
+  # create bambu output
+  outdir_bambu <- paste0(session_id, "/bambu_output")
+  system(paste0("mkdir ", outdir_bambu))
   
   if (input$input_type == "bam_input") {
     
@@ -87,38 +101,52 @@ bambu_server <- function(input, output, session) {
     
   }
   
-  # run bambu function
-  run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$organism, input$user_threads)
+  run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$organism, outdir_bambu)
   
-  # run gffcompare
-  #system(paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf"))
-  command_gff_compare=paste0("gffcompare -r ", input$user_reference_gtf$datapath, " bambu_output/bambu_transcript_annotations.gtf")
+  # rename bambu output files
+  system(paste0("mv ",  outdir_bambu, "/counts_transcript.txt ", outdir_bambu, "/bambu_transcript_counts.txt"))
+  system(paste0("mv ",  outdir_bambu, "/extended_annotations.gtf ", outdir_bambu, "/bambu_transcript_annotations.gtf"))
+  
+  # run gffcompare on bambu gtf
+  #command_gff_compare <- paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
+  command_gff_compare <- paste0("gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
   print(command_gff_compare)
   system(command_gff_compare)
-  system(paste0("mv bambu_output/gffcmp.bambu_transcript_annotations.gtf.tmap bambu_output/gffcompare.tmap.txt"))
+  system(paste0("mv ", outdir_bambu, "/gffcmp.bambu_transcript_annotations.gtf.tmap ", outdir_bambu, "/gffcompare.tmap.txt"))
   system(paste0("rm gffcmp*"))
   
 }
 
 database_server <- function(input, output, session) {
   
+  # store session ID
+  session_id <- session$token
+  outdir_db <- paste0(session_id, "/database_output")
+  system(paste0("mkdir ", outdir_db))
+  
   if (input$input_type == "gtf_input") {
+    
     req(input$user_gtf_file, input$user_reference_gtf)  # GTFs required
     db_gtf_file <- input$user_gtf_file$datapath
     db_counts_file <- input$user_tx_count_file$datapath
+    
   } else if ((input$input_type == "bam_input" | input$input_type == "fastq_input") & input$sequencing_type == "long-read") {
-    db_gtf_file <- "bambu_output/bambu_transcript_annotations.gtf"
-    db_counts_file <- "bambu_output/bambu_transcript_counts.txt"
+    
+    db_gtf_file <- paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf")
+    db_counts_file <- paste0(session_id, "/bambu_output/bambu_transcript_counts.txt")
+    
   } else if ((input$input_type == "bam_input" | input$input_type == "fastq_input") & input$sequencing_type == "short-read") {
+    
     # short-read methods
+    
   }
   
   if (!is.null(db_counts_file)) {
-    command_generate_proteome=paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs)
+    command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -s ", outdir_db)
     print(command_generate_proteome)
     system(command_generate_proteome)
   } else {
-    command_generate_proteome=paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs)
+    command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -s ", outdir_db)
     print(command_generate_proteome)
     system(command_generate_proteome)
   }
@@ -133,28 +161,24 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
-
-  #system(paste0("source activate py39; python bin/database_module/annotate_proteome.py database_output/ref_transcripts_in_data.gtf ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output all"))
-  command_annotate_proteome=paste0("python bin/database_module/annotate_proteome.py ",input$user_reference_gtf$datapath ," ", ref_proteome, " database_output/ORFome_aa.txt database_output/proteome_database_transcripts.gtf database_output/ ", input$database_type ," ", input$min_orf_length)
+  #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
+  command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
   print(command_annotate_proteome)
   system(command_annotate_proteome)
 
-
-
-  
   print("Annotated proteome")
   
   # zip results
-  if (file.exists("database_output/proteome_database.fasta") && file.exists("database_output/proteome_database_transcripts.gtf")) {
+  if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf"))) {
     if (input$input_type == "fastq_input") {
-      bam_files <- list.files(path = "mapping_output/", "\\.bam$", full.names = TRUE)
-      files_to_zip <- c(bam_files, "bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt", "database_output/proteome_database.fasta", "database_output/proteome_database_metadata.txt", "database_output/proteome_database_transcripts.gtf")
+      bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE)
+      files_to_zip <- c(bam_files, paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
     } else if (input$input_type == "bam_input") {
-      files_to_zip <- c("bambu_output/bambu_transcript_annotations.gtf", "bambu_output/bambu_transcript_counts.txt", "bambu_output/novel_transcript_classes.csv", "bambu_output/gffcompare.tmap.txt", "database_output/proteome_database.fasta", "database_output/proteome_database_metadata.txt", "database_output/proteome_database_transcripts.gtf")
+      files_to_zip <- c(paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
     } else if (input$input_type == "gtf_input") {
-      files_to_zip <- c("database_output/proteome_database.fasta", "database_output/proteome_database_metadata.txt", "database_output/proteome_database_transcripts.gtf")
+      files_to_zip <- c(paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
     }
-    zipfile_path <- "database_output/database_results.zip"
+    zipfile_path <- paste0(session_id, "/database_results.zip")
     zip(zipfile = zipfile_path, files = files_to_zip)
   }
   
@@ -198,26 +222,43 @@ integration_server <- function(input, output, session) {
   
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
   
+  # store session ID
+  session_id <- session$token
+  outdir_integ <- paste0(session_id, "/integ_output")
+  system(paste0("mkdir ", outdir_integ))
+  
   # run rscript
-  system(paste0("Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath))
+  system(paste0("Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath, " -s ", outdir_integ))
+
+  top_level_dir <- getwd()
   
   # create report
-  rmarkdown::render(input = "bin/integration_module/integration_summary_report.Rmd",
-                    output_file = "../../integ_output/summary_report.html",
-                    output_format = "html_document")
-  
+  rmarkdown::render(input = paste0(top_level_dir, "/bin/integration_module/integration_summary_report.Rmd"),
+                    output_file = paste0(top_level_dir, "/", outdir_integ, "/summary_report.html"),
+                    output_format = "html_document",
+                    params = list(
+                      directory = paste0(top_level_dir, "/", outdir_integ),
+                      file = "peptide_info.csv"
+                    ))
+
   # check files exist
-  if (file.exists("integ_output/peptide_info.csv") && file.exists("integ_output/summary_report.html")) {
+  if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
     # create a zip file with results
-    files_to_zip_int <- c("integ_output/summary_report.html", "integ_output/peptide_info.csv", "integ_output/combined_annotations.gtf", "integ_output/peptides.bed12", "integ_output/ORFs.bed12", "integ_output/transcripts.bed12")
-    zipfile_path_int <- "integ_output/integration_results.zip"
+    files_to_zip_int <- c(paste0(outdir_integ, "/summary_report.html"), paste0(outdir_integ, "/peptide_info.csv"), paste0(outdir_integ, "/combined_annotations.gtf"), paste0(outdir_integ, "/peptides.bed12"), paste0(outdir_integ, "/ORFs.bed12"), paste0(outdir_integ, "/transcripts.bed12"))
+    zipfile_path_int <- paste0(session_id, "/integration_results.zip")
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
-  }  
-  
+  }
+
 }
 
 # shiny app server
 server <- function(input, output, session) {
+  
+  # store session ID
+  # create session id tmp directory each time app is run
+  session_id <- session$token
+  print(paste0("Session: ", session_id))
+  system(paste0("mkdir ", session_id))
   
   # DATABASE MODULE
   
@@ -247,7 +288,7 @@ server <- function(input, output, session) {
     }
     
     # check if the zip file is created
-    if (file.exists("database_output/database_results.zip")) {
+    if (file.exists(paste0(session_id, "/database_results.zip"))) {
       file_available_db(TRUE)
     }
   })
@@ -267,7 +308,7 @@ server <- function(input, output, session) {
       paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_database_results.zip")
     },
     content = function(file) {
-      file.copy("database_output/database_results.zip", file)
+      file.copy(paste0(session_id, "/database_results.zip"), file)
     }
   )
   
@@ -319,11 +360,13 @@ server <- function(input, output, session) {
   file_available_integ <- reactiveVal(FALSE)
   
   observeEvent(input$integ_submit_button, { 
+    
     session$sendCustomMessage("disableButton", list(id = "integ_submit_button", spinnerId = "integ-loading-container")) # disable submit button
+    
     integration_server(input, output, session)
     
     # check if the zip file is created
-    if (file.exists("integ_output/integration_results.zip")) {
+    if (file.exists(paste0(session_id, "/integration_results.zip"))) {
       file_available_integ(TRUE)
     }
   })
@@ -342,7 +385,7 @@ server <- function(input, output, session) {
       paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_integration_results.zip")
     },
     content = function(file) {
-      file.copy("integ_output/integration_results.zip", file)
+      file.copy(paste0(session_id, "/integration_results.zip"), file)
     }
   )
   
@@ -434,6 +477,27 @@ server <- function(input, output, session) {
       genes_available <- unique(genes_list$gene_id)
     }
     
+    # needs to appear only after submit is pressed
+    # should automatically filter and re-load list
+    
+    # filter genes by high confidence peptide status if check box is selected
+    if (input$high_conf_peptides) {
+      high_conf_peptide_genes <- data_storage$res_pep_import %>%
+        dplyr::filter(peptide_status == "high")
+      
+      genes_list <- data_storage$res_tx_import %>% 
+        dplyr::filter(gene_id %in% high_conf_peptide_genes$gene_id)
+      
+      if ("gene_name" %in% colnames(genes_list)) {
+        genes_available <- unique(genes_list$gene_name)
+      } else {
+        genes_available <- unique(genes_list$gene_id)
+      }
+      
+    }
+    
+    ##
+    
     updateSelectInput(session, "gene_selector", choices = genes_available)
     
     session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # re-enable submit button
@@ -475,5 +539,12 @@ server <- function(input, output, session) {
   )
   
   # END VISUALISATION MODULE
+  
+  # remove session id tmp directory created each time app is run
+  session$onSessionEnded(function() {
+    if (dir.exists(session_id)) {
+      unlink(session_id, recursive = TRUE)
+    }
+  })
   
 }
