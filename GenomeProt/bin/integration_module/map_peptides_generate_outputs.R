@@ -43,6 +43,7 @@ output_directory <- opt$savepath
 # proteomics_import_file <- "~/Documents/linda_data/genomeprot_peptides.txt"
 # fasta_import_file <- "~/Documents/linda_data/proteome_database.fasta"
 # gtf_import_file <- "~/Documents/linda_data/proteome_database_transcripts.gtf"
+# output_directory <- "~/Documents"
 
 # ------------- import files ------------- #
 
@@ -212,7 +213,11 @@ peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 # define transcripts as known or novel
 # currently, python script requires novel txs to have prefix 'Bambu'
 peptide_result <- peptide_result %>% 
-  mutate(isoform_status = case_when(
+  mutate(orf_type = case_when(
+    startsWith(PID, "ORF_") ~ "novel",
+    TRUE ~ "known"
+  ),
+  transcript_type = case_when(
     #!startsWith(transcript_id, "EN") ~ "novel",
     startsWith(transcript_id, "Bambu") ~ "novel",
     TRUE ~ "known"
@@ -226,39 +231,29 @@ peptide_result <- peptide_result %>%
 
 peptide_result <- peptide_result %>% 
   dplyr::group_by(peptide) %>% 
-  dplyr::mutate(peptide_status = case_when(
-    length(unique(gene_id))==1 ~ "high",
-    length(unique(PID))>1 & length(unique(gene_id))>1 ~ "low",
-    TRUE ~ NA),
-    orf_status_1 = case_when(
-      length(unique(gene_id))==1 & length(unique(PID))==1 ~ "high",
-      TRUE ~ "low")) %>% 
-  ungroup()
+  dplyr::mutate(peptide_ids_gene = case_when(
+    length(unique(gene_id))==1 ~ TRUE,
+    TRUE ~ FALSE),
+    peptide_ids_orf = case_when(
+      length(unique(gene_id))==1 & length(unique(PID))==1 ~ TRUE,
+      TRUE ~ FALSE),
+    peptide_ids_transcript = case_when(
+      length(unique(gene_id))==1 & length(unique(PID))==1 & length(unique(transcript_id)) == 1 ~ TRUE,
+      TRUE ~ FALSE)) %>% 
+  dplyr::ungroup()
 
 # if an ORF is identified by at least one high confidence peptide, then the ORF is high confidence
 peptide_result <- peptide_result %>% 
   dplyr::group_by(PID) %>% 
-  dplyr::mutate(orf_status = case_when(
-    orf_status_1 %in% c("high") ~ "high",
-    TRUE ~ "low")) %>% 
-  dplyr::ungroup() %>% dplyr::select(-orf_status_1)
-
-peptide_result <- peptide_result %>% 
-  dplyr::group_by(peptide) %>% 
-  dplyr::mutate(iso_map_status_1 = case_when(
-    peptide_status %in% c("high") & length(unique(transcript_id))==1 & startsWith(transcript_id, "Bambu") ~ "novel_iso_uniq_identified",
-    peptide_status %in% c("high") & length(unique(transcript_id))==1 & !startsWith(transcript_id, "Bambu") ~ "known_iso_uniq_identified",
-    TRUE ~ NA)) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::group_by(transcript_id) %>% 
-  dplyr::mutate(iso_map_status = case_when(
-    iso_map_status_1 %in% c("novel_iso_uniq_identified") ~ "novel_iso_uniq_identified",
-    iso_map_status_1 %in% c("known_iso_uniq_identified") ~ "known_iso_uniq_identified",
-    TRUE ~ "other")) %>% 
-  dplyr::ungroup() %>% dplyr::select(-iso_map_status_1)
+  dplyr::mutate(orf_identified = case_when(
+    any(peptide_ids_orf == TRUE) ~ TRUE,
+    TRUE ~ FALSE),
+    transcript_identified = case_when(
+      any(peptide_ids_transcript == TRUE) ~ TRUE,
+      TRUE ~ FALSE)) %>% 
+  dplyr::ungroup()
 
 # include orf_status and peptide_status in GTF mcols
-results_pept_df$peptide_status <- NULL
 results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id", "seqnames"), all.x=T, all.y=F)
 results_to_merge_with_granges <- results_to_merge_with_granges[!(duplicated(results_to_merge_with_granges)),]
 results_to_merge_with_granges$naming <- paste0(results_to_merge_with_granges$transcript_id, "_", results_to_merge_with_granges$peptide)
