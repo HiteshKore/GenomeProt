@@ -26,27 +26,24 @@ option_list = list(
   make_option(c("-f", "--fasta"), type="character", default=NULL,
               help="Custom FASTA used for proteomics", metavar="character"),
   make_option(c("-g", "--gtf"), type="character", default=NULL,
-              help="GTF used to generate custom FASTA", metavar="character")
+              help="GTF used to generate custom FASTA", metavar="character"),
+  make_option(c("-s", "--savepath"), type="character", default=NULL,
+              help="Output directory", metavar="character")
 )
 
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
-system("mkdir integ_output")
-
 proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 gtf_import_file <- opt$gtf
+output_directory <- opt$savepath
 
 # source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/integration_functions.R")
-# proteomics_import_file <- "~/Documents/integration_bugs/peptides.txt"
-# fasta_import_file <- "~/Documents/integration_bugs/ProteomeDb.fasta"
-# gtf_import_file <- "~/Documents/integration_bugs/ORFome_transcripts.gtf"
-# 
-# 
-# proteomics_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/5_integration_module/peptide.tsv"
-# fasta_import_file <- "~/Documents/GenomeProt_tmp/demo_datasets/5_integration_module/proteome_database.fasta"
-# gtf_import_file <- "~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/database_output/proteome_database_transcripts.gtf"
+# proteomics_import_file <- "~/Documents/linda_data/genomeprot_peptides.txt"
+# fasta_import_file <- "~/Documents/linda_data/proteome_database.fasta"
+# gtf_import_file <- "~/Documents/linda_data/proteome_database_transcripts.gtf"
+# output_directory <- "~/Documents"
 
 # ------------- import files ------------- #
 
@@ -54,7 +51,7 @@ pd <- suppressWarnings(import_proteomics_data(proteomics_import_file))
 
 gtf <- makeTxDbFromGFF(gtf_import_file) # make txdb of gtf
 
-md <- import_fasta(fasta_import_file, pd, gtf)
+md <- import_fasta(fasta_import_file, pd, gtf_import_file)
 
 # ---------------------------------------- #
 
@@ -135,13 +132,15 @@ pep_in_genomic_gr <- unlist(pep_in_genomic, use.names=F) # convert to GRanges
 # rename with transcript and peptide
 tx_pep_names <- c(paste0(names(pep_in_genomic_gr), "_", pep_in_genomic_gr$peptide))
 names(pep_in_genomic_gr) <- tx_pep_names # set names
+pep_in_genomic_gr$tx_pid_grouping <- paste0(pep_in_genomic_gr$PID, "_", names(pep_in_genomic_gr))
 # remove 0 ranges
 pep_in_genomic_gr <- subset(pep_in_genomic_gr, (start(pep_in_genomic_gr) != 0 & end(pep_in_genomic_gr) != 0)  )
 
 # create vector of exon number per peptide and transcript
-exon_number_vec <- ave(seq_along(pep_in_genomic_gr), names(pep_in_genomic_gr), FUN = seq_along)
+exon_number_vec <- ave(seq_along(pep_in_genomic_gr), pep_in_genomic_gr$tx_pid_grouping, FUN = seq_along)
 # add to GRanges
 mcols(pep_in_genomic_gr)$exon_number <- exon_number_vec
+mcols(pep_in_genomic_gr)$tx_pid_grouping <- NULL
 
 # re-list
 pep_in_genomic <- split(pep_in_genomic_gr, ~ names(pep_in_genomic_gr))
@@ -152,11 +151,11 @@ pep_in_genomic <- split(pep_in_genomic_gr, ~ names(pep_in_genomic_gr))
 # ------------- export ------------- #
 
 # export bed12 of peptides
-ORFik::export.bed12(pep_in_genomic, "integ_output/peptides.bed12", rgb = 0)
+ORFik::export.bed12(pep_in_genomic, paste0(output_directory, "/peptides.bed12"), rgb = 0)
 
 # export bed12 of ORFs
 # should we change it so that only unique ORFs are exported, not every ORF per transcript?
-ORFik::export.bed12(orf_in_genomic, "integ_output/ORFs.bed12", rgb = 0)
+ORFik::export.bed12(orf_in_genomic, paste0(output_directory, "/ORFs.bed12"), rgb = 0)
 
 # format GTF of ORFs
 orf_in_genomic_gr$source <- c("custom")
@@ -181,7 +180,7 @@ names(gtf_as_bed12) <- paste0(gtf_as_bed12$transcript_id, "_", gtf_as_bed12$gene
 tx_in_genomic <- split(gtf_as_bed12, ~ names(gtf_as_bed12))
 
 # export bed12 of transcripts
-ORFik::export.bed12(tx_in_genomic, "integ_output/transcripts.bed12", rgb = 0)
+ORFik::export.bed12(tx_in_genomic, paste0(output_directory, "/transcripts.bed12"), rgb = 0)
 
 # ---------------------------------------- #
 
@@ -205,60 +204,56 @@ results_pept_df_unique <- results_pept_df %>%
 
 # merge results with metadata
 metadata_to_merge <- md %>% 
-  dplyr::select(PID, peptide, transcript_id, gene_id)
+  dplyr::select(PID, peptide, transcript_id, gene_id, gene_name)
 
 peptide_result <- merge(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "gene_id", "transcript_id"), all.x=T, all.y=F)
 
 peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
 # define transcripts as known or novel
+# currently, python script requires novel txs to have prefix 'Bambu'
 peptide_result <- peptide_result %>% 
-  mutate(isoform_status = case_when(
-    !startsWith(transcript_id, "EN") ~ "novel",
+  mutate(orf_type = case_when(
+    startsWith(PID, "ORF_") ~ "novel",
+    TRUE ~ "known"
+  ),
+  transcript_type = case_when(
+    #!startsWith(transcript_id, "EN") ~ "novel",
+    startsWith(transcript_id, "Bambu") ~ "novel",
     TRUE ~ "known"
   ))
 
 # determine ORF and peptide mapping status
 
 # peptides mapped to a unique ORF (and gene) = high conf
-# peptides mapped to multi ORFs from one gene = med conf
-# peptides mapped to multi genomic locations = low conf
-
-# NOTE some genes are the same with slightly different version numbers. Should we make it so script ignores versions??
+# peptides mapped to multi ORFs from one gene = high conf (unique genomic location is identified)
+# peptides mapped to multi genes locations = low conf
 
 peptide_result <- peptide_result %>% 
   dplyr::group_by(peptide) %>% 
-  dplyr::mutate(pep_map_status = case_when(
-    length(unique(gene_id))==1 & length(unique(PID))==1 ~ "high",
-    length(unique(PID))>1 & length(unique(gene_id))==1 ~ "medium",
-    length(unique(PID))>1 & length(unique(gene_id))>1 ~ "low",
-    TRUE ~ NA)) %>% 
-  ungroup()
+  dplyr::mutate(peptide_ids_gene = case_when(
+    length(unique(gene_id))==1 ~ TRUE,
+    TRUE ~ FALSE),
+    peptide_ids_orf = case_when(
+      length(unique(gene_id))==1 & length(unique(PID))==1 ~ TRUE,
+      TRUE ~ FALSE),
+    peptide_ids_transcript = case_when(
+      length(unique(gene_id))==1 & length(unique(PID))==1 & length(unique(transcript_id)) == 1 ~ TRUE,
+      TRUE ~ FALSE)) %>% 
+  dplyr::ungroup()
 
 # if an ORF is identified by at least one high confidence peptide, then the ORF is high confidence
 peptide_result <- peptide_result %>% 
   dplyr::group_by(PID) %>% 
-  dplyr::mutate(orf_map_status = case_when(
-    pep_map_status %in% c("high") ~ "high",
-    TRUE ~ "low")) %>% 
+  dplyr::mutate(orf_identified = case_when(
+    any(peptide_ids_orf == TRUE) ~ TRUE,
+    TRUE ~ FALSE),
+    transcript_identified = case_when(
+      any(peptide_ids_transcript == TRUE) ~ TRUE,
+      TRUE ~ FALSE)) %>% 
   dplyr::ungroup()
 
-peptide_result <- peptide_result %>% 
-  dplyr::group_by(peptide) %>% 
-  dplyr::mutate(iso_map_status_1 = case_when(
-    pep_map_status %in% c("high") & length(unique(transcript_id))==1 & !startsWith(transcript_id, "EN") ~ "novel_iso_uniq_identified",
-    pep_map_status %in% c("high") & length(unique(transcript_id))==1 & startsWith(transcript_id, "EN") ~ "known_iso_uniq_identified",
-    TRUE ~ NA)) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::group_by(transcript_id) %>% 
-  dplyr::mutate(iso_map_status = case_when(
-    iso_map_status_1 %in% c("novel_iso_uniq_identified") ~ "novel_iso_uniq_identified",
-    iso_map_status_1 %in% c("known_iso_uniq_identified") ~ "known_iso_uniq_identified",
-    TRUE ~ "other")) %>% 
-  dplyr::ungroup() %>% dplyr::select(-iso_map_status_1)
-
-# include orf_map_status and pep_map_status in GTF mcols
-results_pept_df$pep_map_status <- NULL
+# include orf_status and peptide_status in GTF mcols
 results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id", "seqnames"), all.x=T, all.y=F)
 results_to_merge_with_granges <- results_to_merge_with_granges[!(duplicated(results_to_merge_with_granges)),]
 results_to_merge_with_granges$naming <- paste0(results_to_merge_with_granges$transcript_id, "_", results_to_merge_with_granges$peptide)
@@ -276,12 +271,11 @@ pep_in_genomic_gr_export$type <- "exon"
 pep_in_genomic_gr_export$group_id <- "peptides"
 
 # export summary data
-write.csv(peptide_result, "integ_output/peptide_info.csv", row.names=F, quote=F)
+write.csv(peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
 
 # export annotations for vis
-
 combined <- c(pep_in_genomic_gr_export, orf_in_genomic_gr, gtf_filtered)
-export(combined, "integ_output/combined_annotations.gtf", format="gtf")
+export(combined, paste0(output_directory, "/combined_annotations.gtf"), format="gtf")
 
 # ---------------------------------------- #
 
