@@ -132,13 +132,31 @@ ui <- dashboardPage(
                        # Variable options
                        conditionalPanel(
                          condition = "input.input_type == 'fastq_input'",
+                         #h5("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
+                         selectInput("sequencing_type_fastq", label = "Sequencing platform:", 
+                                     choices = list("long-read", "short-read"),
+                                     selected = "long-read"),
                          numericInput("user_threads", label = "CPUs:", value = 1),
+                         selectInput("database_type", label = "ORFs to be included in proteomedb:", 
+                                     choices = list("canonical", "all"),
+                                     selected = "all"),
+                         conditionalPanel(condition = "input.sequencing_type_fastq == 'short-read'",
+                         fileInput("transcriptome_file", "Upload Transcriptome File",NULL, buttonLabel = "Browse...", multiple = FALSE)),
                          fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                          fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
                        ),
                        conditionalPanel(
                          condition = "input.input_type == 'bam_input'",
+                         #h5("Identify (in long-reads) and quantify isoforms, and generate the database"),
+                         selectInput("sequencing_type_bam", label = "Sequencing platform:", 
+                                     choices = list("long-read", "short-read"),
+                                     selected = "long-read"),
                          numericInput("user_threads", label = "CPUs:", value = 1),
+                         selectInput("database_type", label = "ORFs to be included in proteomedb:", 
+                                     choices = list("canonical", "all"),
+                                     selected = "all"),
+                         conditionalPanel(condition = "input.sequencing_type_bam == 'short-read'",
+                                          fileInput("transcriptome_file_bam", "Upload Transcriptome File",NULL, buttonLabel = "Browse...", multiple = FALSE)),
                          fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
                        ),
                        conditionalPanel(
