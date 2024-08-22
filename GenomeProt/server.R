@@ -10,6 +10,7 @@ fastq_server <- function(input, output, session) {
   # store session ID
   session_id <- session$token
   outdir_bam <- paste0(session_id, "/mapping_output")
+  print(outdir_bam)
   system(paste0("mkdir ", outdir_bam))
   
   # optionally export genome from R
@@ -27,7 +28,7 @@ fastq_server <- function(input, output, session) {
   
   # create dataframe with sample details and add prefix column 
   user_fastq_files_df <- input$user_fastq_files %>% 
-    mutate(file_prefix = str_replace_all(name, c("\\.fastq\\.gz$" = "", "\\.fastq$" = "", "\\.fq$" = "", "\\.fa$" = "", "\\.fasta$" = "")))
+  mutate(file_prefix = str_replace_all(name, c("\\.fastq\\.gz$" = "", "\\.fastq$" = "", "\\.fq$" = "", "\\.fa$" = "", "\\.fasta$" = "")))
   
   print(user_fastq_files_df)
   
@@ -54,10 +55,204 @@ fastq_server <- function(input, output, session) {
     }
     
   } else if (input$sequencing_type == "short-read") {
-    # short-read methods
+    
+    #generate salmon index
+    if ( grepl("\\.gz$", input$user_reference_genome$datapath) & grepl("\\.gz$",input$transcriptome_file$datapath)) {
+    
+      command_generate_decoy <- paste0("bash -c \"grep '^>' <(gunzip -c ",input$user_reference_genome$datapath, ") | cut -d ' ' -f 1 >", outdir_bam, "/decoys.txt",'\"')
+      command_sed=paste0("sed -i -e 's/>//g' ",outdir_bam, "/decoys.txt")
+      command_ref_file<-paste0( "cat ", input$transcriptome_file$datapath ," ",input$user_reference_genome$datapath," >", outdir_bam, "/gentrome.fa.gz")
+      command_index<-paste0("salmon index -t  ",outdir_bam, "/gentrome.fa.gz -d ", outdir_bam, "/decoys.txt -p ", input$user_threads ," -i ", outdir_bam,"/salmon_index ", "--gencode")
+      
+    }else{
+      command_generate_decoy <- paste0("grep '^>' ", input$user_reference_genome$datapath, " | cut -d \" \" -f 1 >", outdir_bam, "/decoys.txt")
+      command_sed=paste0("sed -i -e 's/>//g' ",outdir_bam, "/decoys.txt")
+      command_ref_file<-paste0( "cat ", input$transcriptome_file$datapath ," ",input$user_reference_genome$datapath," >", outdir_bam, "/gentrome.fa")
+      command_index<-paste0("salmon index -t  ",outdir_bam, "/gentrome.fa -d ", outdir_bam, "/decoys.txt -p ", input$user_threads ," -i ", outdir_bam,"/salmon_index ", "--gencode")
+    }
+    
+   
+    
+   #generate index
+    system(command_generate_decoy)
+    system(command_sed)
+    system(command_ref_file)
+    system(command_index)
+    
+    
+    #Determine paired end or single end
+    
+    paired_end <- list(list(R1 = NULL, R2 = NULL))
+    single_end <- list()
+    
+
+      
+    for (i in 1:nrow(user_fastq_files_df)) {
+      file_name=user_fastq_files_df$name[i]
+      
+      if (grepl("_R1",file_name )) {
+        base_name <- sub("_R1(\\.fastq(\\.gz)?)$", "", file_name)  
+       
+        paired_end[[base_name]]$R1 <- user_fastq_files_df$datapath[i]
+        
+      } else if (grepl("_R2",file_name )){
+        base_name <- sub("_R2(\\.fastq(\\.gz)?)$", "", file_name)
+        paired_end[[base_name]]$R2 <- user_fastq_files_df$datapath[i]
+        
+      }
+      
+      if(!grepl("_R1", file_name) && !grepl("_R2", file_name)){
+        base_name <- sub("(\\.fastq(\\.gz)?)$", "", file_name)
+        single_end[[base_name]] <- user_fastq_files_df$datapath[i]
+      } 
+      
+      
+    }
+    
+    
+    if (length(paired_end) >0){
+      
+      for (base_name in names(paired_end)) {
+        # Access R1 and R2 elements
+        R1_path <- paired_end[[base_name]]$R1
+        R2_path <- paired_end[[base_name]]$R2
+        if (!is.null(R1_path) && !is.null(R2_path))
+        {
+          # Perform your desired operations with R1 and R2
+          cat("Base Name:", base_name, "\t","R1 Path:", R1_path, "R2 Path:", R2_path, "\n")
+            
+          command_salmon=paste0("salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A  -1 ", R1_path," -2 ", R2_path, " --validateMappings  -o ", outdir_bam,"/", base_name)
+          print(command_salmon)
+          system(command_salmon)
+          
+        }
+        
+      }
+      
+    }
+    
+    #single end
+    
+    if (length(single_end) >0){
+      for (base_name in names(single_end)) {
+        print(single_end[[base_name]])
+        command_salmon=paste0("salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A  -r ", single_end[[base_name]]," --validateMappings  -o ", outdir_bam,"/", base_name)
+        print(command_salmon)
+        system(command_salmon)
+      }
+      
+    }
+    
+    #compiling count matrix
+    samples<-c(names(single_end),names(paired_end))
+    samples<-samples[samples != ""]
+    print(samples)
+    files <- file.path(outdir_bam, samples, "quant.sf")
+    print(files)
+    names(files) <- samples
+    
+    # Check if the files exist
+    print(all(file.exists(files)))
+    
+    # Import Salmon quantification files
+    txi <- tximport(files, type = "salmon", txOut = TRUE)
+    
+    #adding gene information
+    gtf_data <- import(input$user_reference_gtf$datapath, format = "gtf")
+    
+    # Convert GTF data to a data frame
+    gtf_df <- as.data.frame(gtf_data)
+    
+    # Filter for relevant columns
+
+    transcript_gene_info <- gtf_df[gtf_df$type == "transcript", c("transcript_id", "gene_id")]
+    colnames(transcript_gene_info) <-c("TXNAME","GENEID")
+    count_df<-as.data.frame(txi$counts)
+    count_df <-  count_df%>%mutate(TXNAME = rownames(count_df)) %>%dplyr::select(TXNAME, everything())
+    rownames(count_df)<-NULL
+    
+    count_df_merged<-left_join(count_df,transcript_gene_info,by="TXNAME")
+    
+    count_df_merged<-count_df_merged%>%dplyr::select(TXNAME,GENEID, everything())
+    
+    
+    
+    #count data
+    write_tsv(count_df_merged, file = paste0(outdir_bam,"/counts_matrix.tsv"),escape = "none", col_names = TRUE)
+    #write_tsv(txi$abundance, file = paste0(outdir_bam,"/tpm_counts_matrix.csv"),quote_escape = "none", col_names = TRUE)
+    
+
   }
   
 }
+
+bam_server<-function(input, output, session) {
+  req(input$user_reference_genome_bam$datapath,input$user_reference_gtf$datapath )  # required
+  
+  # store session ID
+  session_id <- session$token
+  outdir_bam <- paste0(session_id, "/mapping_output")
+  print(outdir_bam)
+  system(paste0("mkdir ", outdir_bam))
+  
+  #generating reference.fa
+  #check if file is compressed
+  if(grepl("\\.gz$", input$user_reference_genome_bam$datapath)){
+    command_decompress<-paste0("gzip -c -d ",input$user_reference_genome_bam$datapath," >", outdir_bam,"/genome.fa")
+    system(command_decompress)
+    print(command_decompress)
+    command_gffread<-paste0("gffread -w ",outdir_bam, "/transcript.fa -g ",outdir_bam,"/genome.fa ", input$user_reference_gtf$datapath)
+    
+  }else{
+  command_gffread<-paste0("gffread -w ",outdir_bam, "/transcript.fa -g ", input$user_reference_genome_bam$datapath," ", input$user_reference_gtf$datapath)
+  }
+  print(command_gffread)
+  system(command_gffread) 
+  
+  
+  user_bam_files_df<-input$user_bam_files%>%
+    mutate(file_prefix = sub("\\.bam$", "", name))
+  print(user_bam_files_df)
+  for (i in 1:nrow(user_bam_files_df)) {
+    bam_file <- user_bam_files_df$datapath[i]
+    file_prefix <- user_bam_files_df$file_prefix[i]
+    
+    command_salmon=paste0("salmon quant -t ", outdir_bam, "/transcript.fa -p ", input$user_threads ," -l A  -a ",bam_file ," -o ", outdir_bam,"/", file_prefix)
+    
+    print(command_salmon)
+    system(command_salmon)
+  }
+  
+  #compiling count matrix
+  samples<-user_bam_files_df$file_prefix
+  files <- file.path(outdir_bam, samples, "quant.sf")
+  names(files) <- samples
+   
+  # Check if the files exist
+   print(all(file.exists(files)))
+  # Import Salmon quantification files
+   txi <- tximport(files, type = "salmon", txOut = TRUE)
+  # adding gene information
+  gtf_data <- import(input$user_reference_gtf$datapath, format = "gtf")
+   
+  #Convert GTF data to a data frame
+  gtf_df <- as.data.frame(gtf_data)
+  # Filter for relevant columns
+  transcript_gene_info <- gtf_df[gtf_df$type == "transcript", c("transcript_id", "gene_id")]
+  colnames(transcript_gene_info) <-c("TXNAME","GENEID")
+  count_df<-as.data.frame(txi$counts)
+  count_df <-  count_df%>%mutate(TXNAME = rownames(count_df)) %>%dplyr::select(TXNAME, everything())
+  rownames(count_df)<-NULL
+  count_df_merged<-left_join(count_df,transcript_gene_info,by="TXNAME")
+  count_df_merged<-count_df_merged%>%dplyr::select(TXNAME,GENEID, everything())
+
+  # count data
+  write_tsv(count_df_merged, file = paste0(outdir_bam,"/counts_matrix.tsv"),escape = "none", col_names = TRUE)
+ 
+  
+}
+
+
 
 bambu_server <- function(input, output, session) {
   
@@ -129,15 +324,15 @@ database_server <- function(input, output, session) {
     req(input$user_gtf_file, input$user_reference_gtf)  # GTFs required
     db_gtf_file <- input$user_gtf_file$datapath
     db_counts_file <- input$user_tx_count_file$datapath
-    
+
   } else if ((input$input_type == "bam_input" | input$input_type == "fastq_input") & input$sequencing_type == "long-read") {
-    
     db_gtf_file <- paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf")
     db_counts_file <- paste0(session_id, "/bambu_output/bambu_transcript_counts.txt")
     
-  } else if ((input$input_type == "bam_input" | input$input_type == "fastq_input") & input$sequencing_type == "short-read") {
-    
-    # short-read methods
+  } else if ((input$input_type == "bam_input" | input$input_type == "fastq_input") & input$sequencing_type == "short-read" ) {
+    db_gtf_file <- input$user_reference_gtf$datapath
+    db_counts_file <- paste0(session_id,"/mapping_output/counts_matrix.tsv")
+
     
   }
   
@@ -170,12 +365,14 @@ database_server <- function(input, output, session) {
   
   # zip results
   if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf"))) {
-    if (input$input_type == "fastq_input") {
+    if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
       bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE)
       files_to_zip <- c(bam_files, paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
-    } else if (input$input_type == "bam_input") {
+    } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
       files_to_zip <- c(paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
-    } else if (input$input_type == "gtf_input") {
+    } else if (input$sequencing_type == "short-read"){
+      files_to_zip <- c(paste0(session_id, "/mapping_output/counts_matrix.tsv"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"))
+    }else if (input$input_type == "gtf_input") {
       files_to_zip <- c(paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
     }
     zipfile_path <- paste0(session_id, "/database_results.zip")
@@ -280,10 +477,17 @@ server <- function(input, output, session) {
       bambu_server(input, output, session)
       database_server(input, output, session)
     } else if (input$input_type == "fastq_input" & input$sequencing_type == "short-read") {
-      # short-read settings
+      fastq_server(input, output, session)
+      database_server(input, output, session)
+      
+      
     } else if (input$input_type == "bam_input" & input$sequencing_type == "short-read") {
       # short-read settings
+      bam_server(input, output, session)
+      database_server(input, output, session)
+      
     } else if (input$input_type == "gtf_input") {
+      database_server(input, output, session)
       database_server(input, output, session)
     }
     

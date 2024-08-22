@@ -27,6 +27,7 @@ suppressPackageStartupMessages({
   library(ggrepel)
   library(optparse)
   library(mygene)
+  library(tximport)
 })
 
 options(shiny.maxRequestSize = 107374182400) # 2GB
