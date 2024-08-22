@@ -220,7 +220,7 @@ proteomics_server <- function(input, output, session) {
 
 integration_server <- function(input, output, session) {
   
-  req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file)  # GTF is required
+  req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file, input$user_metadata_file)  # GTF is required
   
   # store session ID
   session_id <- session$token
@@ -228,7 +228,7 @@ integration_server <- function(input, output, session) {
   system(paste0("mkdir ", outdir_integ))
   
   # run rscript
-  system(paste0("Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -g ", input$user_post_gtf_file$datapath, " -s ", outdir_integ))
+  system(paste0("Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -m ", input$user_metadata_file$datapath, " -g ", input$user_post_gtf_file$datapath, " -s ", outdir_integ))
 
   top_level_dir <- getwd()
   

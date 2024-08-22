@@ -80,6 +80,19 @@ import_proteomics_data <- function(proteomics_file) {
   
 }
 
+
+# import custom database metadata of ORFs
+import_orf_metadata <- function(metadata_file) {
+  orf_data <- fread(metadata_file)
+  orf_data$PID <- paste0(orf_data$accession, "|CO=", orf_data$orf_genomic_coordinates)
+  orf_data <- orf_data %>% dplyr::select(PID, transcript, transcript_biotype, orf_type, localisation, openprot_id, 
+                                         `molecular_weight(kDA)`, isoelectric_point, hydrophobicity, aliphatic_index)
+  orf_data$transcript_id <- orf_data$transcript
+  orf_data$transcript <- NULL
+  return(orf_data)
+  
+}
+
 # import custom database FASTA of ORFs
 import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   
@@ -298,6 +311,8 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   metadata <- metadata %>% dplyr::filter(pep_start < protein_length & pep_end < protein_length)
   
   metadata$mapped_pep_start <- NULL
+  metadata$name <- NULL
+  metadata$header <- NULL
   
   return(metadata)
   
