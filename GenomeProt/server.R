@@ -471,8 +471,8 @@ server <- function(input, output, session) {
     # run different servers depending on input type selected
     if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
       fastq_server(input, output, session)
-      #bambu_server(input, output, session)
-      #database_server(input, output, session)
+      bambu_server(input, output, session)
+      database_server(input, output, session)
     } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
       bambu_server(input, output, session)
       database_server(input, output, session)
