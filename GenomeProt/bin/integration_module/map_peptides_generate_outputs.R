@@ -25,6 +25,8 @@ option_list = list(
               help="Proteomics data file", metavar="character"),
   make_option(c("-f", "--fasta"), type="character", default=NULL,
               help="Custom FASTA used for proteomics", metavar="character"),
+  make_option(c("-m", "--metadata"), type="character", default=NULL,
+              help="Custom metadata used for proteomics", metavar="character"),
   make_option(c("-g", "--gtf"), type="character", default=NULL,
               help="GTF used to generate custom FASTA", metavar="character"),
   make_option(c("-s", "--savepath"), type="character", default=NULL,
@@ -36,12 +38,14 @@ opt <- parse_args(opt_parser)
 
 proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
+metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
 
 # source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/integration_functions.R")
 # proteomics_import_file <- "~/Documents/linda_data/genomeprot_peptides.txt"
 # fasta_import_file <- "~/Documents/linda_data/proteome_database.fasta"
+# metadata_import_file <- "~/Documents/linda_data/proteome_database_metadata.txt"
 # gtf_import_file <- "~/Documents/linda_data/proteome_database_transcripts.gtf"
 # output_directory <- "~/Documents"
 
@@ -51,12 +55,14 @@ pd <- suppressWarnings(import_proteomics_data(proteomics_import_file))
 
 gtf <- makeTxDbFromGFF(gtf_import_file) # make txdb of gtf
 
+orf_df <- import_orf_metadata(metadata_import_file)
+
 md <- import_fasta(fasta_import_file, pd, gtf_import_file)
 
 # ---------------------------------------- #
 
 
-# ------------- apply functions ------------- #
+# ------------- run analysis ------------- #
 
 # extract ORF transcript coordinates to df
 md$orf_tx_id <- paste0(md$protein_name, "_", md$transcript_id)
@@ -210,24 +216,9 @@ peptide_result <- merge(results_pept_df_unique, metadata_to_merge, by=c("PID", "
 
 peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
-# define transcripts as known or novel
-# currently, python script requires novel txs to have prefix 'Bambu'
-peptide_result <- peptide_result %>% 
-  mutate(orf_type = case_when(
-    startsWith(PID, "ORF_") ~ "novel",
-    TRUE ~ "known"
-  ),
-  transcript_type = case_when(
-    #!startsWith(transcript_id, "EN") ~ "novel",
-    startsWith(transcript_id, "Bambu") ~ "novel",
-    TRUE ~ "known"
-  ))
+peptide_result <- merge(peptide_result, orf_df, by=c("PID", "transcript_id"), all.x=T, all.y=F)
 
-# determine ORF and peptide mapping status
-
-# peptides mapped to a unique ORF (and gene) = high conf
-# peptides mapped to multi ORFs from one gene = high conf (unique genomic location is identified)
-# peptides mapped to multi genes locations = low conf
+peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
 peptide_result <- peptide_result %>% 
   dplyr::group_by(peptide) %>% 
@@ -253,9 +244,14 @@ peptide_result <- peptide_result %>%
       TRUE ~ FALSE)) %>% 
   dplyr::ungroup()
 
+# export summary data
+write.csv(peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
+
 # include orf_status and peptide_status in GTF mcols
 results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id", "seqnames"), all.x=T, all.y=F)
 results_to_merge_with_granges <- results_to_merge_with_granges[!(duplicated(results_to_merge_with_granges)),]
+results_to_merge_with_granges <- results_to_merge_with_granges %>% 
+  dplyr::select(-openprot_id, -`molecular_weight(kDA)`, -isoelectric_point, -hydrophobicity, -aliphatic_index)
 results_to_merge_with_granges$naming <- paste0(results_to_merge_with_granges$transcript_id, "_", results_to_merge_with_granges$peptide)
 
 # make GRanges from df of ORF transcript coordinates
@@ -263,15 +259,13 @@ pep_in_genomic_gr_export <- makeGRangesFromDataFrame(results_to_merge_with_grang
                                                   keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
                                                   seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
                                                   starts.in.df.are.0based=FALSE, na.rm=TRUE)
+
 names(pep_in_genomic_gr_export) <- c(pep_in_genomic_gr_export$naming) # set names
 
 # add mcols
 pep_in_genomic_gr_export$source <- "custom"
 pep_in_genomic_gr_export$type <- "exon"
 pep_in_genomic_gr_export$group_id <- "peptides"
-
-# export summary data
-write.csv(peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
 
 # export annotations for vis
 combined <- c(pep_in_genomic_gr_export, orf_in_genomic_gr, gtf_filtered)
