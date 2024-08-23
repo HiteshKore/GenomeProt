@@ -19,7 +19,6 @@ import_proteomics_data <- function(proteomics_file) {
   # # Convert to a data frame
   # df <- as.data.frame(split_data, stringsAsFactors = FALSE)
   
-  
   #proteomics_file <- "~/Documents/GenomeProt_tmp/demo_datasets/integration_module/human/peptide.tsv"
   
   # import proteomics
@@ -36,6 +35,7 @@ import_proteomics_data <- function(proteomics_file) {
     protfile$Stripped.Sequence <- NULL
   }
   
+  # check if Protein Start is a valid column
   if (c("Protein Start") %in% colnames(protfile)) {
     protfile <- protfile %>% dplyr::select(Peptide, Protein, `Protein Start`, `Mapped Proteins`)
   } else {
@@ -52,21 +52,30 @@ import_proteomics_data <- function(proteomics_file) {
   
   # separate into one row per mapped ORF
   prot_expanded <- separate_rows(protfile, all_mappings, sep = "\\, |\\;")
+  
+  # remove ORFs with multiple genomic locations
   prot_expanded <- prot_expanded[!grepl("\\,chr", prot_expanded$all_mappings),]
+  
+  # remove white space and characters
   prot_expanded <- prot_expanded %>% 
     dplyr::mutate(across(where(is.character), str_remove_all, pattern = fixed(" "))) %>% 
     dplyr::mutate(PID = str_replace(all_mappings, "\\,", "\\."))
+  
+  # remove any duplications
   prot_expanded <- prot_expanded[!(base::duplicated(prot_expanded)),]
   
+  # select columns to keep
   if (c("Protein Start") %in% colnames(prot_expanded)) {
     prot_expanded <- prot_expanded %>% dplyr::select(PID, Peptide, `Protein Start`)
   } else {
     prot_expanded <- prot_expanded %>% dplyr::select(PID, Peptide)
   }
   
+  # remove peptides mapped to reversed sequences
   prot_expanded <- prot_expanded %>% 
     dplyr::filter(!startsWith(PID, "rev"))
   
+  # rename column
   prot_expanded$peptide <- prot_expanded$Peptide
   prot_expanded$Peptide <- NULL
   
@@ -91,9 +100,9 @@ import_orf_metadata <- function(metadata_file) {
 # import custom database FASTA of ORFs
 import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   
-  # fasta_file <- fasta_import_file
-  # gtf_file <- gtf_import_file
-  # proteomics_data <- pd
+  fasta_file <- fasta_import_file
+  gtf_file <- gtf_import_file
+  proteomics_data <- pd
   
   # get transcript lengths
   gtf_txdb <- makeTxDbFromGFF(gtf_file)
@@ -107,7 +116,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
     dplyr::select(transcript_id, gene_name, strand)
   
   tx_data <- merge(tx_lengths, gtf_import, by="transcript_id", all.x=T, all.y=F)
-
+  
   # get transcripts for mapping
   txs <- exonsBy(gtf_txdb, by=c("tx"), use.names=T)
   
@@ -178,7 +187,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
     # transcript_id <- "ENST00000585111.2"
     # genomic_start <- 64506119
     # strand <- "-"
-
+    
     tx_exons <- txdb[names(txdb) == transcript_id]
     
     if (length(tx_exons) == 0) {
@@ -236,9 +245,11 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   orf_transcriptomic_coords <- apply_conversion_to_df(txs_unlisted, orf_genomic_coords_df)
   
   # ORFs that could not be mapped to transcripts are returned with -1 starts
-  orf_transcriptomic_coords <- orf_transcriptomic_coords %>% dplyr::filter(txstart >= 1)
-  # remove ORF coords outside transcript ends
+  # orf_transcriptomic_coords <- orf_transcriptomic_coords %>% dplyr::filter(txstart >= 1)
+  
+  # get transcript end coord 
   orf_transcriptomic_coords$txend <- orf_transcriptomic_coords$txstart + orf_transcriptomic_coords$nt_length - 1
+  # remove ORF coords outside transcript ends
   orf_transcriptomic_coords <- orf_transcriptomic_coords %>% dplyr::filter(txend < tx_len)
   
   # combine with proteomics data
@@ -303,13 +314,13 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   # get peptide end location within every ORF
   metadata$pep_end <- metadata$pep_start + nchar(metadata$peptide)
   
-  metadata <- metadata %>% dplyr::filter(pep_start < protein_length & pep_end < protein_length)
+  metadata_output <- metadata %>% dplyr::filter(pep_start < protein_length & pep_end < protein_length)
   
-  metadata$mapped_pep_start <- NULL
-  metadata$name <- NULL
-  metadata$header <- NULL
+  metadata_output$mapped_pep_start <- NULL
+  metadata_output$name <- NULL
+  metadata_output$header <- NULL
   
-  return(metadata)
+  return(metadata_output)
   
 }
 
