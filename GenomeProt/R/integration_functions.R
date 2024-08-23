@@ -70,12 +70,6 @@ import_proteomics_data <- function(proteomics_file) {
   prot_expanded$peptide <- prot_expanded$Peptide
   prot_expanded$Peptide <- NULL
   
-  # remove very low confidence peptides (peptides that map to >4 different ORFs)
-  prot_expanded <- prot_expanded %>% 
-    group_by(peptide) %>% 
-    dplyr::filter(length(unique(PID)) < 5) %>% 
-    ungroup()
-  
   return(prot_expanded)
   
 }
@@ -84,11 +78,12 @@ import_proteomics_data <- function(proteomics_file) {
 # import custom database metadata of ORFs
 import_orf_metadata <- function(metadata_file) {
   orf_data <- fread(metadata_file)
-  orf_data$PID <- paste0(orf_data$accession, "|CO=", orf_data$orf_genomic_coordinates)
-  orf_data <- orf_data %>% dplyr::select(PID, transcript, transcript_biotype, orf_type, localisation, openprot_id, 
-                                         `molecular_weight(kDA)`, isoelectric_point, hydrophobicity, aliphatic_index)
   orf_data$transcript_id <- orf_data$transcript
   orf_data$transcript <- NULL
+  orf_data$PID <- paste0(orf_data$accession, "|CO=", orf_data$orf_genomic_coordinates)
+  orf_data <- orf_data %>% dplyr::select(PID, accession, orf_genomic_coordinates, transcript_id, transcript_biotype, orf_type, localisation, uniprot_status, openprot_id, 
+                                         `molecular_weight(kDA)`, isoelectric_point, hydrophobicity, aliphatic_index, longest_orf_in_transcript)
+
   return(orf_data)
   
 }
