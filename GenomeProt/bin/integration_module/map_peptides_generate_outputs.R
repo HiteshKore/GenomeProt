@@ -238,7 +238,11 @@ peptide_result <- peptide_result %>%
       TRUE ~ FALSE),
     peptide_ids_transcript = case_when(
       length(unique(gene_id))==1 & length(unique(PID))==1 & length(unique(transcript_id)) == 1 ~ TRUE,
-      TRUE ~ FALSE)) %>% 
+      TRUE ~ FALSE),
+    shared_novel_protein_peptide = case_when(
+      length(unique(PID))>1 & all(startsWith(PID, "ORF")) ~ TRUE,
+      TRUE ~ FALSE
+    )) %>% 
   dplyr::ungroup()
 
 # if an ORF is identified by at least one high confidence peptide, then the ORF is high confidence
