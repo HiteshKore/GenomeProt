@@ -220,6 +220,14 @@ peptide_result <- merge(peptide_result, orf_df, by=c("PID", "transcript_id"), al
 
 peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
+peptide_result$seqnames <- NULL
+
+peptide_result <- peptide_result %>% 
+  dplyr::mutate(longest_orf_in_transcript = case_when(
+    longest_orf_in_transcript == "Y" ~ TRUE,
+    longest_orf_in_transcript == "N" ~ FALSE
+  ))
+
 peptide_result <- peptide_result %>% 
   dplyr::group_by(peptide) %>% 
   dplyr::mutate(peptide_ids_gene = case_when(
@@ -248,7 +256,7 @@ peptide_result <- peptide_result %>%
 write.csv(peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
 
 # include orf_status and peptide_status in GTF mcols
-results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id", "seqnames"), all.x=T, all.y=F)
+results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id"), all.x=T, all.y=F)
 results_to_merge_with_granges <- results_to_merge_with_granges[!(duplicated(results_to_merge_with_granges)),]
 results_to_merge_with_granges <- results_to_merge_with_granges %>% 
   dplyr::select(-openprot_id, -`molecular_weight(kDA)`, -isoelectric_point, -hydrophobicity, -aliphatic_index)
