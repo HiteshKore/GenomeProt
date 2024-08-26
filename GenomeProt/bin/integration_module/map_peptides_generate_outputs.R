@@ -42,12 +42,6 @@ metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
 
-# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/integration_functions.R")
-# proteomics_import_file <- "~/Documents/linda_data/genomeprot_peptides.txt"
-# fasta_import_file <- "~/Documents/linda_data/proteome_database.fasta"
-# metadata_import_file <- "~/Documents/linda_data/proteome_database_metadata.txt"
-# gtf_import_file <- "~/Documents/linda_data/proteome_database_transcripts.gtf"
-# output_directory <- "~/Documents"
 
 # ------------- import files ------------- #
 
@@ -160,7 +154,6 @@ pep_in_genomic <- split(pep_in_genomic_gr, ~ names(pep_in_genomic_gr))
 ORFik::export.bed12(pep_in_genomic, paste0(output_directory, "/peptides.bed12"), rgb = 0)
 
 # export bed12 of ORFs
-# should we change it so that only unique ORFs are exported, not every ORF per transcript?
 ORFik::export.bed12(orf_in_genomic, paste0(output_directory, "/ORFs.bed12"), rgb = 0)
 
 # format GTF of ORFs
@@ -256,8 +249,29 @@ peptide_result <- peptide_result %>%
       TRUE ~ FALSE)) %>% 
   dplyr::ungroup()
 
+# get missing peptides
+missing_peptides <- pd %>% dplyr::filter(!(PID %in% peptide_result$PID))
+
+missing_peptides <- missing_peptides %>% dplyr::filter(!startsWith(PID, "ORF") & !startsWith(PID, "sp"))
+
+missing_peptides <- missing_peptides[grepl("\\,chr", missing_peptides$PID),]
+
+# ensure same col names
+columns_to_add <- setdiff(names(peptide_result), names(missing_peptides))
+
+# add missing columns to missing df with NA values
+missing_peptides[columns_to_add] <- NA
+
+# ensure the column order is same before rbind
+missing_peptides <- missing_peptides[, names(peptide_result)]
+
+combined_peptide_result <- rbind(peptide_result, missing_peptides)
+
+combined_peptide_result$PID <- gsub(",", ".", combined_peptide_result$PID)
+combined_peptide_result <- combined_peptide_result[!(base::duplicated(combined_peptide_result)),]
+
 # export summary data
-write.csv(peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
+write.csv(combined_peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
 
 # include orf_status and peptide_status in GTF mcols
 results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id"), all.x=T, all.y=F)
