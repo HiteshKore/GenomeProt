@@ -47,19 +47,19 @@ import_proteomics_data <- function(proteomics_file) {
     all_mappings = case_when(
       (is.na(`Mapped Proteins`) == TRUE | nchar(`Mapped Proteins`) == 0) ~ paste0(Protein),
       TRUE ~ paste0(Protein, ", ", `Mapped Proteins`)
-      )
     )
+  )
   
   # separate into one row per mapped ORF
   prot_expanded <- separate_rows(protfile, all_mappings, sep = "\\, |\\;")
   
-  # remove ORFs with multiple genomic locations
-  prot_expanded <- prot_expanded[!grepl("\\,chr", prot_expanded$all_mappings),]
+  #prot_expanded <- prot_expanded[!grepl("\\,chr", prot_expanded$all_mappings),]
   
   # remove white space and characters
   prot_expanded <- prot_expanded %>% 
-    dplyr::mutate(across(where(is.character), str_remove_all, pattern = fixed(" "))) %>% 
-    dplyr::mutate(PID = str_replace(all_mappings, "\\,", "\\."))
+    dplyr::mutate(across(where(is.character), str_remove_all, pattern = fixed(" "))) %>%
+    dplyr::mutate(PID = all_mappings)
+  #dplyr::mutate(PID = str_replace(all_mappings, "\\,", "\\."))
   
   # remove any duplications
   prot_expanded <- prot_expanded[!(base::duplicated(prot_expanded)),]
@@ -86,13 +86,14 @@ import_proteomics_data <- function(proteomics_file) {
 
 # import custom database metadata of ORFs
 import_orf_metadata <- function(metadata_file) {
+  
   orf_data <- fread(metadata_file)
   orf_data$transcript_id <- orf_data$transcript
   orf_data$transcript <- NULL
   orf_data$PID <- paste0(orf_data$accession, "|CO=", orf_data$orf_genomic_coordinates)
   orf_data <- orf_data %>% dplyr::select(PID, accession, orf_genomic_coordinates, transcript_id, transcript_biotype, orf_type, localisation, uniprot_status, openprot_id, 
                                          `molecular_weight(kDA)`, isoelectric_point, hydrophobicity, aliphatic_index, longest_orf_in_transcript)
-
+  
   return(orf_data)
   
 }
@@ -100,9 +101,9 @@ import_orf_metadata <- function(metadata_file) {
 # import custom database FASTA of ORFs
 import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   
-  #fasta_file <- fasta_import_file
-  #gtf_file <- gtf_import_file
-  #proteomics_data <- pd
+  # fasta_file <- fasta_import_file
+  # gtf_file <- gtf_import_file
+  # proteomics_data <- pd
   
   # get transcript lengths
   gtf_txdb <- makeTxDbFromGFF(gtf_file)
@@ -138,10 +139,12 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   # format headers into columns
   suppressWarnings({
     df <- df %>%
-      separate(name, into = c("PID"), sep = "\\ |\\,", remove = FALSE) 
+      separate(name, into = c("PID"), sep = "\\ ", remove = FALSE)
     
     # filter for proteins with mapped peptides
     df <- df %>% dplyr::filter(PID %in% proteomics_data$PID)
+    
+    df <- df[!grepl("\\,chr", df$PID),]
     
     df <- df %>% 
       separate(name, into = c("header", "gene_id", "gene_name", "transcript_id"), sep = "\\ ", remove = FALSE) %>%
@@ -169,24 +172,20 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   # get df of orf genomic coords
   orf_genomic_coords_df <- df_expanded
   
+  # re orient start and end to match strand for mapping
   orf_genomic_coords_df <- orf_genomic_coords_df %>% 
     rowwise() %>% 
-    mutate(
-      stranded_start = case_when(
+    mutate(stranded_start = case_when(
         strand == "+" ~ min(start,end),
         strand == "-" ~ max(start,end),
-      ))
+    ))
   
+  # filter txdb for only those in df
   txs_filtered <- txs[names(txs) %in% orf_genomic_coords_df$transcript_id]
   txs_unlisted <- unlist(txs_filtered)
   
   # function to convert genomic start position to transcript position
   convert_gene_pos_to_transcript_pos <- function(txdb, transcript_id, genomic_start, strand) {
-    
-    # Get the exons for the specific transcript
-    # transcript_id <- "ENST00000585111.2"
-    # genomic_start <- 64506119
-    # strand <- "-"
     
     tx_exons <- txdb[names(txdb) == transcript_id]
     
@@ -194,7 +193,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
       transcript_start <- -1
     }
     
-    # Find the cumulative transcript position for each exon
+    # find the cumulative transcript position for each exon
     exon_data <- data.frame(
       exon_start = start(tx_exons),
       exon_end = end(tx_exons),
@@ -206,13 +205,13 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
         total_length = cumsum(exon_length)
       )
     
-    # Find which exon the genomic start position falls into
+    # find which exon the genomic start position falls into
     exon_index <- which(genomic_start >= exon_data$exon_start & genomic_start <= exon_data$exon_end)
     
     if (length(exon_index) == 0) {
       transcript_start <- -1
     } else {
-    
+      
       # calculate the transcript start position
       if (strand == "+") {
         if (exon_index == 1) {
@@ -245,18 +244,17 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   orf_transcriptomic_coords <- apply_conversion_to_df(txs_unlisted, orf_genomic_coords_df)
   
   # ORFs that could not be mapped to transcripts are returned with -1 starts
-  # orf_transcriptomic_coords <- orf_transcriptomic_coords %>% dplyr::filter(txstart >= 1)
+  orf_transcriptomic_coords <- orf_transcriptomic_coords %>% dplyr::filter(txstart >= 0)
   
-  # get transcript end coord 
+  # get transcript end coord
   orf_transcriptomic_coords$txend <- orf_transcriptomic_coords$txstart + orf_transcriptomic_coords$nt_length - 1
+  
   # remove ORF coords outside transcript ends
   orf_transcriptomic_coords <- orf_transcriptomic_coords %>% dplyr::filter(txend < tx_len)
   
   # combine with proteomics data
-  
   metadata <- merge(orf_transcriptomic_coords, proteomics_data, by="PID", all.x=T, all.y=T)
   metadata <- metadata[!(base::duplicated(metadata)),]
-  
   metadata <- metadata %>% dplyr::filter(!is.na(transcript_id) & !is.na(txstart))
   
   # find peptide sequence exact matches in protein sequences
@@ -271,14 +269,14 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   }
   
   # find leftover peptides with no exact match, sequences now with one mismatch in protein sequences
-  find_one_mismatch <- function(peptide, protein_sequence) {
+  find_a_mismatch <- function(peptide, protein_sequence, num_mismatch) {
     peptide_length <- nchar(peptide)
     protein_length <- nchar(protein_sequence)
     
     for (i in 1:(protein_length - peptide_length + 1)) {
       sub_seq <- substr(protein_sequence, i, i + peptide_length - 1)
       dist <- stringdist::stringdist(peptide, sub_seq, method = "hamming")
-      if (dist == 1) {
+      if (dist == num_mismatch) {
         return(i)
       }
     }
@@ -287,12 +285,35 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   
   # combine both functions
   find_peptide_position <- function(peptide, protein_sequence) {
+    
     exact_match_position <- find_exact_match(peptide, protein_sequence)
     
     if (exact_match_position != -1) {
+      
       return(exact_match_position)
+      
     } else {
-      return(find_one_mismatch(peptide, protein_sequence))
+      
+      one_mismatch_pos <- find_a_mismatch(peptide, protein_sequence, 1)
+     
+      if (one_mismatch_pos != -1) {
+        
+        return(one_mismatch_pos) 
+        
+      } else {
+        
+        two_mismatch_pos <- find_a_mismatch(peptide, protein_sequence, 2)
+        
+        if (two_mismatch_pos != -1) {
+          
+          return(two_mismatch_pos) 
+          
+        } else {
+          
+          return(find_a_mismatch(peptide, protein_sequence, 3))
+          
+        }
+      }
     }
   }
   
@@ -312,9 +333,9 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   }
   
   # get peptide end location within every ORF
-  metadata$pep_end <- metadata$pep_start + nchar(metadata$peptide)
+  metadata$pep_end <- metadata$pep_start + nchar(metadata$peptide) - 1
   
-  metadata_output <- metadata %>% dplyr::filter(pep_start < protein_length & pep_end < protein_length)
+  metadata_output <- metadata %>% dplyr::filter(pep_start < protein_length & pep_end <= protein_length)
   
   metadata_output$mapped_pep_start <- NULL
   metadata_output$name <- NULL
@@ -326,7 +347,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
 
 # get peptide coords from transcript coords
 extract_peptide_coords <- function(metadata_df) {
-
+  
   # subset metadata for conversion of peptide coords
   txcoordsdf_subset <- metadata_df %>% dplyr::select(orf_tx_id, transcript_id, PID, gene_id, pep_start, pep_end, peptide, txstart, txend)
   
@@ -334,13 +355,13 @@ extract_peptide_coords <- function(metadata_df) {
   txcoordsdf_subset$txstart <- as.numeric(txcoordsdf_subset$txstart)
   txcoordsdf_subset$txend <- as.numeric(txcoordsdf_subset$txend)
   
-  txcoordsdf_subset$start <- txcoordsdf_subset$txstart + ((txcoordsdf_subset$pep_start-1) * 3) - 1
-  txcoordsdf_subset$end <- txcoordsdf_subset$start + (nchar(txcoordsdf_subset$peptide) * 3)
+  txcoordsdf_subset$start <- txcoordsdf_subset$txstart + ((txcoordsdf_subset$pep_start-1) * 3)
+  txcoordsdf_subset$end <- txcoordsdf_subset$start + (nchar(txcoordsdf_subset$peptide) * 3) - 1
   txcoordsdf_subset$width <- txcoordsdf_subset$end - txcoordsdf_subset$start
   txcoordsdf_subset$peptide <- as.factor(txcoordsdf_subset$peptide)
   
   txcoordsdf_subset <- txcoordsdf_subset %>% 
-    dplyr::filter(start > txstart & end < txend)
+    dplyr::filter(start >= txstart & end <= txend)
   
   # GRanges from df of transcriptomic coords of peptides
   coords_peptides <- makeGRangesFromDataFrame(txcoordsdf_subset,
@@ -356,12 +377,11 @@ extract_peptide_coords <- function(metadata_df) {
   # set names
   names(coords_peptides) <- c(coords_peptides$transcript)
   
-  
   # filter peptides for bad mappings
   coords_peptides <- subset(coords_peptides, start(coords_peptides) != 0)
-  coords_peptides <- subset(coords_peptides, end(coords_peptides) < coords_peptides$txend)
-  coords_peptides <- subset(coords_peptides, (mcols(coords_peptides)$txstart != mcols(coords_peptides)$pep_start))
-  coords_peptides <- subset(coords_peptides, (mcols(coords_peptides)$txend != mcols(coords_peptides)$pep_end))
+  coords_peptides <- subset(coords_peptides, end(coords_peptides) <= coords_peptides$txend)
+  #coords_peptides <- subset(coords_peptides, (mcols(coords_peptides)$txstart != mcols(coords_peptides)$pep_start))
+  #coords_peptides <- subset(coords_peptides, (mcols(coords_peptides)$txend != mcols(coords_peptides)$pep_end))
   
   return(coords_peptides)
   
