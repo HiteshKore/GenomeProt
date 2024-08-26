@@ -100,9 +100,9 @@ import_orf_metadata <- function(metadata_file) {
 # import custom database FASTA of ORFs
 import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   
-  fasta_file <- fasta_import_file
-  gtf_file <- gtf_import_file
-  proteomics_data <- pd
+  #fasta_file <- fasta_import_file
+  #gtf_file <- gtf_import_file
+  #proteomics_data <- pd
   
   # get transcript lengths
   gtf_txdb <- makeTxDbFromGFF(gtf_file)
