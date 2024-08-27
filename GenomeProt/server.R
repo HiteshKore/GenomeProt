@@ -462,6 +462,9 @@ server <- function(input, output, session) {
   # run database function when submit is pressed
   observeEvent(input$db_submit_button, {
     
+    # ensure download button remains greyed out (if submit is re-pressed)
+    shinyjs::disable("db_download_button")
+    shinyjs::runjs("document.getElementById('db_download_button').style.backgroundColor = '#d3d3d3';")
     # disable submit button after it is pressed
     session$sendCustomMessage("disableButton", list(id = "db_submit_button", spinnerId = "db-loading-container"))
     
