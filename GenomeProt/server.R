@@ -361,7 +361,7 @@ database_server <- function(input, output, session) {
   print("Annotated proteome")
   
   # zip results
-  if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf"))) {
+  if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf")) && !file.exists(paste0(outdir_db, "/orf_temp.txt"))) {
     if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
       bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE)
       files_to_zip <- c(bam_files, paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
@@ -476,15 +476,10 @@ server <- function(input, output, session) {
     } else if (input$input_type == "fastq_input" & input$sequencing_type == "short-read") {
       fastq_server(input, output, session)
       database_server(input, output, session)
-      
-      
     } else if (input$input_type == "bam_input" & input$sequencing_type == "short-read") {
-      # short-read settings
       bam_server(input, output, session)
       database_server(input, output, session)
-      
     } else if (input$input_type == "gtf_input") {
-      database_server(input, output, session)
       database_server(input, output, session)
     }
     
@@ -635,7 +630,15 @@ server <- function(input, output, session) {
       
       sample_names <- sample_names[order(match(sample_names,colnames(data_storage$countsp)))]
       
-      data_storage$countsp$Peptide <- data_storage$countsp$Stripped.Sequence
+      
+      # rename as per bambu counts output
+      if ("Stripped.Sequence" %in% colnames(data_storage$countsp)) {
+        data_storage$countsp$Peptide <- data_storage$countsp$Stripped.Sequence
+        data_storage$countsp$Stripped.Sequence <- NULL
+      } else if ("peptide" %in% colnames(data_storage$countsp)) {
+        data_storage$countsp$Peptide <- data_storage$countsp$peptide
+        data_storage$countsp$peptide <- NULL
+      }
       
       # noted that sometimes a peptide is in the data twice, so take max count value
       data_storage$countsp <- data_storage$countsp %>% 

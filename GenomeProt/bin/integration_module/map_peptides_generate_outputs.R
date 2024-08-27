@@ -42,6 +42,12 @@ metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
 
+# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/integration_functions.R")
+# proteomics_import_file <- "~/Documents/linda_data/genomeprot_peptides.txt"
+# fasta_import_file <- "~/Documents/linda_data/proteome_database.fasta"
+# metadata_import_file <- "~/Documents/linda_data/proteome_database_metadata.txt"
+# gtf_import_file <- "~/Documents/linda_data/proteome_database_transcripts.gtf"
+# output_directory <- "~/Documents"
 
 # ------------- import files ------------- #
 

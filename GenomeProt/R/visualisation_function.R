@@ -4,7 +4,7 @@
 plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcounts=NA, min_intron_len=500) {
   
   # test vars
-  # gene_symbol <- "Cox5a"
+  # gene_symbol <- "KPTN"
   # tx_res <- res_tx_import
   # pep_res <- res_pep_import
   # orf_res <- res_ORF_import
