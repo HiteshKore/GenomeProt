@@ -132,7 +132,7 @@ ui <- dashboardPage(
                        # Variable options
                        conditionalPanel(
                          condition = "input.input_type == 'fastq_input'",
-                         numericInput("user_threads", label = "CPUs:", value = 1),
+                         numericInput("user_threads", label = "CPUs:", value = 4, min = 1, max = 46, step = 1),
                          #h5("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
                          fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                          conditionalPanel(condition = "input.sequencing_type == 'short-read'",
@@ -142,7 +142,7 @@ ui <- dashboardPage(
                        ),
                        conditionalPanel(
                          condition = "input.input_type == 'bam_input'",
-                         numericInput("user_threads", label = "CPUs:", value = 1),
+                         numericInput("user_threads", label = "CPUs:", value = 4, min = 1, max = 46, step = 1),
                          conditionalPanel(condition = "input.sequencing_type == 'short-read'",
                          fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)),
                          fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
