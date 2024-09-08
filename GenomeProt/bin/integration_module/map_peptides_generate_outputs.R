@@ -160,7 +160,6 @@ pep_in_genomic <- split(pep_in_genomic_gr, ~ names(pep_in_genomic_gr))
 ORFik::export.bed12(pep_in_genomic, paste0(output_directory, "/peptides.bed12"), rgb = 0)
 
 # export bed12 of ORFs
-# should we change it so that only unique ORFs are exported, not every ORF per transcript?
 ORFik::export.bed12(orf_in_genomic, paste0(output_directory, "/ORFs.bed12"), rgb = 0)
 
 # format GTF of ORFs
@@ -220,6 +219,14 @@ peptide_result <- merge(peptide_result, orf_df, by=c("PID", "transcript_id"), al
 
 peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
+peptide_result$seqnames <- NULL
+
+peptide_result <- peptide_result %>% 
+  dplyr::mutate(longest_orf_in_transcript = case_when(
+    longest_orf_in_transcript == "Y" ~ TRUE,
+    longest_orf_in_transcript == "N" ~ FALSE
+  ))
+
 peptide_result <- peptide_result %>% 
   dplyr::group_by(peptide) %>% 
   dplyr::mutate(peptide_ids_gene = case_when(
@@ -230,7 +237,11 @@ peptide_result <- peptide_result %>%
       TRUE ~ FALSE),
     peptide_ids_transcript = case_when(
       length(unique(gene_id))==1 & length(unique(PID))==1 & length(unique(transcript_id)) == 1 ~ TRUE,
-      TRUE ~ FALSE)) %>% 
+      TRUE ~ FALSE),
+    shared_novel_protein_peptide = case_when(
+      length(unique(PID))>1 & all(startsWith(PID, "ORF")) ~ TRUE,
+      TRUE ~ FALSE
+    )) %>% 
   dplyr::ungroup()
 
 # if an ORF is identified by at least one high confidence peptide, then the ORF is high confidence
@@ -244,11 +255,32 @@ peptide_result <- peptide_result %>%
       TRUE ~ FALSE)) %>% 
   dplyr::ungroup()
 
+# get missing peptides
+missing_peptides <- pd %>% dplyr::filter(!(PID %in% peptide_result$PID))
+
+missing_peptides <- missing_peptides %>% dplyr::filter(!startsWith(PID, "ORF") & !startsWith(PID, "sp"))
+
+missing_peptides <- missing_peptides[grepl("\\,chr", missing_peptides$PID),]
+
+# ensure same col names
+columns_to_add <- setdiff(names(peptide_result), names(missing_peptides))
+
+# add missing columns to missing df with NA values
+missing_peptides[columns_to_add] <- NA
+
+# ensure the column order is same before rbind
+missing_peptides <- missing_peptides[, names(peptide_result)]
+
+combined_peptide_result <- rbind(peptide_result, missing_peptides)
+
+combined_peptide_result$PID <- gsub(",", ".", combined_peptide_result$PID)
+combined_peptide_result <- combined_peptide_result[!(base::duplicated(combined_peptide_result)),]
+
 # export summary data
-write.csv(peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
+write.csv(combined_peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
 
 # include orf_status and peptide_status in GTF mcols
-results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id", "seqnames"), all.x=T, all.y=F)
+results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id"), all.x=T, all.y=F)
 results_to_merge_with_granges <- results_to_merge_with_granges[!(duplicated(results_to_merge_with_granges)),]
 results_to_merge_with_granges <- results_to_merge_with_granges %>% 
   dplyr::select(-openprot_id, -`molecular_weight(kDA)`, -isoelectric_point, -hydrophobicity, -aliphatic_index)
