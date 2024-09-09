@@ -28,6 +28,12 @@ suppressPackageStartupMessages({
   library(optparse)
   library(mygene)
   library(tximport)
+  library(BSgenome.Hsapiens.UCSC.hg38)
+  library(BSgenome.Mmusculus.UCSC.mm39)
+  library(BSgenome.Celegans.UCSC.ce11)
+  library(BSgenome.Dmelanogaster.UCSC.dm6)
+  library(BSgenome.Rnorvegicus.UCSC.rn7)
+  library(BSgenome.Drerio.UCSC.danRer11)
 })
 
 options(shiny.maxRequestSize = 107374182400) # 2GB
