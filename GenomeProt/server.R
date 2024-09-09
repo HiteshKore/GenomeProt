@@ -14,16 +14,25 @@ fastq_server <- function(input, output, session) {
   system(paste0("mkdir ", outdir_bam))
   
   # optionally export genome from R
-  # set organism
-  # if (organism == "mouse") {
-  #   library(BSgenome.Mmusculus.UCSC.mm39)
-  #   genomedb <- BSgenome.Mmusculus.UCSC.mm39::Mmusculus
-  # } else if (organism == "human") {
+  # if (organism == "human") {
   #   library(BSgenome.Hsapiens.UCSC.hg38)
   #   genomedb <- BSgenome.Hsapiens.UCSC.hg38
+  # } else if (organism == "mouse") {
+  #   library(BSgenome.Mmusculus.UCSC.mm39)
+  #   genomedb <- BSgenome.Mmusculus.UCSC.mm39
+  # } else if (organism == "celegans") {
+  #   library(BSgenome.Celegans.UCSC.ce11)
+  #   genomedb <- BSgenome.Celegans.UCSC.ce11
+  # } else if (organism == "drosophila") {
+  #   library(BSgenome.Dmelanogaster.UCSC.dm6)
+  #   genomedb <- BSgenome.Dmelanogaster.UCSC.dm6
+  # } else if (organism == "rat") {
+  #   library(BSgenome.Rnorvegicus.UCSC.rn7)
+  #   genomedb <- BSgenome.Rnorvegicus.UCSC.rn7
+  # } else if (organism == "zebrafish") {
+  #   library(BSgenome.Drerio.UCSC.danRer11)
+  #   genomedb <- BSgenome.Drerio.UCSC.danRer11
   # }
-  # 
-  # getSeq(bs, c("chr1","chr2"))
   # export(genomedb, "genome.fasta.gz", verbose=T, compress=T, format="fasta")
   
   # create dataframe with sample details and add prefix column 
@@ -350,6 +359,14 @@ database_server <- function(input, output, session) {
     ref_proteome <- "data/openprot_uniprotDb_hs.txt"
   } else if (input$organism == "mouse") {
     ref_proteome <- "data/openprot_uniprotDb_mm.txt"
+  } else if (input$organism == "celegans") {
+    ref_proteome <- "data/openprot_uniprotDb_c_elegans.txt"
+  } else if (input$organism == "drosophila") {
+    ref_proteome <- "data/openprot_uniprotDb_drosophila.txt"
+  } else if (input$organism == "rat") {
+    ref_proteome <- "data/openprot_uniprotDb_rat.txt"
+  } else if (input$organism == "zebrafish") {
+    ref_proteome <- "data/openprot_uniprotDb_zebrafish.txt"
   }
   
   # run python script
@@ -357,7 +374,7 @@ database_server <- function(input, output, session) {
   command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
   print(command_annotate_proteome)
   system(command_annotate_proteome)
-
+  
   print("Annotated proteome")
   
   # zip results

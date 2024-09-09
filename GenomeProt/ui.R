@@ -111,7 +111,12 @@ ui <- dashboardPage(
                        
                        # Constant options
                        selectInput("organism", label = "Organism:", 
-                                   choices = list("human" = "human", "mouse" = "mouse"), 
+                                   choices = list("Roundworm (C. elegans)" = "celegans", 
+                                                  "Fruit fly (D. melanogaster)" = "drosophila", 
+                                                  "Human (H. sapiens)" = "human", 
+                                                  "Mouse (M. musculus)" = "mouse", 
+                                                  "Rat (R. rattus)" = "rat", 
+                                                  "Zebrafish (D. rerio)" = "zebrafish"), 
                                    selected = "human"),
                        selectInput("database_type", label = "ORFs to be included in proteomedb:", 
                                    choices = list("canonical", "all"),

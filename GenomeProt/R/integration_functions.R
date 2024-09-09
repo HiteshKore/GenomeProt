@@ -51,7 +51,7 @@ import_proteomics_data <- function(proteomics_file) {
   )
   
   # separate into one row per mapped ORF
-  prot_expanded <- separate_rows(protfile, all_mappings, sep = "\\, |\\;")
+  prot_expanded <- separate_rows(protfile, all_mappings, sep = "\\, |\\;|\\; ")
   
   #prot_expanded <- prot_expanded[!grepl("\\,chr", prot_expanded$all_mappings),]
   
