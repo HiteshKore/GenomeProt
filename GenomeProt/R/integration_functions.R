@@ -199,7 +199,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   txs_unlisted <- unlist(txs_filtered)
   
   # function to convert genomic start position to transcript position
-  convert_gene_pos_to_transcript_pos_vectorized <- function(txdb, input_df) {
+  convert_gene_pos_to_transcript_pos <- function(txdb, input_df) {
     
     # get all relevant exons
     all_exons <- txdb[names(txdb) %in% input_df$transcript_id]
@@ -238,7 +238,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   }
   
   # apply to orf genomic coords
-  orf_transcriptomic_coords <- convert_gene_pos_to_transcript_pos_vectorized(txs_unlisted, orf_genomic_coords_df)
+  orf_transcriptomic_coords <- convert_gene_pos_to_transcript_pos(txs_unlisted, orf_genomic_coords_df)
   
   # ORFs that could not be mapped to transcripts are returned with -1 starts
   orf_transcriptomic_coords <- orf_transcriptomic_coords %>% dplyr::filter(txstart >= 0)
@@ -254,11 +254,12 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   metadata <- metadata[!(base::duplicated(metadata)),]
   metadata <- metadata %>% dplyr::filter(!is.na(transcript_id) & !is.na(txstart))
   
-  find_peptide_position_vectorized <- function(peptides, protein_sequences) {
-    # Exact match
+  find_peptide_position <- function(peptides, protein_sequences) {
+    
+    # exact match
     exact_matches <- stri_locate_first_fixed(protein_sequences, peptides)
     
-    # For non-exact matches, use fuzzy matching
+    # non-exact matches use fuzzy matching
     non_exact_mask <- is.na(exact_matches[,1])
     
     if (any(non_exact_mask)) {
@@ -266,7 +267,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
         peptide <- peptides[i]
         protein <- protein_sequences[i]
         
-        # Generate regex pattern allowing up to 3 mismatches
+        # generate regex pattern allowing up to 3 mismatches
         pattern <- paste0(strsplit(peptide, "")[[1]], collapse = "(.{0,1})")
         
         match <- stri_locate_first_regex(protein, pattern)
@@ -280,7 +281,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   
   # apply to dataframe
   setDT(metadata)
-  metadata[, mapped_pep_start := find_peptide_position_vectorized(peptide, protein_sequence)]
+  metadata[, mapped_pep_start := find_peptide_position(peptide, protein_sequence)]
   
   # if exact match or one mismatch isn't found, use proteomics defined start site
   if (c("Protein Start") %in% colnames(metadata)) {
