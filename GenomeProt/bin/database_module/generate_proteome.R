@@ -4,7 +4,7 @@
 source("global.R")
 
 # import gtf and filter for minimum transcript counts
-filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
+filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, outdir) {
   # customgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_subset.gtf"
   # tx_counts <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_counts.csv"
   # min_count <- 40
@@ -32,6 +32,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
     # filter for these transcripts
     bambu_data <- bambu_data[mcols(bambu_data)$transcript_id %in% tx_ids]
     
+    
   } 
   
   # remove scaffolds and weird chromosomes
@@ -43,17 +44,19 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
   # subset the GRanges
   bambu_data <- bambu_data[keep_rows]
   
+  
   # filter based on strand
   okstrand <- c("+", "-")
   bambu_data <- bambu_data[strand(bambu_data) %in% okstrand]
-  
   # get gene names
+  
   
   # convert to tibble
   bambu_df <- bambu_data %>% as_tibble()
   
   # remove version numbers for search
   bambu_df <- bambu_df %>% separate(gene_id, into="ensg_id", sep="\\.", remove = FALSE)
+  
   
   # use mygene to search for gene names
   gene_query <- queryMany(unique(bambu_df$ensg_id), scopes="ensembl.gene", fields="symbol", species=as.character(organism),  returnall=TRUE)
@@ -71,6 +74,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
   
   # merge results 
   bambu_merged <- merge(bambu_df, gene_df, by.x="ensg_id", by.y="query", all.x=T, all.y=F)
+ 
   bambu_merged$ensg_id <- NULL
   
   # make GRanges including new names
@@ -79,9 +83,24 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
                                             seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
                                             starts.in.df.are.0based=FALSE)
   
+  
+  
+  #write_tsv(data.frame(bambu_data_gr), paste0(outdir, "/bambu_data_gr.tsv"))
+  
   # remove extra mcols
-  mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name", "exon_number")]
+  columns_present <- all(c("gene_name.x", "gene_name.y") %in%  colnames(data.frame(bambu_data_gr)))
+  
+  if (columns_present){
+    mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name.x","gene_name.y", "exon_number")]
+  }else{
+    mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name", "exon_number")]
+  }
+    
+  
+  
+  
   bambu_exons <- bambu_data_gr[bambu_data_gr$type == "exon"]
+  #print(bambu_exons)
   bambu_transcripts <- bambu_data_gr[bambu_data_gr$type == "transcript"]
   
   # sort by chr and locations
@@ -94,319 +113,159 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA) {
   bambu_export <- c(bambu_transcripts, bambu_exons)
   
   # export filtered gtf
-  export(bambu_export, "database_output/proteome_database_transcripts.gtf", format="gtf")
+  export(bambu_export, paste0(outdir, "/proteome_database_transcripts.gtf"), format="gtf")
   
   print("Exported filtered GTF")
   
 }
 
 # export FASTA of transcript sequences
-get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_orfs=FALSE, find_UTR_3_orfs=FALSE, referencegtf) {
-  # filteredgtf <- "~/Documents/GenomeProt_tmp/demo_datasets/3_db_module/bambu_transcript_annotations.gtf"
+get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_orfs=FALSE, find_UTR_3_orfs=FALSE, referencegtf, outdir) {
+  # filteredgtf <- "~/Documents/hek_wt/database_output_longest_ORF_T/proteome_database_transcripts.gtf"
   # organism <- "human"
   # orf_len <- 30
-  # find_UTR_5_orfs <- FALSE
-  # find_UTR_3_orfs <- TRUE
-  # referencegtf <- "~/Documents/gencode_annotations/gencode.v44.annotation.gtf"
+  # find_UTR_5_orfs <- TRUE
+  # find_UTR_3_orfs <- FALSE
+  # referencegtf <- "~/Documents/hek_wt/gencode.v42.annotation.gtf"
+  
+  # set organism
+  if (organism == "human") {
+    library(BSgenome.Hsapiens.UCSC.hg38)
+    genomedb <- BSgenome.Hsapiens.UCSC.hg38
+  } else if (organism == "mouse") {
+    library(BSgenome.Mmusculus.UCSC.mm39)
+    genomedb <- BSgenome.Mmusculus.UCSC.mm39
+  } else if (organism == "celegans") {
+    library(BSgenome.Celegans.UCSC.ce11)
+    genomedb <- BSgenome.Celegans.UCSC.ce11
+  } else if (organism == "drosophila") {
+    library(BSgenome.Dmelanogaster.UCSC.dm6)
+    genomedb <- BSgenome.Dmelanogaster.UCSC.dm6
+  } else if (organism == "rat") {
+    library(BSgenome.Rnorvegicus.UCSC.rn7)
+    genomedb <- BSgenome.Rnorvegicus.UCSC.rn7
+  } else if (organism == "zebrafish") {
+    library(BSgenome.Drerio.UCSC.danRer11)
+    genomedb <- BSgenome.Drerio.UCSC.danRer11
+  }
+  
+  # required for UTR regions
+  ref_txdb <- makeTxDbFromGFF(referencegtf)
   
   # import filtered gtf as a txdb
   txdb <- makeTxDbFromGFF(filteredgtf)
-  txs <- exonsBy(txdb, by=c("tx","gene"), use.names=TRUE)
+  txs <- exonsBy(txdb, by=c("tx", "gene"), use.names=TRUE)
   
-  # convert to GRangesList
-  txs.granges <- GRangesList(txs)
+  # convert txdb to GRangesList
+  txs_grl <- GRangesList(txs)
   
-  # use this GTF to extract transcript sequences based on genome (extracts novel sequences too)
-  if (organism=="mouse") {
-    library(BSgenome.Mmusculus.UCSC.mm39)
-    genomedb <- BSgenome.Mmusculus.UCSC.mm39::Mmusculus
-    tx_seqs <- extractTranscriptSeqs(genomedb, txs.granges)
-  } else if (organism=="human") {
-    library(BSgenome.Hsapiens.UCSC.hg38)
-    genomedb <- BSgenome.Hsapiens.UCSC.hg38
-    tx_seqs <- extractTranscriptSeqs(genomedb, txs.granges)
+  # ORFik function to find ORFs in GRangesList
+  apply_orfik <- function(grl, orfik_min_length, orfik_max_length, orfik_type) {
+    
+    # extract transcript nt sequence
+    tx_seqs <- extractTranscriptSeqs(genomedb, grl)
+    
+    # ORFik
+    ORFs <- findMapORFs(grl,
+                        tx_seqs, 
+                        groupByTx = FALSE,
+                        longestORF = orfik_type, 
+                        minimumLength = as.numeric(orfik_min_length), 
+                        startCodon = "ATG",
+                        stopCodon = stopDefinition(1))
+    
+    # unlist GRL
+    ORFs_unlisted <- unlist(ORFs) %>% as_tibble()
+    
+    orf_genome_coordinates <- ORFs_unlisted %>% 
+      rowwise() %>% 
+      dplyr::mutate(width = end - start) %>% 
+      group_by(names) %>% 
+      summarise(chr = seqnames[1],
+                start = min(start),
+                end = max(end),
+                length = sum(width),
+                strand = strand[1]) %>% 
+      ungroup() %>% 
+      dplyr::filter(length < (as.numeric(orfik_max_length)*3)-3) %>% # length ORFs < 30 AA
+      dplyr::select(-length)
+    
+    # remove any ORFs from original ORF object if they were filtered out due to length settings above
+    ORFs <- ORFs[names(ORFs) %in% orf_genome_coordinates$names]
+    
+    # rename
+    orf_genome_coordinates$ORF_id <- orf_genome_coordinates$names
+    orf_genome_coordinates$names <- NULL
+    
+    # convert these ORF coordinates into nt sequence
+    orf_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, ORFs)
+    
+    # convert the nucleotide sequences to amino acid sequences
+    orf_aa_seq <- Biostrings::translate(orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE)
+    
+    # create data frame of all possible ORFs
+    orf_aa_seq_df <- data.frame(ORF_id = orf_aa_seq@ranges@NAMES,ORF_sequence = orf_aa_seq, row.names=NULL) 
+    
+    orf_aa_seq_df_genomic_coordinates <- left_join(orf_aa_seq_df, orf_genome_coordinates, by = "ORF_id")
+    
+    return(orf_aa_seq_df_genomic_coordinates)
+    
   }
   
-  # get nt sequence as df
-  #fasta_export_nucleotides <- data.frame(transcript = names(tx_seqs), sequence = tx_seqs, row.names=NULL)
-  #writeXStringSet(tx_seqs, "database_output/ORFome_transcripts_nt.fasta")
+  # ORF discovery
   
-  # ORFik to find ORFs
-  ORFs <- findMapORFs(txs.granges, 
-                      tx_seqs, 
-                      groupByTx = FALSE, 
-                      longestORF = TRUE, 
-                      minimumLength = as.numeric(orf_len), 
-                      startCodon = "ATG",
-                      stopCodon = stopDefinition(1))
+  # extract main ORFs
+  # set ORF max length to large number (to disable)
+  # set longestORF to FALSE to ensure we identify CDS
+  all_ORFs <- apply_orfik(txs_grl, as.numeric(orf_len), 100000, FALSE)
   
-  # unlist GRL
-  ORFs_unlisted <- unlist(ORFs) %>% as_tibble()
+  # create tmp copy
+  tmp <- all_ORFs
   
-  orf_genome_coordinates <- ORFs_unlisted %>% group_by(names) %>% 
-    summarise(chr = seqnames[1],
-              start = min(start),
-              end = max(end),
-              strand = strand[1])
-  
-  orf_genome_coordinates$ORF_id <- orf_genome_coordinates$names
-  
-  # convert these ORFs coordinates into nucleotide sequences
-  orf_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, ORFs)
-  
-  # convert the nucleotide sequences to amino acid sequences
-  orf_aa_seq <- Biostrings::translate(orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE)
-  
-  # create data frame of all possible ORFs
-  orf_aa_seq_df <- data.frame(ORF_id = orf_aa_seq@ranges@NAMES,ORF_sequence = orf_aa_seq, row.names=NULL) 
-  
-  orf_aa_seq_df_genomic_coordinates <- left_join(orf_aa_seq_df, orf_genome_coordinates, by = "ORF_id")
-  orf_aa_seq_df_genomic_coordinates$names <- NULL
-  
-  combined <- orf_aa_seq_df_genomic_coordinates
-  
-  if (find_UTR_5_orfs == FALSE & find_UTR_3_orfs == FALSE) {
-    
-    ref_transcripts <- rtracklayer::import(referencegtf)
-    export(ref_transcripts, "database_output/ref_transcripts_in_data.gtf", format="gtf")
-    
-  } else if (find_UTR_5_orfs == TRUE & find_UTR_3_orfs == FALSE) {
-    
-    ref_transcripts <- rtracklayer::import(referencegtf)
-    ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
-    
-    # need to add if statement, what if no reference transcripts are found in the data?
-    export(ref_transcripts, "database_output/ref_transcripts_in_data.gtf", format="gtf")
-    
-    ref_txdb <- makeTxDbFromGFF("database_output/ref_transcripts_in_data.gtf")
+  # extract 5UTR ORFs
+  if (find_UTR_5_orfs == TRUE) {
     
     utrs5 <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs5_filtered <- utrs5[names(utrs5) %in% names(txs)]
     
-    # extract UTR transcript sequences
-    utr_seqs <- extractTranscriptSeqs(genomedb, utrs5_filtered)
+    # ORF max length is now the main ORF min length
+    # only keep longest UTR ORFs
+    utr5_ORFs <- apply_orfik(utrs5_filtered, 10, as.numeric(orf_len), TRUE)
     
-    # ORFik to find ORFs
-    utrORFs <- findMapORFs(utrs5_filtered,
-                           utr_seqs, 
-                           groupByTx = FALSE, 
-                           longestORF = TRUE,
-                           minimumLength = 10,
-                           startCodon = "ATG",
-                           stopCodon = stopDefinition(1))
+    # update tmp
+    tmp <- rbind(tmp, utr5_ORFs)
     
-    utrORFs_unlisted <- unlist(utrORFs) %>% as_tibble()
-    
-    utrORFs_unlisted$new_names <- paste0(utrORFs_unlisted$names, "_utr")
-    
-    utr_orf_genome_coordinates <- utrORFs_unlisted %>% 
-      rowwise() %>% 
-      dplyr::mutate(width = end - start) %>% 
-      group_by(new_names, names) %>% 
-      summarise(chr = seqnames[1],
-                start = min(start),
-                end = max(end),
-                length = sum(width),
-                strand = strand[1]) %>% 
-      ungroup() %>% 
-      dplyr::filter(length < (as.numeric(orf_len)*3)-3) %>% # length ORFs < 30 AA
-      dplyr::select(-length)
-    
-    utrORFs <- utrORFs[names(utrORFs) %in% utr_orf_genome_coordinates$names]
-    
-    utr_orf_genome_coordinates$ORF_id <- utr_orf_genome_coordinates$names
-    
-    # convert these ORFs coordinates into nucleotide sequences
-    utr_orf_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, utrORFs)
-    
-    # convert the nucleotide sequences to amino acid sequences
-    utr_orf_aa_seq <- Biostrings::translate(utr_orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE)
-    
-    # create data frame of all possible ORFs
-    utr_orf_aa_seq_df <- data.frame(ORF_id = utr_orf_aa_seq@ranges@NAMES, 
-                                    ORF_sequence = utr_orf_aa_seq, row.names=NULL)
-    
-    utr_orf_aa_seq_df_genomic_coordinates <- left_join(utr_orf_aa_seq_df, utr_orf_genome_coordinates, by = "ORF_id")
-    
-    utr_orf_aa_seq_df_genomic_coordinates$ORF_id <- utr_orf_aa_seq_df_genomic_coordinates$new_names
-    utr_orf_aa_seq_df_genomic_coordinates$new_names <- NULL
-    utr_orf_aa_seq_df_genomic_coordinates$names <- NULL
-    
-    combined <- NULL
-    
-    combined <- rbind(orf_aa_seq_df_genomic_coordinates, utr_orf_aa_seq_df_genomic_coordinates)
-    
-    combined <- combined %>% 
-      separate(ORF_id, into=c("transcript_id"), sep=c("\\_"), remove=F) %>% 
-      group_by(transcript_id) %>% 
-      mutate(tx_id_number = row_number()) %>% 
-      ungroup()
-    
-    combined$ORF_id <- paste0(combined$transcript_id, "_", combined$tx_id_number)
-    
-    combined$transcript_id <- NULL
-    combined$tx_id_number <- NULL
-    
-  } else if (find_UTR_5_orfs == FALSE & find_UTR_3_orfs == TRUE) {
-    
-    ref_transcripts <- rtracklayer::import(referencegtf)
-    ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
-    
-    # need to add if statement, what if no reference transcripts are found in the data?
-    export(ref_transcripts, "database_output/ref_transcripts_in_data.gtf", format="gtf")
-    
-    ref_txdb <- makeTxDbFromGFF("database_output/ref_transcripts_in_data.gtf")
+  }
+  
+  # extract 3UTR ORFs
+  if (find_UTR_3_orfs == TRUE) {
     
     utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs3_filtered <- utrs3[names(utrs3) %in% names(txs)]
     
-    # extract UTR transcript sequences
-    utr_seqs <- extractTranscriptSeqs(genomedb, utrs3_filtered)
+    # ORF max length is now the main ORF min length
+    # only keep longest UTR ORFs
+    utr3_ORFs <- apply_orfik(utrs3_filtered, 10, as.numeric(orf_len), TRUE)
     
-    # ORFik to find ORFs
-    utrORFs <- findMapORFs(utrs3_filtered,
-                           utr_seqs,
-                           groupByTx = FALSE, 
-                           longestORF = TRUE,
-                           minimumLength = 10,
-                           startCodon = "ATG",
-                           stopCodon = stopDefinition(1))
+    # update tmp
+    tmp <- rbind(tmp, utr3_ORFs)
     
-    utrORFs_unlisted <- unlist(utrORFs) %>% as_tibble()
-    
-    utrORFs_unlisted$new_names <- paste0(utrORFs_unlisted$names, "_utr")
-    
-    utr_orf_genome_coordinates <- utrORFs_unlisted %>% 
-      rowwise() %>% 
-      dplyr::mutate(width = end - start) %>% 
-      group_by(new_names, names) %>% 
-      summarise(chr = seqnames[1],
-                start = min(start),
-                end = max(end),
-                length = sum(width),
-                strand = strand[1]) %>% 
-      ungroup() %>% 
-      dplyr::filter(length < (as.numeric(orf_len)*3)-3) %>% # length ORFs < 30 AA
-      dplyr::select(-length)
-    
-    utrORFs <- utrORFs[names(utrORFs) %in% utr_orf_genome_coordinates$names]
-    
-    utr_orf_genome_coordinates$ORF_id <- utr_orf_genome_coordinates$names
-    
-    # convert these ORFs coordinates into nucleotide sequences
-    utr_orf_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, utrORFs)
-    
-    # convert the nucleotide sequences to amino acid sequences
-    utr_orf_aa_seq <- Biostrings::translate(utr_orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE)
-    
-    # create data frame of all possible ORFs
-    utr_orf_aa_seq_df <- data.frame(ORF_id = utr_orf_aa_seq@ranges@NAMES, 
-                                    ORF_sequence = utr_orf_aa_seq, row.names=NULL)
-    
-    utr_orf_aa_seq_df_genomic_coordinates <- left_join(utr_orf_aa_seq_df, utr_orf_genome_coordinates, by = "ORF_id")
-    
-    utr_orf_aa_seq_df_genomic_coordinates$ORF_id <- utr_orf_aa_seq_df_genomic_coordinates$new_names
-    utr_orf_aa_seq_df_genomic_coordinates$new_names <- NULL
-    utr_orf_aa_seq_df_genomic_coordinates$names <- NULL
-    
-    combined <- NULL
-    
-    combined <- rbind(orf_aa_seq_df_genomic_coordinates, utr_orf_aa_seq_df_genomic_coordinates)
-    
-    combined <- combined %>% 
-      separate(ORF_id, into=c("transcript_id"), sep=c("\\_"), remove=F) %>% 
-      group_by(transcript_id) %>% 
-      mutate(tx_id_number = row_number()) %>% 
-      ungroup()
-    
-    combined$ORF_id <- paste0(combined$transcript_id, "_", combined$tx_id_number)
-    
-    combined$transcript_id <- NULL
-    combined$tx_id_number <- NULL
-    
-  } else if (find_UTR_5_orfs == TRUE & find_UTR_3_orfs == TRUE) {
-    
-    ref_transcripts <- rtracklayer::import(referencegtf)
-    ref_transcripts <- ref_transcripts[mcols(ref_transcripts)$transcript_id %in% names(txs)]
-    
-    # need to add if statement, what if no reference transcripts are found in the data?
-    export(ref_transcripts, "database_output/ref_transcripts_in_data.gtf", format="gtf")
-    
-    ref_txdb <- makeTxDbFromGFF("database_output/ref_transcripts_in_data.gtf")
-    
-    utrs5 <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
-    utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
-    utrs_both <- c(utrs5, utrs3)
-    
-    utrsboth_filtered <- utrs_both[names(utrs_both) %in% names(txs)]
-    
-    # extract UTR transcript sequences
-    utr_seqs <- extractTranscriptSeqs(genomedb, utrsboth_filtered)
-    
-    # ORFik to find ORFs
-    utrORFs <- findMapORFs(utrsboth_filtered,
-                           utr_seqs,
-                           groupByTx = FALSE, 
-                           longestORF = TRUE,
-                           minimumLength = 10,
-                           startCodon = "ATG",
-                           stopCodon = stopDefinition(1))
-    
-    utrORFs_unlisted <- unlist(utrORFs) %>% as_tibble()
-    
-    utrORFs_unlisted$new_names <- paste0(utrORFs_unlisted$names, "_utr")
-    
-    utr_orf_genome_coordinates <- utrORFs_unlisted %>% 
-      rowwise() %>% 
-      dplyr::mutate(width = end - start) %>% 
-      group_by(new_names, names) %>% 
-      summarise(chr = seqnames[1],
-                start = min(start),
-                end = max(end),
-                length = sum(width),
-                strand = strand[1]) %>% 
-      ungroup() %>% 
-      dplyr::filter(length < (as.numeric(orf_len)*3)-3) %>% # length ORFs < 30 AA
-      dplyr::select(-length)
-    
-    utrORFs <- utrORFs[names(utrORFs) %in% utr_orf_genome_coordinates$names]
-    
-    utr_orf_genome_coordinates$ORF_id <- utr_orf_genome_coordinates$names
-    
-    # convert these ORFs coordinates into nucleotide sequences
-    utr_orf_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, utrORFs)
-    
-    # convert the nucleotide sequences to amino acid sequences
-    utr_orf_aa_seq <- Biostrings::translate(utr_orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE)
-    
-    # create data frame of all possible ORFs
-    utr_orf_aa_seq_df <- data.frame(ORF_id = utr_orf_aa_seq@ranges@NAMES, 
-                                    ORF_sequence = utr_orf_aa_seq, row.names=NULL)
-    
-    utr_orf_aa_seq_df_genomic_coordinates <- left_join(utr_orf_aa_seq_df, utr_orf_genome_coordinates, by = "ORF_id")
-    
-    utr_orf_aa_seq_df_genomic_coordinates$ORF_id <- utr_orf_aa_seq_df_genomic_coordinates$new_names
-    utr_orf_aa_seq_df_genomic_coordinates$new_names <- NULL
-    utr_orf_aa_seq_df_genomic_coordinates$names <- NULL
-    
-    combined <- NULL
-    
-    combined <- rbind(orf_aa_seq_df_genomic_coordinates, utr_orf_aa_seq_df_genomic_coordinates)
-    
-    combined <- combined %>% 
-      separate(ORF_id, into=c("transcript_id"), sep=c("\\_"), remove=F) %>% 
-      group_by(transcript_id) %>% 
-      mutate(tx_id_number = row_number()) %>% 
-      ungroup()
-    
-    combined$ORF_id <- paste0(combined$transcript_id, "_", combined$tx_id_number)
-    
-    combined$transcript_id <- NULL
-    combined$tx_id_number <- NULL
   }
   
-  # export protein seqs
-  write_tsv(combined, "database_output/ORFome_aa.txt")
+  # rename final ORFs with new numerical IDs
+  combined <- tmp %>% 
+    separate(ORF_id, into=c("transcript_id"), sep=c("\\_"), remove=F) %>% 
+    group_by(transcript_id) %>% 
+    mutate(tx_id_number = row_number()) %>% 
+    ungroup()
+  
+  # apply new names
+  combined$ORF_id <- paste0(combined$transcript_id, "_", combined$tx_id_number)
+  combined$transcript_id <- NULL
+  combined$tx_id_number <- NULL
+  
+  # export protein seqs for python script
+  write_tsv(combined, paste0(outdir, "/ORFome_aa.txt"))
   
   print("Exported ORFik data")
   
@@ -428,7 +287,9 @@ option_list = list(
   make_option(c("-u", "--uorfs"), type="logical", default=NULL,
               help="Find uORFs", metavar="TRUE/FALSE"),
   make_option(c("-d", "--dorfs"), type="logical", default=NULL,
-              help="Find dORFs", metavar="TRUE/FALSE")
+              help="Find dORFs", metavar="TRUE/FALSE"),
+  make_option(c("-s", "--savepath"), type="character", default=NULL,
+              help="Output directory", metavar="character")
 )
 
 opt_parser <- OptionParser(option_list=option_list)
@@ -442,18 +303,16 @@ organism <- opt$organism
 min_orf_length <- opt$length
 find_5_orfs <- opt$uorfs
 find_3_orfs <- opt$dorfs
-
-# make output directory
-system("mkdir database_output")
+output_directory <- opt$savepath
 
 # run filter_custom_gtf, check if counts are present
 if (!is.null(tx_count_path)) {
-  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, tx_counts=tx_count_path, min_count=minimum_tx_count)
+  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, tx_counts=tx_count_path, min_count=minimum_tx_count, outdir=output_directory)
 } else {
-  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism)
+  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, outdir=output_directory)
 }
 
 # run orfik to find ORFs
-get_transcript_orfs(filteredgtf="database_output/proteome_database_transcripts.gtf", organism=organism, orf_len=min_orf_length, find_UTR_5_orfs=find_5_orfs, find_UTR_3_orfs=find_3_orfs, referencegtf=reference_gtf)
+get_transcript_orfs(filteredgtf=paste0(output_directory, "/proteome_database_transcripts.gtf"), organism=organism, orf_len=min_orf_length, find_UTR_5_orfs=find_5_orfs, find_UTR_3_orfs=find_3_orfs, referencegtf=reference_gtf, outdir=output_directory)
 
 
