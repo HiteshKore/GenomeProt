@@ -42,6 +42,13 @@ metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
 
+source("~/Documents/GenomeProt/GenomeProt/R/integration_functions.R")
+proteomics_import_file <- "~/Documents/miguel_data/august/diann/report.pr_matrix.tsv"
+fasta_import_file <- "~/Documents/miguel_data/august/database/proteome_database_filt.fasta"
+metadata_import_file <- "~/Documents/miguel_data/august/database/proteome_database_metadata_filt.txt"
+gtf_import_file <- "~/Documents/miguel_data/august/database/proteome_database_transcripts.gtf"
+output_directory <- "~/Documents"
+
 # ------------- import files ------------- #
 
 pd <- suppressWarnings(import_proteomics_data(proteomics_import_file))
@@ -203,13 +210,13 @@ results_pept_df_unique <- results_pept_df %>%
 
 # merge results with metadata
 metadata_to_merge <- md %>% 
-  dplyr::select(PID, peptide, transcript_id, gene_id, gene_name)
+  dplyr::select(PID, peptide, transcript_id, gene_id, gene_name, protein_length, tx_len)
 
-peptide_result <- merge(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "gene_id", "transcript_id"), all.x=T, all.y=F)
+peptide_result <- left_join(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "gene_id", "transcript_id"))
 
 peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
-peptide_result <- merge(peptide_result, orf_df, by=c("PID", "transcript_id"), all.x=T, all.y=F)
+peptide_result <- left_join(peptide_result, orf_df, by=c("PID", "transcript_id"))
 
 peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
 
@@ -221,40 +228,26 @@ peptide_result <- peptide_result %>%
     longest_orf_in_transcript == "N" ~ FALSE
   ))
 
-peptide_result <- peptide_result %>% 
-  dplyr::group_by(peptide) %>% 
-  dplyr::mutate(peptide_ids_gene = case_when(
-    length(unique(gene_id))==1 ~ TRUE,
-    TRUE ~ FALSE),
-    peptide_ids_orf = case_when(
-      length(unique(gene_id))==1 & length(unique(PID))==1 ~ TRUE,
-      TRUE ~ FALSE),
-    peptide_ids_transcript = case_when(
-      length(unique(gene_id))==1 & length(unique(PID))==1 & length(unique(transcript_id)) == 1 ~ TRUE,
-      TRUE ~ FALSE),
-    shared_novel_protein_peptide = case_when(
-      length(unique(PID))>1 & all(startsWith(PID, "ORF")) ~ TRUE,
-      TRUE ~ FALSE
-    )) %>% 
-  dplyr::ungroup()
+setDT(peptide_result)
 
-# if an ORF is identified by at least one high confidence peptide, then the ORF is high confidence
-peptide_result <- peptide_result %>% 
-  dplyr::group_by(PID) %>% 
-  dplyr::mutate(orf_identified = case_when(
-    any(peptide_ids_orf == TRUE) ~ TRUE,
-    TRUE ~ FALSE),
-    transcript_identified = case_when(
-      any(peptide_ids_transcript == TRUE) ~ TRUE,
-      TRUE ~ FALSE)) %>% 
-  dplyr::ungroup()
+peptide_result[, c("peptide_ids_gene", "peptide_ids_orf", "peptide_ids_transcript", "shared_novel_protein_peptide") := 
+                 .(length(unique(gene_id)) == 1,
+                   length(unique(gene_id)) == 1 & length(unique(PID)) == 1,
+                   length(unique(gene_id)) == 1 & length(unique(PID)) == 1 & length(unique(transcript_id)) == 1,
+                   length(unique(PID)) > 1 & all(startsWith(PID, "ORF"))),
+               by = peptide]
 
-# get missing peptides
-missing_peptides <- pd %>% dplyr::filter(!(PID %in% peptide_result$PID))
+peptide_result[, orf_identified := any(peptide_ids_orf == TRUE), by = PID]
+peptide_result[, gene_identified := any(peptide_ids_gene == TRUE), by = gene_id]
+peptide_result[, transcript_identified := any(peptide_ids_transcript == TRUE), by = transcript_id]
 
-missing_peptides <- missing_peptides %>% dplyr::filter(!startsWith(PID, "ORF") & !startsWith(PID, "sp"))
+# get missing peptides back in the output
+# missing_peptides <- pd %>% dplyr::filter(!(PID %in% peptide_result$PID))
+missing_peptides <- pd %>% dplyr::filter(!(peptide %in% peptide_result$peptide))
 
-missing_peptides <- missing_peptides[grepl("\\,chr", missing_peptides$PID),]
+#missing_peptides <- missing_peptides %>% dplyr::filter(!startsWith(PID, "ORF") & !startsWith(PID, "sp"))
+
+#missing_peptides <- missing_peptides[grepl("\\,chr", missing_peptides$PID),]
 
 # ensure same col names
 columns_to_add <- setdiff(names(peptide_result), names(missing_peptides))
@@ -274,7 +267,7 @@ combined_peptide_result <- combined_peptide_result[!(base::duplicated(combined_p
 write.csv(combined_peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
 
 # include orf_status and peptide_status in GTF mcols
-results_to_merge_with_granges <- merge(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id"), all.x=T, all.y=F)
+results_to_merge_with_granges <- left_join(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id"))
 results_to_merge_with_granges <- results_to_merge_with_granges[!(duplicated(results_to_merge_with_granges)),]
 results_to_merge_with_granges <- results_to_merge_with_granges %>% 
   dplyr::select(-openprot_id, -`molecular_weight(kDA)`, -isoelectric_point, -hydrophobicity, -aliphatic_index)
@@ -288,6 +281,8 @@ pep_in_genomic_gr_export <- makeGRangesFromDataFrame(results_to_merge_with_grang
 
 names(pep_in_genomic_gr_export) <- c(pep_in_genomic_gr_export$naming) # set names
 
+pep_in_genomic_gr_export$naming <- NULL
+
 # add mcols
 pep_in_genomic_gr_export$source <- "custom"
 pep_in_genomic_gr_export$type <- "exon"
@@ -295,7 +290,7 @@ pep_in_genomic_gr_export$group_id <- "peptides"
 
 # export annotations for vis
 combined <- c(pep_in_genomic_gr_export, orf_in_genomic_gr, gtf_filtered)
-export(combined, paste0(output_directory, "/combined_annotations.gtf"), format="gtf")
+rtracklayer::export(combined, paste0(output_directory, "/combined_annotations.gtf"), format="gtf")
 
 # ---------------------------------------- #
 

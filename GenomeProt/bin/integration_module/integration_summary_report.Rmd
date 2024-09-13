@@ -22,7 +22,11 @@ options(scipen=999)
 
 df <- read.csv(paste0(params$directory, "/", params$file))
 
-#df <- fread("/Users/josieg/Downloads/ff5039dca9b9f11782302e87e2c4bac9/integ_output/peptide_info.csv")
+#df <- fread("/Users/josieg/Documents/peptide_info.csv")
+
+bad_pep <- df %>% dplyr::filter(is.na(transcript_id))
+
+df <- df %>% dplyr::filter(!is.na(transcript_id))
 
 ```
 
@@ -57,11 +61,6 @@ orfuniqtotal <- nrow(df %>% group_by(PID) %>%
             slice_head(n=1) %>% ungroup() %>% 
             dplyr::filter(orf_identified == TRUE))
 
-
-# Contaminant peptides? How to show?
-
-# Peptides mapped to ORFs that had multi genomic loci
-
 ```
 
 Total peptides: `r paste0(peptotal)`
@@ -79,6 +78,42 @@ Total genes with ≥1 UMP: `r paste0(geneuniqtotal)`
 Total ORFs: `r paste0(orftotal)`
 
 Total ORFs with ≥1 UMP: `r paste0(orfuniqtotal)`
+
+
+
+### Summary of peptides mapped to contaminants, decoys or that weren't mapped to genomic loci
+
+```{r, eval=TRUE, echo=FALSE}
+
+
+bad_rev <- bad_pep %>% dplyr::filter(startsWith(PID, "rev"))
+if (nrow(bad_rev) == 0) {
+  bad_rev_num <- 0
+} else {
+  bad_rev_num <- length(unique(bad_rev$peptide))
+}
+
+bad_contam <- bad_pep %>% dplyr::filter(startsWith(PID, "sp"))
+if (nrow(bad_contam) == 0) {
+  bad_contam_num <- 0
+} else {
+  bad_contam_num <- length(unique(bad_contam$peptide))
+}
+
+bad_multi_loc <- bad_pep %>% dplyr::filter(!startsWith(PID, "sp") & !startsWith(PID, "rev"))
+if (nrow(bad_multi_loc) == 0) {
+  bad_multi_loc_num <- 0
+} else {
+  bad_multi_loc_num <- length(unique(bad_multi_loc$peptide))
+}
+
+```
+
+Total peptides mapped to decoys: `r paste0(bad_rev_num)`
+Total peptides mapped to contaminants: `r paste0(bad_contam_num)`
+Total other peptides that weren't mapped (likely belong to ORFs with multiple genomic locations): `r paste0(bad_multi_loc_num)`
+
+
 
 ### Peptide-level data
 
@@ -118,6 +153,8 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 
 ```
 
+
+
 ### Transcript-level data (with ≥1 UMP)
 
 ```{r, eval=TRUE, echo=FALSE}
@@ -154,6 +191,39 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 
 ```
 
+
+
+### Gene-level data (with ≥1 UMP)
+
+```{r, eval=TRUE, echo=FALSE}
+
+h1 <- nrow(df %>% group_by(gene_id) %>%
+             dplyr::filter(peptide_ids_gene == TRUE) %>% 
+            slice_head(n=1) %>%
+            ungroup() %>% dplyr::filter(!startsWith(gene_id, "Bambu")))
+i1 <- nrow(df %>% group_by(gene_id) %>%
+             dplyr::filter(peptide_ids_gene == TRUE) %>% 
+            slice_head(n=1) %>%
+            ungroup() %>% dplyr::filter(startsWith(gene_id, "Bambu")))
+
+# Make stats
+item <- c(
+  "known genes identified by ≥1 UMP",
+  "novel genes identified by ≥1 UMP")
+
+total <- c(h1,i1)
+stats <- data.frame(item, total)
+
+knitr::kable(stats, format = "html", col.names=c(" ", ""))
+
+# Export overall stats file
+#write.table(stats, file = paste0(output,"_stats.csv"), sep=",", quote=F, col.names=F, row.names=F)
+
+
+```
+
+
+
 ### ORF-level data (with ≥1 UMP)
 
 ```{r, eval=TRUE, echo=FALSE}
@@ -181,9 +251,11 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 
 ```
 
+
+
 ### Figures
 
-#### Peptides by mapping type
+#### Peptides by mapping status
 
 ```{r, eval=TRUE, echo=FALSE}
 
@@ -210,7 +282,8 @@ print(pepplot)
 ```
 
 
-#### UMPs by exon count
+
+#### UMPs by number of exons spanned
 
 ```{r, eval=TRUE, echo=FALSE}
 
@@ -285,11 +358,32 @@ print(plot_orf_biotype)
 
 
 
-#### Length distribution of detected ORFs (known and novel)
+#### Lengths of detected ORFs (known and novel)
 
 ```{r, eval=TRUE, echo=FALSE}
 
-# plot
+summary_df <- df %>% group_by(peptide) %>% 
+            dplyr::filter(length(unique(PID)) == 1) %>%
+            ungroup() %>% 
+            group_by(PID) %>% slice_head(n=1) %>% ungroup()
+
+# plot_orf_lengths <- ggplot(summary_df) +
+#   geom_boxplot(aes(x=orf_type, y=protein_length, fill=orf_type), outlier.shape=NA) +
+#   ylab("Length") +
+#   xlab("ORF type") +
+#   theme_bw() +
+#   ylim(0,1000) +
+#   theme(legend.position = "none", 
+#         axis.text.x = element_text(angle = -45, hjust = 0, vjust = 1))
+
+plot_orf_lengths <- ggplot(summary_df) +
+  geom_density(aes(x=protein_length, y=..scaled.., color=orf_type)) +
+  ylab("Scaled density") +
+  xlab("ORF Length (AA)") +
+  theme_bw() +
+  xlim(20,1000)
+
+print(plot_orf_lengths)
 
 ```
 
