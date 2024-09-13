@@ -42,13 +42,6 @@ metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
 
-# source("~/Documents/GenomeProt_tmp/GenomeProt/GenomeProt/R/integration_functions.R")
-# proteomics_import_file <- "~/Documents/linda_data/genomeprot_peptides.txt"
-# fasta_import_file <- "~/Documents/linda_data/proteome_database.fasta"
-# metadata_import_file <- "~/Documents/linda_data/proteome_database_metadata.txt"
-# gtf_import_file <- "~/Documents/linda_data/proteome_database_transcripts.gtf"
-# output_directory <- "~/Documents"
-
 # ------------- import files ------------- #
 
 pd <- suppressWarnings(import_proteomics_data(proteomics_import_file))
@@ -73,9 +66,9 @@ orf_transcript_coords_df <- orf_transcript_coords_df[!(base::duplicated(orf_tran
 
 # make GRanges from df of ORF transcript coordinates
 orf_transcript_coords <- makeGRangesFromDataFrame(orf_transcript_coords_df,
-  keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
-  seqnames.field="transcript_id", start.field="txstart", end.field="txend", strand.field="strand",
-  starts.in.df.are.0based=FALSE, na.rm=TRUE)
+                                                  keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
+                                                  seqnames.field="transcript_id", start.field="txstart", end.field="txend", strand.field="strand",
+                                                  starts.in.df.are.0based=FALSE, na.rm=TRUE)
 
 names(orf_transcript_coords) <- c(orf_transcript_coords$orf_tx_id) # set names
 mcols(orf_transcript_coords)$gene_id <- c(orf_transcript_coords_df$gene_id)
@@ -103,6 +96,7 @@ orf_in_genomic_gr <- unlist(orf_in_genomic, use.names=F) # convert to GRanges
 
 # create vector of exon number per peptide and transcript
 exon_number_vec <- ave(seq_along(orf_in_genomic_gr), mcols(orf_in_genomic_gr)$PID, FUN = seq_along)
+
 # add to GRanges
 mcols(orf_in_genomic_gr)$exon_number <- exon_number_vec
 # re-list
@@ -288,9 +282,9 @@ results_to_merge_with_granges$naming <- paste0(results_to_merge_with_granges$tra
 
 # make GRanges from df of ORF transcript coordinates
 pep_in_genomic_gr_export <- makeGRangesFromDataFrame(results_to_merge_with_granges,
-                                                  keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
-                                                  seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
-                                                  starts.in.df.are.0based=FALSE, na.rm=TRUE)
+                                                     keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
+                                                     seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
+                                                     starts.in.df.are.0based=FALSE, na.rm=TRUE)
 
 names(pep_in_genomic_gr_export) <- c(pep_in_genomic_gr_export$naming) # set names
 
