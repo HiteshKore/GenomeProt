@@ -41,13 +41,13 @@ fasta_import_file <- opt$fasta
 metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
-
-source("~/Documents/GenomeProt/GenomeProt/R/integration_functions.R")
-proteomics_import_file <- "~/Documents/miguel_data/august/diann/report.pr_matrix.tsv"
-fasta_import_file <- "~/Documents/miguel_data/august/database/proteome_database_filt.fasta"
-metadata_import_file <- "~/Documents/miguel_data/august/database/proteome_database_metadata_filt.txt"
-gtf_import_file <- "~/Documents/miguel_data/august/database/proteome_database_transcripts.gtf"
-output_directory <- "~/Documents"
+ 
+# source("~/Documents/GenomeProt/GenomeProt/R/integration_functions.R")
+# proteomics_import_file <- "~/Documents/miguel_data/august/diann/report.pr_matrix.tsv"
+# fasta_import_file <- "~/Documents/miguel_data/august/database/proteome_database_filt.fasta"
+# metadata_import_file <- "~/Documents/miguel_data/august/database/proteome_database_metadata_filt.txt"
+# gtf_import_file <- "~/Documents/miguel_data/august/database/proteome_database_transcripts.gtf"
+# output_directory <- "~/Documents"
 
 # ------------- import files ------------- #
 
@@ -244,10 +244,6 @@ peptide_result[, transcript_identified := any(peptide_ids_transcript == TRUE), b
 # get missing peptides back in the output
 # missing_peptides <- pd %>% dplyr::filter(!(PID %in% peptide_result$PID))
 missing_peptides <- pd %>% dplyr::filter(!(peptide %in% peptide_result$peptide))
-
-#missing_peptides <- missing_peptides %>% dplyr::filter(!startsWith(PID, "ORF") & !startsWith(PID, "sp"))
-
-#missing_peptides <- missing_peptides[grepl("\\,chr", missing_peptides$PID),]
 
 # ensure same col names
 columns_to_add <- setdiff(names(peptide_result), names(missing_peptides))
