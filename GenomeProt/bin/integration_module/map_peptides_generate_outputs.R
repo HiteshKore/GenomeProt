@@ -277,8 +277,6 @@ pep_in_genomic_gr_export <- makeGRangesFromDataFrame(results_to_merge_with_grang
 
 names(pep_in_genomic_gr_export) <- c(pep_in_genomic_gr_export$naming) # set names
 
-pep_in_genomic_gr_export$naming <- NULL
-
 # add mcols
 pep_in_genomic_gr_export$source <- "custom"
 pep_in_genomic_gr_export$type <- "exon"
