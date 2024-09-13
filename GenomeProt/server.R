@@ -707,13 +707,15 @@ server <- function(input, output, session) {
     # should automatically filter and re-load list
     
     # filter genes by high confidence peptide status if check box is selected
-    if (input$high_conf_peptides) {
-      high_conf_peptide_genes <- data_storage$res_pep_import %>%
-        dplyr::filter(peptide_status == "high")
+    if (input$uniq_map_peptides) {
+      
+      high_conf_peptides <- data_storage$res_pep_import %>%
+        dplyr::filter(peptide_ids_orf == TRUE)
       
       genes_list <- data_storage$res_tx_import %>% 
-        dplyr::filter(gene_id %in% high_conf_peptide_genes$gene_id)
+        dplyr::filter(gene_id %in% high_conf_peptides$gene_id)
       
+      # update available genes
       if ("gene_name" %in% colnames(genes_list)) {
         genes_available <- unique(genes_list$gene_name)
       } else {
@@ -721,8 +723,6 @@ server <- function(input, output, session) {
       }
       
     }
-    
-    ##
     
     updateSelectInput(session, "gene_selector", choices = genes_available)
     
