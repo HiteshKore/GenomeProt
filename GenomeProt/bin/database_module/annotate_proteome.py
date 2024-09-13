@@ -16,7 +16,7 @@ import subprocess
 def main():
   args=sys.argv
   if len(args) != 8:
-        print("Usage: python3 annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length_min>")
+        print("Usage: python3 annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all>")
         sys.exit(1)
   else:
     
@@ -505,14 +505,15 @@ def main():
       elif args[6]=="all":
         fw_proteomedb.write(">"+protein_accession+"|CO="+orf_cooordinates_s+" GA="+orf_genes_accession_s+" GN="+orf_genes_symbol_s+" TA="+orf_transcripts_s+"\n"+protein_seq+"\n")
       counter1=counter1+1
-
+  
     #remove intermidiate files
     if os.path.isfile(outdir+"orf_temp.txt"):
       subprocess.run(['rm', '-rf', outdir+"orf_temp.txt"], check=True)
     
     if os.path.isfile(outdir+"cdhit_out"):
-      subprocess.run(['rm', '-rf', outdir+"cdhit_out*"], check=True)
-  
+      subprocess.run(['rm', '-rf', outdir+"cdhit_out"], check=True)
+    subprocess.run(['rm', '-rf', outdir+"cdhit_out.clstr"], check=True)
+
 
 
 if __name__ == "__main__":
