@@ -17,6 +17,7 @@ suppressPackageStartupMessages({
   library(shinythemes)
   library(shinydashboard)
   library(ORFik)
+  library(stringi)
   library(GenomicRanges)
   library(rtracklayer)
   library(markdown)
@@ -28,16 +29,11 @@ suppressPackageStartupMessages({
   library(optparse)
   library(mygene)
   library(tximport)
-  library(BSgenome.Hsapiens.UCSC.hg38)
-  library(BSgenome.Mmusculus.UCSC.mm39)
-  library(BSgenome.Celegans.UCSC.ce11)
-  library(BSgenome.Dmelanogaster.UCSC.dm6)
-  library(BSgenome.Rnorvegicus.UCSC.rn7)
-  library(BSgenome.Drerio.UCSC.danRer11)
 })
 
-options(shiny.maxRequestSize = 107374182400) # 2GB
+options(shiny.maxRequestSize = 21474836480) # 20GB
 
 source("R/integration_functions.R")
 source("R/visualisation_function.R")
 source("R/run_bambu_function.R")
+

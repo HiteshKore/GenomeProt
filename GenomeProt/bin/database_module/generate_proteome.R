@@ -5,10 +5,7 @@ source("global.R")
 
 # import gtf and filter for minimum transcript counts
 filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, outdir) {
-  # customgtf <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_subset.gtf"
-  # tx_counts <- "~/Documents/GenomeProt_tmp/test_datasets/db_module/miguel_counts.csv"
-  # min_count <- 40
-  
+ 
   # import bambu gtf
   bambu_data <- rtracklayer::import(customgtf)
   
@@ -57,7 +54,6 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   # remove version numbers for search
   bambu_df <- bambu_df %>% separate(gene_id, into="ensg_id", sep="\\.", remove = FALSE)
   
-  
   # use mygene to search for gene names
   gene_query <- queryMany(unique(bambu_df$ensg_id), scopes="ensembl.gene", fields="symbol", species=as.character(organism),  returnall=TRUE)
   
@@ -74,7 +70,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   
   # merge results 
   bambu_merged <- merge(bambu_df, gene_df, by.x="ensg_id", by.y="query", all.x=T, all.y=F)
- 
+  
   bambu_merged$ensg_id <- NULL
   
   # make GRanges including new names
@@ -82,8 +78,6 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
                                             keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
                                             seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
                                             starts.in.df.are.0based=FALSE)
-  
-  
   
   #write_tsv(data.frame(bambu_data_gr), paste0(outdir, "/bambu_data_gr.tsv"))
   
@@ -95,9 +89,6 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   }else{
     mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name", "exon_number")]
   }
-    
-  
-  
   
   bambu_exons <- bambu_data_gr[bambu_data_gr$type == "exon"]
   #print(bambu_exons)
@@ -121,12 +112,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
 
 # export FASTA of transcript sequences
 get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_orfs=FALSE, find_UTR_3_orfs=FALSE, referencegtf, outdir) {
-  # filteredgtf <- "~/Documents/hek_wt/database_output_longest_ORF_T/proteome_database_transcripts.gtf"
-  # organism <- "human"
-  # orf_len <- 30
-  # find_UTR_5_orfs <- TRUE
-  # find_UTR_3_orfs <- FALSE
-  # referencegtf <- "~/Documents/hek_wt/gencode.v42.annotation.gtf"
+  
   
   # set organism
   if (organism == "human") {
