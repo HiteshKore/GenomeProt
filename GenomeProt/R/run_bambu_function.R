@@ -24,14 +24,14 @@ run_bambu_function <- function(bam_file_list, gtf, organism, output_directory) {
     genomedb <- BSgenome.Drerio.UCSC.danRer11
   }
   
-	bambuAnnotations <- prepareAnnotations(gtf)
-	se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb)
-	writeBambuOutput(se, path = output_directory)
-	
-	tx_data <- as.data.frame(mcols(se))
-	tx_data <- as.data.frame(apply(tx_data, 2, as.character))
-	tx_data <- tx_data %>% dplyr::filter(novelTranscript == "TRUE")
-	
-	write.csv(tx_data, paste0(output_directory, "/novel_transcript_classes.csv"), row.names=F, quote=F)
-	
+  bambuAnnotations <- prepareAnnotations(gtf)
+  se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb)
+  writeBambuOutput(se, path = output_directory)
+  
+  tx_data <- as.data.frame(mcols(se))
+  tx_data <- as.data.frame(apply(tx_data, 2, as.character))
+  tx_data <- tx_data %>% dplyr::filter(novelTranscript == "TRUE")
+  
+  write.csv(tx_data, paste0(output_directory, "/novel_transcript_classes.csv"), row.names=F, quote=F)
+  
 }
