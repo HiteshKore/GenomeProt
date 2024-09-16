@@ -2,21 +2,7 @@
 # inputs: MQ/FragPipe peptides.tsv output, GTF, metadata
 # outputs: BED12/GTF files of peptides, ORFs and transcripts, database of peptides with info on locations etc, summary file of peptides
 
-suppressMessages({
-  library(data.table)
-  library(ORFik)
-  library(tidyr)
-  library(dplyr)
-  library(stringr)
-  library(GenomicFeatures)
-  library(GenomicRanges)
-  library(rtracklayer)
-  library(stringdist)
-  library(Repitools)
-  library(optparse)
-  library(mygene)
-})
-
+library(stringi)
 source("global.R")
 source("R/integration_functions.R")
 
