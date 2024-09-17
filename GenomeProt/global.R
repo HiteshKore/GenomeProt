@@ -8,7 +8,6 @@ suppressPackageStartupMessages({
   library(readr)
   library(tibble)
   library(purrr)
-  library(stringr)
   library(forcats)
   library(GenomicFeatures)
   library(Biostrings)
@@ -30,8 +29,11 @@ suppressPackageStartupMessages({
   library(tximport)
 })
 
-options(shiny.maxRequestSize = 107374182400) # 2GB
+options(shiny.maxRequestSize = 21474836480) # 20GB
+
+options(scipen=999)
 
 source("R/integration_functions.R")
 source("R/visualisation_function.R")
 source("R/run_bambu_function.R")
+

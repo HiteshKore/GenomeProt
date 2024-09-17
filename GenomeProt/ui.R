@@ -111,7 +111,12 @@ ui <- dashboardPage(
                        
                        # Constant options
                        selectInput("organism", label = "Organism:", 
-                                   choices = list("human" = "human", "mouse" = "mouse"), 
+                                   choices = list("Roundworm (C. elegans)" = "celegans", 
+                                                  "Fruit fly (D. melanogaster)" = "drosophila", 
+                                                  "Human (H. sapiens)" = "human", 
+                                                  "Mouse (M. musculus)" = "mouse", 
+                                                  "Rat (R. rattus)" = "rat", 
+                                                  "Zebrafish (D. rerio)" = "zebrafish"), 
                                    selected = "human"),
                        selectInput("database_type", label = "ORFs to be included in proteomedb:", 
                                    choices = list("canonical", "all"),
@@ -144,7 +149,7 @@ ui <- dashboardPage(
                          condition = "input.input_type == 'bam_input'",
                          numericInput("user_threads", label = "CPUs:", value = 4, min = 1, max = 46, step = 1),
                          conditionalPanel(condition = "input.sequencing_type == 'short-read'",
-                         fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)),
+                                          fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)),
                          fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
                        ),
                        conditionalPanel(
@@ -217,7 +222,7 @@ ui <- dashboardPage(
                 ),
                 column(8,
                        selectInput("gene_selector", "Select Gene", choices = NULL),
-                       checkboxInput("high_conf_peptides", "Genes with high confidence mapped peptides", value = FALSE),
+                       checkboxInput("uniq_map_peptides", "Only display genes encoding ORFs with uniquely mapped peptides", value = FALSE),
                        div(id = "vis-loading-container", class = "loading-container", div(class = "spinner")),
                        plotOutput("plot"),
                        downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing") # initially disabled
