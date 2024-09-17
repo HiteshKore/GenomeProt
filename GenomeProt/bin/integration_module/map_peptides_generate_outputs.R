@@ -22,6 +22,8 @@ option_list = list(
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
+options(scipen=999)
+
 proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 metadata_import_file <- opt$metadata

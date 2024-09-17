@@ -452,11 +452,29 @@ integration_server <- function(input, output, session) {
                     ))
   
   # check files exist
+  # if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
+  #   # create a zip file with results
+  #   files_to_zip_int <- c(paste0(outdir_integ, "/summary_report.html"), paste0(outdir_integ, "/peptide_info.csv"), paste0(outdir_integ, "/combined_annotations.gtf"), paste0(outdir_integ, "/peptides.bed12"), paste0(outdir_integ, "/ORFs.bed12"), paste0(outdir_integ, "/transcripts.bed12"))
+  #   zipfile_path_int <- paste0(session_id, "/integration_results.zip")
+  #   zip(zipfile = zipfile_path_int, files = files_to_zip_int)
+  # }
+  
   if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
     # create a zip file with results
-    files_to_zip_int <- c(paste0(outdir_integ, "/summary_report.html"), paste0(outdir_integ, "/peptide_info.csv"), paste0(outdir_integ, "/combined_annotations.gtf"), paste0(outdir_integ, "/peptides.bed12"), paste0(outdir_integ, "/ORFs.bed12"), paste0(outdir_integ, "/transcripts.bed12"))
-    zipfile_path_int <- paste0(session_id, "/integration_results.zip")
+    files_to_zip_int <- c("summary_report.html", "peptide_info.csv", 
+                          "combined_annotations.gtf", "peptides.bed12", 
+                          "ORFs.bed12", "transcripts.bed12")
+    
+    # set the path to the ZIP file (in the session_id directory)
+    zipfile_path_int <- file.path("../integration_results.zip")
+    
+    # temp change the working dir to outdir_integ
+    tmp_wd <- setwd(outdir_integ)
+    
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
+    
+    setwd(top_level_dir)
+    
   }
   
 }
