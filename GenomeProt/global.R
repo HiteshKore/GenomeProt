@@ -31,6 +31,8 @@ suppressPackageStartupMessages({
 
 options(shiny.maxRequestSize = 21474836480) # 20GB
 
+options(scipen=999)
+
 source("R/integration_functions.R")
 source("R/visualisation_function.R")
 source("R/run_bambu_function.R")
