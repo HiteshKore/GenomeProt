@@ -114,7 +114,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   # proteomics_data <- pd
   
   # get transcript lengths
-  gtf_txdb <- makeTxDbFromGFF(gtf_file)
+  gtf_txdb <- makeTxDbFromGFF(gtf_file, format="gtf")
   tx_lengths <- transcriptLengths(gtf_txdb)
   tx_lengths$transcript_id <- tx_lengths$tx_name
   tx_lengths <- tx_lengths %>% dplyr::select(transcript_id, tx_len)

@@ -41,7 +41,7 @@ output_directory <- opt$savepath
 
 pd <- suppressWarnings(import_proteomics_data(proteomics_import_file))
 
-gtf <- makeTxDbFromGFF(gtf_import_file) # make txdb of gtf
+gtf <- makeTxDbFromGFF(gtf_import_file, format="gtf") # make txdb of gtf
 
 orf_df <- import_orf_metadata(metadata_import_file)
 
