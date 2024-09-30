@@ -114,7 +114,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   # proteomics_data <- pd
   
   # get transcript lengths
-  gtf_txdb <- makeTxDbFromGFF(gtf_file)
+  gtf_txdb <- makeTxDbFromGFF(gtf_file, format="gtf")
   tx_lengths <- transcriptLengths(gtf_txdb)
   tx_lengths$transcript_id <- tx_lengths$tx_name
   tx_lengths <- tx_lengths %>% dplyr::select(transcript_id, tx_len)
@@ -319,8 +319,8 @@ extract_peptide_coords <- function(metadata_df) {
   txcoordsdf_subset$txend <- as.numeric(txcoordsdf_subset$txend)
   
   txcoordsdf_subset$start <- txcoordsdf_subset$txstart + ((txcoordsdf_subset$pep_start-1) * 3)
-  txcoordsdf_subset$end <- txcoordsdf_subset$start + (nchar(txcoordsdf_subset$peptide) * 3) - 1
-  txcoordsdf_subset$width <- txcoordsdf_subset$end - txcoordsdf_subset$start
+  txcoordsdf_subset$end <- txcoordsdf_subset$start + (nchar(txcoordsdf_subset$peptide) * 3)
+  #txcoordsdf_subset$width <- txcoordsdf_subset$end - txcoordsdf_subset$start
   txcoordsdf_subset$peptide <- as.factor(txcoordsdf_subset$peptide)
   
   txcoordsdf_subset <- txcoordsdf_subset %>% 

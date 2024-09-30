@@ -369,8 +369,12 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
+  
+  # set database_type here for now until we define properly
+  command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " all ", input$min_orf_length)
+  
   #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
-  command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
+  #command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
   print(command_annotate_proteome)
   system(command_annotate_proteome)
   
@@ -452,11 +456,29 @@ integration_server <- function(input, output, session) {
                     ))
   
   # check files exist
+  # if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
+  #   # create a zip file with results
+  #   files_to_zip_int <- c(paste0(outdir_integ, "/summary_report.html"), paste0(outdir_integ, "/peptide_info.csv"), paste0(outdir_integ, "/combined_annotations.gtf"), paste0(outdir_integ, "/peptides.bed12"), paste0(outdir_integ, "/ORFs.bed12"), paste0(outdir_integ, "/transcripts.bed12"))
+  #   zipfile_path_int <- paste0(session_id, "/integration_results.zip")
+  #   zip(zipfile = zipfile_path_int, files = files_to_zip_int)
+  # }
+  
   if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
     # create a zip file with results
-    files_to_zip_int <- c(paste0(outdir_integ, "/summary_report.html"), paste0(outdir_integ, "/peptide_info.csv"), paste0(outdir_integ, "/combined_annotations.gtf"), paste0(outdir_integ, "/peptides.bed12"), paste0(outdir_integ, "/ORFs.bed12"), paste0(outdir_integ, "/transcripts.bed12"))
-    zipfile_path_int <- paste0(session_id, "/integration_results.zip")
+    files_to_zip_int <- c("summary_report.html", "peptide_info.csv", 
+                          "combined_annotations.gtf", "peptides.bed12", 
+                          "ORFs.bed12", "transcripts.bed12")
+    
+    # set the path to the ZIP file (in the session_id directory)
+    zipfile_path_int <- file.path("../integration_results.zip")
+    
+    # temp change the working dir to outdir_integ
+    tmp_wd <- setwd(outdir_integ)
+    
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
+    
+    setwd(top_level_dir)
+    
   }
   
 }
@@ -635,6 +657,7 @@ server <- function(input, output, session) {
         data_storage$countst$GENEID <- NULL
       } else if ("TXNAME" %in% colnames(data_storage$countst)) {
         data_storage$countst$transcript_id <- data_storage$countst$TXNAME
+        data_storage$countst$TXNAME <- NULL
       }
       
       # filter GTF transcripts for those with counts
@@ -651,7 +674,6 @@ server <- function(input, output, session) {
       print(sample_names)
       
       sample_names <- sample_names[order(match(sample_names,colnames(data_storage$countsp)))]
-      
       
       # rename as per bambu counts output
       if ("Stripped.Sequence" %in% colnames(data_storage$countsp)) {
@@ -674,7 +696,14 @@ server <- function(input, output, session) {
       rownames(countsp_matrix) <- data_storage$countsp$Peptide
       
       # apply justvsn
-      vsnp <- as.data.frame(justvsn(countsp_matrix))
+      if (nrow(countsp_matrix)>50) {
+        vsnp <- as.data.frame(justvsn(countsp_matrix)) 
+      } else {
+        # if test data, or row number too low, don't apply vsn
+        vsnp <- as.data.frame(countsp_matrix)
+        vsnp[is.na(vsnp)] <- 0
+      }
+      
       vsnp$peptide <- rownames(vsnp)
       
       # melt for plotting
