@@ -192,7 +192,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
       ggplot(aes(x = sample_id, y = transcript_id, fill = log2(count+1))) +
       geom_tile() +
       scale_fill_viridis_b(n.breaks = 8, option = "D") +
-      labs(x = "Sample", y = "", fill = "log2(TPM+1)") +
+      labs(x = "Sample", y = "", fill = "log2(count+1)") +
       theme_bw() +
       scale_x_discrete(limits = levels(txcounts$sample_id)) +
       theme(strip.background = element_rect(color = "black", fill = "white", size = 0, linetype = "solid"),
