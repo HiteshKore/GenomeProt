@@ -369,6 +369,10 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
+  
+  # set database_type here for now until we define properly
+  input$database_type <- "all"
+  
   #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
   command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
   print(command_annotate_proteome)
