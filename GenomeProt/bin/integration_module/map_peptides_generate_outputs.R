@@ -2,21 +2,7 @@
 # inputs: MQ/FragPipe peptides.tsv output, GTF, metadata
 # outputs: BED12/GTF files of peptides, ORFs and transcripts, database of peptides with info on locations etc, summary file of peptides
 
-suppressMessages({
-  library(data.table)
-  library(ORFik)
-  library(tidyr)
-  library(dplyr)
-  library(stringr)
-  library(GenomicFeatures)
-  library(GenomicRanges)
-  library(rtracklayer)
-  library(stringdist)
-  library(Repitools)
-  library(optparse)
-  library(mygene)
-})
-
+library(stringi)
 source("global.R")
 source("R/integration_functions.R")
 
@@ -36,6 +22,8 @@ option_list = list(
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
+options(scipen=999)
+
 proteomics_import_file <- opt$proteomics
 fasta_import_file <- opt$fasta
 metadata_import_file <- opt$metadata
@@ -53,7 +41,7 @@ output_directory <- opt$savepath
 
 pd <- suppressWarnings(import_proteomics_data(proteomics_import_file))
 
-gtf <- makeTxDbFromGFF(gtf_import_file) # make txdb of gtf
+gtf <- makeTxDbFromGFF(gtf_import_file, format="gtf") # make txdb of gtf
 
 orf_df <- import_orf_metadata(metadata_import_file)
 

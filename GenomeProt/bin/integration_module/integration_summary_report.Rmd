@@ -280,7 +280,7 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 
 plot1 <- data.frame(
   metric = c("total", "gene-specific", "UMP"),
-  total = c(peptotal, d, c)
+  total = c(peptotal, c, a)
   )
 
 plot1$metric <- factor(plot1$metric,
