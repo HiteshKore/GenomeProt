@@ -117,6 +117,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
     # filter transcript counts for gene of interest
     txcounts <- txcounts %>%
       dplyr::filter(transcript_id %in% tx_gtf_to_plot$transcript_id)
+    
     # filter peptide counts for gene of interest
     pepcounts <- pepcounts %>%
       dplyr::filter(peptide %in% pep_gtf_to_plot$transcript_id)

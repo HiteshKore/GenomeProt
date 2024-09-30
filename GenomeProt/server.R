@@ -653,6 +653,7 @@ server <- function(input, output, session) {
         data_storage$countst$GENEID <- NULL
       } else if ("TXNAME" %in% colnames(data_storage$countst)) {
         data_storage$countst$transcript_id <- data_storage$countst$TXNAME
+        data_storage$countst$TXNAME <- NULL
       }
       
       # filter GTF transcripts for those with counts
@@ -669,7 +670,6 @@ server <- function(input, output, session) {
       print(sample_names)
       
       sample_names <- sample_names[order(match(sample_names,colnames(data_storage$countsp)))]
-      
       
       # rename as per bambu counts output
       if ("Stripped.Sequence" %in% colnames(data_storage$countsp)) {
@@ -692,7 +692,14 @@ server <- function(input, output, session) {
       rownames(countsp_matrix) <- data_storage$countsp$Peptide
       
       # apply justvsn
-      vsnp <- as.data.frame(justvsn(countsp_matrix))
+      if (nrow(countsp_matrix)>50) {
+        vsnp <- as.data.frame(justvsn(countsp_matrix)) 
+      } else {
+        # if test data, or row number too low, don't apply vsn
+        vsnp <- as.data.frame(countsp_matrix)
+        vsnp[is.na(vsnp)] <- 0
+      }
+      
       vsnp$peptide <- rownames(vsnp)
       
       # melt for plotting
