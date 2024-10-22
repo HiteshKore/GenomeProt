@@ -1,39 +1,7 @@
 
 # define functions
 
-#source("global.R")
-suppressPackageStartupMessages({
-  library(devtools)
-  library(rmarkdown)
-  library(bambu)
-  library(data.table)
-  library(dplyr)
-  library(tidyr)
-  library(readr)
-  library(tibble)
-  library(purrr)
-  library(forcats)
-  library(GenomicFeatures)
-  library(Biostrings)
-  library(shinyjs)
-  library(shiny)
-  library(shinythemes)
-  library(shinydashboard)
-  library(ORFik)
-  library(GenomicRanges)
-  library(rtracklayer)
-  library(markdown)
-  library(devtools)
-  library(vsn)
-  library(ggtranscript)
-  library(patchwork)
-  library(ggrepel)
-  library(optparse)
-  library(mygene)
-  library(tximport)
-  library(stringr)
-  library(Rsamtools)
-})
+source("global.R")
 
 
 # import gtf and filter for minimum transcript counts
