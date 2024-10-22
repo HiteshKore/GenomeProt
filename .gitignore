@@ -3,4 +3,6 @@
 .RData
 .Ruserdata
 data/
+GenomeProt/data/openprot_uniprotDb_hs.txt
+GenomeProt/data/openprot_uniprotDb_mm.txt
 GenomeProt.Rproj
