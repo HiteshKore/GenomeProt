@@ -11,6 +11,54 @@ RUN apt-get update && apt-get install -y \
     liblzma-dev \
     git 
 
+FROM rocker/r-ver:4.3.2
+FROM bioconductor/bioconductor_docker:devel
+
+# install R packages required 
+RUN R -e 'install.packages(c(\
+              "shiny", \
+              "shinyjs", \
+              "shinythemes", \
+              "shinydashboard", \
+              "data.table", \ 
+              "dplyr", \
+              "magrittr", \
+              "ggplot2", \
+              "tidyr", \
+              "readr", \
+              "tibble", \
+              "purrr", \
+              "stringr", \
+              "forcats", \
+              "markdown", \
+              "devtools", \
+              "ggrepel", \
+              "reshape2", \
+              "phylotools", \
+              "gplots", \
+              "optparse"), \
+              repos="https://packagemanager.rstudio.com/cran/__linux__/focal/2021-04-23")'
+
+# Bioconductor
+RUN R -e 'BiocManager::install(ask = F)' && R -e 'BiocManager::install(c("rtracklayer", \
+              "ORFik", \
+              "bambu", \
+              "GenomicFeatures", \
+              "GenomicRanges", \
+              "GenomicAlignments",\
+              "BSgenome.Mmusculus.UCSC.mm39", \
+              "BSgenome.Hsapiens.UCSC.hg38", \
+              "Biostrings", \
+              "SummarizedExperiment", \
+              "Rsamtools", \
+              "mygene", \
+              "vsn", \
+              "tximport", \
+              "patchwork", ask = F))'
+
+# install ggtranscript from github with devtools
+RUN R -e "devtools::install_github('dzhang32/ggtranscript')"
+
 RUN wget https://github.com/lh3/minimap2/releases/download/v2.27/minimap2-2.27.tar.bz2 && \
     tar -xvjf minimap2-2.27.tar.bz2 && \
     cd minimap2-2.27 && \
@@ -50,52 +98,6 @@ RUN conda install -c bioconda gffcompare
 RUN pip install biopython==1.77
 RUN pip install py-cdhit
 RUN pip install peptides
-
-FROM rocker/r-ver:4.3.2
-FROM bioconductor/bioconductor_docker:devel
-
-# install R packages required 
-RUN R -e 'install.packages(c(\
-              "shiny", \
-              "shinyjs", \
-              "shinythemes", \
-              "shinydashboard", \
-              "data.table", \ 
-              "dplyr", \
-              "magrittr", \
-              "ggplot2", \
-              "tidyr", \
-              "readr", \
-              "tibble", \
-              "purrr", \
-              "stringr", \
-              "forcats", \
-              "markdown", \
-              "devtools", \
-              "ggrepel", \
-              "phylotools", \
-              "optparse"), \
-              repos="https://packagemanager.rstudio.com/cran/__linux__/focal/2021-04-23")'
-
-
-# Bioconductor
-RUN R -e 'BiocManager::install(ask = F)' && R -e 'BiocManager::install(c("rtracklayer", \
-              "ORFik", \
-              "GenomicFeatures", \
-              "GenomicRanges", \
-              "GenomicAlignments",\
-              "BSgenome.Mmusculus.UCSC.mm39",\
-              "BSgenome.Hsapiens.UCSC.hg38",\
-              "bambu", \
-              "Biostrings", \
-              "SummarizedExperiment", \
-              "Rsamtools", \
-              "mygene", \
-              "vsn", \
-              "patchwork", ask = F))'
-
-# install ggtranscript from github with devtools
-RUN R -e "devtools::install_github('dzhang32/ggtranscript')"
 
 # copy the shiny app directory into the image
 COPY ./GenomeProt /srv/shiny-server/

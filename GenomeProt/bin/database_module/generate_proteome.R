@@ -5,7 +5,7 @@ source("global.R")
 
 # import gtf and filter for minimum transcript counts
 filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, outdir) {
- 
+  
   # import bambu gtf
   bambu_data <- rtracklayer::import(customgtf)
   
@@ -25,10 +25,14 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
       dplyr::filter(total > as.numeric(min_count))
     
     # extract txnames
-    tx_ids <- counts_filt$TXNAME
+    if (c("TXNAME") %in% colnames(counts_filt)) {
+      tx_ids <- counts_filt$TXNAME
+    } else if (c("transcript_id") %in% colnames(counts_filt)) {
+      tx_ids <- counts_filt$transcript_id
+    }
+    
     # filter for these transcripts
     bambu_data <- bambu_data[mcols(bambu_data)$transcript_id %in% tx_ids]
-    
     
   } 
   
@@ -41,13 +45,11 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   # subset the GRanges
   bambu_data <- bambu_data[keep_rows]
   
-  
   # filter based on strand
   okstrand <- c("+", "-")
   bambu_data <- bambu_data[strand(bambu_data) %in% okstrand]
+  
   # get gene names
-  
-  
   # convert to tibble
   bambu_df <- bambu_data %>% as_tibble()
   
