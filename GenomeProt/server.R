@@ -341,16 +341,33 @@ database_server <- function(input, output, session) {
     
   }
   
+  print(input$user_vcf_file$datapath)
   if (!is.null(db_counts_file)) {
-    command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -s ", outdir_db)
-    print(command_generate_proteome)
+    
+    if (!is.null(input$user_vcf_file)){
+      command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_reference_genome$datapath )
+      print(command_generate_proteome)
+      
+    }else{
+      command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -s ", outdir_db)
+      print(command_generate_proteome)
+      
+    }
+    
     system(command_generate_proteome)
   } else {
+    
+    if (!is.null(input$user_vcf_file)){
+      command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_reference_genome$datapath )
+      print(command_generate_proteome)
+      
+    }else{
     command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -s ", outdir_db)
     print(command_generate_proteome)
+    
+  }
     system(command_generate_proteome)
   }
-  
   print("Generated ORFs")
   
   # set reference protein database
@@ -370,8 +387,17 @@ database_server <- function(input, output, session) {
   
   # run python script
   #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
-  command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
-  print(command_annotate_proteome)
+  
+  if (!is.null(input$user_vcf_file)){
+    
+    command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt"))
+    print(command_annotate_proteome)
+  }else{
+    command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None")
+    print(command_annotate_proteome)
+    
+  }
+  
   system(command_annotate_proteome)
   
   print("Annotated proteome")
