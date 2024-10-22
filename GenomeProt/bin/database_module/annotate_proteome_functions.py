@@ -1,5 +1,9 @@
 from pycdhit import cd_hit, read_clstr
 import peptides as pep
+from Bio import pairwise2
+from Bio.SubsMat import MatrixInfo as matlist
+from Bio.pairwise2 import format_alignment
+
 
 
 
@@ -167,3 +171,39 @@ class SequenceProperties():
     peptide = pep.Peptide(seq)
     aliphatic_index=round(peptide.aliphatic_index(),2) #hydrophobicity
     return aliphatic_index
+
+class SequenceSimilarity():
+  def calculate_similarity(self,seq1, seq2):
+    # Use a substitution matrix like BLOSUM62
+    matrix = matlist.blosum62
+    # Set gap open and gap extend penalties
+    gap_open = -10  # Penalty for opening a gap
+    gap_extend = -0.5  # Penalty for extending a gap
+     # Perform global alignment with the matrix and gap penalties
+    alignments = pairwise2.align.globalds(seq1, seq2, matrix, gap_open, gap_extend)
+    
+    # Take the best alignment (the first one)
+    best_alignment = alignments[0]
+    
+    
+    #print(format_alignment(*best_alignment))
+
+    # Extract aligned sequences
+    aligned_seq1, aligned_seq2, score, start, end = best_alignment
+    
+    # Calculate the percentage similarity
+    matches = sum(1 for a, b in zip(aligned_seq1, aligned_seq2) if a == b)
+    similarity_percentage = matches / len(aligned_seq1) * 100
+    
+    # Find changed amino acids
+    changed_positions = [
+        (i + 1, a, b) for i, (a, b) in enumerate(zip(aligned_seq1, aligned_seq2)) #first mutant and second wild type
+        if a != b and a != '-' and b != '-'
+    ]
+    # convert into standard format to denote mutation
+    aa_changes = ",".join([f"{b}{pos}{a}" for pos, a, b in changed_positions])
+    
+
+    return similarity_percentage,aa_changes
+
+  
