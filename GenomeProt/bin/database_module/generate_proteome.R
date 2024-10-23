@@ -1,39 +1,8 @@
 
 # define functions
 
-#source("global.R")
-suppressPackageStartupMessages({
-  library(devtools)
-  library(rmarkdown)
-  library(bambu)
-  library(data.table)
-  library(dplyr)
-  library(tidyr)
-  library(readr)
-  library(tibble)
-  library(purrr)
-  library(forcats)
-  library(GenomicFeatures)
-  library(Biostrings)
-  library(shinyjs)
-  library(shiny)
-  library(shinythemes)
-  library(shinydashboard)
-  library(ORFik)
-  library(GenomicRanges)
-  library(rtracklayer)
-  library(markdown)
-  library(devtools)
-  library(vsn)
-  library(ggtranscript)
-  library(patchwork)
-  library(ggrepel)
-  library(optparse)
-  library(mygene)
-  library(tximport)
-  library(stringr)
-  library(Rsamtools)
-})
+source("global.R")
+
 
 
 # import gtf and filter for minimum transcript counts
@@ -529,8 +498,8 @@ output_directory <- opt$savepath
  
  #generate custom genome
  if (!is.null(ref_genome) && !is.null(vcf_file)){
-   #custom_genome_command<-paste0("bash bin/database_module/generate_custom_genome.sh -g  ",ref_genome ," -r " ,reference_gtf ," -v ",vcf_file, " -o ",output_directory,"/")
-   custom_genome_command<-paste0("bash generate_custom_genome.sh -g  ",ref_genome ," -r " ,reference_gtf ," -v ",vcf_file, " -o ",output_directory,"/")
+   custom_genome_command<-paste0("bash bin/database_module/generate_custom_genome.sh -g  ",ref_genome ," -r " ,reference_gtf ," -v ",vcf_file, " -o ",output_directory,"/")
+   #custom_genome_command<-paste0("bash generate_custom_genome.sh -g  ",ref_genome ," -r " ,reference_gtf ," -v ",vcf_file, " -o ",output_directory,"/")
    system(custom_genome_command)
    
    # fetch variant protein sequences based on variants provided in VCF file
