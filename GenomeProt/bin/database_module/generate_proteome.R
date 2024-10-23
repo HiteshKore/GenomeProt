@@ -1,7 +1,39 @@
 
 # define functions
 
-source("global.R")
+#source("global.R")
+suppressPackageStartupMessages({
+  library(devtools)
+  library(rmarkdown)
+  library(bambu)
+  library(data.table)
+  library(dplyr)
+  library(tidyr)
+  library(readr)
+  library(tibble)
+  library(purrr)
+  library(forcats)
+  library(GenomicFeatures)
+  library(Biostrings)
+  library(shinyjs)
+  library(shiny)
+  library(shinythemes)
+  library(shinydashboard)
+  library(ORFik)
+  library(GenomicRanges)
+  library(rtracklayer)
+  library(markdown)
+  library(devtools)
+  library(vsn)
+  library(ggtranscript)
+  library(patchwork)
+  library(ggrepel)
+  library(optparse)
+  library(mygene)
+  library(tximport)
+  library(stringr)
+  library(Rsamtools)
+})
 
 
 # import gtf and filter for minimum transcript counts
@@ -27,16 +59,12 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
     
     # extract txnames
     tx_ids <- counts_filt$TXNAME
-
-    if (c("TXNAME") %in% colnames(counts_filt)) {
-      tx_ids <- counts_filt$TXNAME
-    } else if (c("transcript_id") %in% colnames(counts_filt)) {
-      tx_ids <- counts_filt$transcript_id
-    }
     
     # filter for these transcripts
     bambu_data <- bambu_data[mcols(bambu_data)$transcript_id %in% tx_ids]
-
+    
+    
+    
   } 
   
   # remove scaffolds and weird chromosomes
@@ -48,11 +76,13 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   # subset the GRanges
   bambu_data <- bambu_data[keep_rows]
   
+  
   # filter based on strand
   okstrand <- c("+", "-")
   bambu_data <- bambu_data[strand(bambu_data) %in% okstrand]
-  
   # get gene names
+  
+  
   # convert to tibble
   bambu_df <- bambu_data %>% as_tibble()
   

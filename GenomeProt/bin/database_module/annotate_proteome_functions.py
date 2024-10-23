@@ -1,6 +1,7 @@
 from pycdhit import cd_hit, read_clstr
 import peptides as pep
 from Bio import pairwise2
+#from Bio.pairwise2 import format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 from Bio.pairwise2 import format_alignment
 

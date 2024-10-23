@@ -386,12 +386,7 @@ database_server <- function(input, output, session) {
   }
   
   # run python script
-  
-  # set database_type here for now until we define properly
-  command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " all ", input$min_orf_length)
-  
   #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
-
   
   if (!is.null(input$user_vcf_file)){
     
@@ -407,32 +402,20 @@ database_server <- function(input, output, session) {
   
   print("Annotated proteome")
   
-  top_level_dir <- getwd()
-  
   # zip results
   if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf")) && !file.exists(paste0(outdir_db, "/orf_temp.txt"))) {
     if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
       bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE)
-      files_to_zip_db <- c(bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      files_to_zip <- c(bam_files, paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
     } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-      files_to_zip_db <- c("../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      files_to_zip <- c(paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
     } else if (input$sequencing_type == "short-read"){
-      files_to_zip_db <- c("../mapping_output/counts_matrix.tsv", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      files_to_zip <- c(paste0(session_id, "/mapping_output/counts_matrix.tsv"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"))
     }else if (input$input_type == "gtf_input") {
-      files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      files_to_zip <- c(paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
     }
-    
-    # set the path to the ZIP file (in the session_id directory)
-    zipfile_path_db <- file.path("../database_results.zip")
-    
-    # temp change the working dir to outdir_db
-    tmp_wd <- setwd(outdir_db)
-    
-    zip(zipfile = zipfile_path_db, files = files_to_zip_db)
-    
-    # back to starting wd
-    setwd(top_level_dir)
-    
+    zipfile_path <- paste0(session_id, "/database_results.zip")
+    zip(zipfile = zipfile_path, files = files_to_zip)
   }
   
 }
@@ -494,8 +477,15 @@ integration_server <- function(input, output, session) {
                       file = "peptide_info.csv"
                     ))
   
+  # check files exist
+  # if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
+  #   # create a zip file with results
+  #   files_to_zip_int <- c(paste0(outdir_integ, "/summary_report.html"), paste0(outdir_integ, "/peptide_info.csv"), paste0(outdir_integ, "/combined_annotations.gtf"), paste0(outdir_integ, "/peptides.bed12"), paste0(outdir_integ, "/ORFs.bed12"), paste0(outdir_integ, "/transcripts.bed12"))
+  #   zipfile_path_int <- paste0(session_id, "/integration_results.zip")
+  #   zip(zipfile = zipfile_path_int, files = files_to_zip_int)
+  # }
+  
   if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
-    
     # create a zip file with results
     files_to_zip_int <- c("summary_report.html", "peptide_info.csv", 
                           "combined_annotations.gtf", "peptides.bed12", 
@@ -689,7 +679,6 @@ server <- function(input, output, session) {
         data_storage$countst$GENEID <- NULL
       } else if ("TXNAME" %in% colnames(data_storage$countst)) {
         data_storage$countst$transcript_id <- data_storage$countst$TXNAME
-        data_storage$countst$TXNAME <- NULL
       }
       
       # filter GTF transcripts for those with counts
@@ -706,6 +695,7 @@ server <- function(input, output, session) {
       print(sample_names)
       
       sample_names <- sample_names[order(match(sample_names,colnames(data_storage$countsp)))]
+      
       
       # rename as per bambu counts output
       if ("Stripped.Sequence" %in% colnames(data_storage$countsp)) {
@@ -728,14 +718,7 @@ server <- function(input, output, session) {
       rownames(countsp_matrix) <- data_storage$countsp$Peptide
       
       # apply justvsn
-      if (nrow(countsp_matrix)>50) {
-        vsnp <- as.data.frame(justvsn(countsp_matrix)) 
-      } else {
-        # if test data, or row number too low, don't apply vsn
-        vsnp <- as.data.frame(countsp_matrix)
-        vsnp[is.na(vsnp)] <- 0
-      }
-      
+      vsnp <- as.data.frame(justvsn(countsp_matrix))
       vsnp$peptide <- rownames(vsnp)
       
       # melt for plotting
