@@ -108,6 +108,7 @@ ui <- dashboardPage(
                                     choices = c("FASTQs" = "fastq_input",
                                                 "BAMs" = "bam_input",
                                                 "GTF (and/or transcript counts)" = "gtf_input")),
+                       checkboxInput("vcf_option", "Incoporate SNVs into protein sequences.", value = FALSE),
                        
                        # Constant options
                        selectInput("organism", label = "Organism:", 
@@ -118,9 +119,9 @@ ui <- dashboardPage(
                                                   "Rat (R. rattus)" = "rat", 
                                                   "Zebrafish (D. rerio)" = "zebrafish"), 
                                    selected = "human"),
-                       # selectInput("database_type", label = "ORFs to be included in proteomedb:", 
-                       #             choices = list("canonical", "all"),
-                       #             selected = "all"),
+                       selectInput("database_type", label = "ORFs to be included in proteomedb:", 
+                                   choices = list("canonical", "all"),
+                                   selected = "all"),
                        numericInput("min_orf_length", 
                                     label = "ORF length (amino acids):", 
                                     value = 30),
@@ -133,7 +134,11 @@ ui <- dashboardPage(
                                     label = "Minimum expression threshold (sum per transcript):", 
                                     value = 5),
                        fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       
+                       # VCF file input conditionally shown
+                       conditionalPanel(
+                         condition = "input.vcf_option == true",
+                         fileInput("user_vcf_file", "Upload VCF file:", NULL, buttonLabel = "Browse...", multiple = FALSE)
+                       ),
                        # Variable options
                        conditionalPanel(
                          condition = "input.input_type == 'fastq_input'",
