@@ -108,7 +108,7 @@ ui <- dashboardPage(
                                     choices = c("FASTQs" = "fastq_input",
                                                 "BAMs" = "bam_input",
                                                 "GTF (and/or transcript counts)" = "gtf_input")),
-                       checkboxInput("vcf_option", "Incoporate SNVs into protein sequences.", value = FALSE),
+                       checkboxInput("vcf_option", "Incoporate SNVs into protein sequences", value = FALSE),
                        
                        # Constant options
                        selectInput("organism", label = "Organism:", 
