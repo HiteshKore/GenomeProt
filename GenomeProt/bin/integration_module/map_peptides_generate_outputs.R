@@ -249,7 +249,7 @@ combined_peptide_result <- combined_peptide_result[!(base::duplicated(combined_p
 combined_peptide_result$transcript_length <- combined_peptide_result$tx_len
 
 # rearrange columns for output
-combined_peptide_result <- combined_peptide_result %>% dplyr::select(peptide,accession,PID,transcript_id,gene_id,strand,number_exons,gene_name,transcript_length,transcript_biotype,protein_length,orf_genomic_coordinates,orf_type,localisation,uniprot_status,openprot_id,`molecular_weight(kDA)`,isoelectric_point,hydrophobicity,aliphatic_index,longest_orf_in_transcript,peptide_ids_gene,peptide_ids_orf,peptide_ids_transcript,shared_novel_protein_peptide,orf_identified,gene_identified,transcript_identified)
+combined_peptide_result <- combined_peptide_result %>% dplyr::select(peptide,accession,PID,transcript_id,gene_id,gene_name,strand,number_exons,transcript_length,transcript_biotype,protein_length,orf_genomic_coordinates,orf_type,localisation,uniprot_status,openprot_id,`molecular_weight(kDA)`,isoelectric_point,hydrophobicity,aliphatic_index,longest_orf_in_transcript,peptide_ids_gene,peptide_ids_orf,peptide_ids_transcript,shared_novel_protein_peptide,orf_identified,gene_identified,transcript_identified)
 
 # export summary data
 write.csv(combined_peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
