@@ -320,9 +320,22 @@ extract_peptide_coords <- function(metadata_df) {
   
   txcoordsdf_subset$start <- txcoordsdf_subset$txstart + ((txcoordsdf_subset$pep_start-1) * 3)
   txcoordsdf_subset$end <- txcoordsdf_subset$start + (nchar(txcoordsdf_subset$peptide) * 3)
-  #txcoordsdf_subset$width <- txcoordsdf_subset$end - txcoordsdf_subset$start
   txcoordsdf_subset$peptide <- as.factor(txcoordsdf_subset$peptide)
   
+  # sometimes peptide ends are off by 1, if so correct them to transcript end site
+  txcoordsdf_subset <- txcoordsdf_subset %>% 
+    mutate(end_corrected = case_when(
+      (end == txend + 1) ~ txend,
+      TRUE ~ end
+    ))
+  
+  # replace original end col
+  txcoordsdf_subset$end <- txcoordsdf_subset$end_corrected
+  
+  # remove tmp end col
+  txcoordsdf_subset$end_corrected <- NULL
+  
+  # ensure peptides are within transcript coords
   txcoordsdf_subset <- txcoordsdf_subset %>% 
     dplyr::filter(start >= txstart & end <= txend)
   
