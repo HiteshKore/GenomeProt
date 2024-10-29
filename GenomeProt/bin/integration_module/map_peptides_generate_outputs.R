@@ -29,13 +29,13 @@ fasta_import_file <- opt$fasta
 metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
- 
-# source("~/Documents/GenomeProt/GenomeProt/R/integration_functions.R")
-# proteomics_import_file <- "~/Documents/miguel_data/august/demo_data/proteomics/report.pr_matrix.txt"
-# fasta_import_file <- "~/Documents/miguel_data/august/demo_data/2_integration_input/proteome_database.fasta"
-# metadata_import_file <- "~/Documents/miguel_data/august/demo_data/2_integration_input/proteome_database_metadata.txt"
-# gtf_import_file <- "~/Documents/miguel_data/august/demo_data/2_integration_input/proteome_database_transcripts.gtf"
-# output_directory <- "~/Documents"
+
+# source("~/Documents/GenomeProt_gits/GenomeProt/GenomeProt/R/integration_functions.R")
+# proteomics_import_file <- "~/Documents/kusa_hk_oct/peptide_combined.txt"
+# fasta_import_file <- "~/Documents/kusa_hk_oct/database/proteome_database.fasta"
+# metadata_import_file <- "~/Documents/kusa_hk_oct/database/proteome_database_metadata.txt"
+# gtf_import_file <- "~/Documents/kusa_hk_oct/database/proteome_database_transcripts.gtf"
+# output_directory <- "~/Documents/kusa_hk_oct/jg_int_test"
 
 # ------------- import files ------------- #
 
