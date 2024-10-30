@@ -29,13 +29,13 @@ fasta_import_file <- opt$fasta
 metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
- 
-# source("~/Documents/GenomeProt/GenomeProt/R/integration_functions.R")
-# proteomics_import_file <- "~/Documents/miguel_data/august/diann/report.pr_matrix.tsv"
-# fasta_import_file <- "~/Documents/miguel_data/august/database/proteome_database_filt.fasta"
-# metadata_import_file <- "~/Documents/miguel_data/august/database/proteome_database_metadata_filt.txt"
-# gtf_import_file <- "~/Documents/miguel_data/august/database/proteome_database_transcripts.gtf"
-# output_directory <- "~/Documents"
+
+# source("~/Documents/GenomeProt_gits/GenomeProt/GenomeProt/R/integration_functions.R")
+# proteomics_import_file <- "~/Documents/kusa_hk_oct/peptide_combined.txt"
+# fasta_import_file <- "~/Documents/kusa_hk_oct/database/proteome_database.fasta"
+# metadata_import_file <- "~/Documents/kusa_hk_oct/database/proteome_database_metadata.txt"
+# gtf_import_file <- "~/Documents/kusa_hk_oct/database/proteome_database_transcripts.gtf"
+# output_directory <- "~/Documents/kusa_hk_oct/jg_int_test"
 
 # ------------- import files ------------- #
 
@@ -246,6 +246,10 @@ combined_peptide_result <- rbind(peptide_result, missing_peptides)
 
 combined_peptide_result$PID <- gsub(",", ".", combined_peptide_result$PID)
 combined_peptide_result <- combined_peptide_result[!(base::duplicated(combined_peptide_result)),]
+combined_peptide_result$transcript_length <- combined_peptide_result$tx_len
+
+# rearrange columns for output
+combined_peptide_result <- combined_peptide_result %>% dplyr::select(peptide,accession,PID,transcript_id,gene_id,gene_name,strand,number_exons,transcript_length,transcript_biotype,protein_length,orf_genomic_coordinates,orf_type,localisation,uniprot_status,openprot_id,`molecular_weight(kDA)`,isoelectric_point,hydrophobicity,aliphatic_index,longest_orf_in_transcript,peptide_ids_gene,peptide_ids_orf,peptide_ids_transcript,shared_novel_protein_peptide,orf_identified,gene_identified,transcript_identified)
 
 # export summary data
 write.csv(combined_peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)

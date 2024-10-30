@@ -62,8 +62,6 @@ import_proteomics_data <- function(proteomics_file) {
   # separate into one row per mapped ORF
   prot_expanded <- separate_rows(protfile, all_mappings, sep = "\\,(?!chr)|\\; |\\;|\\, ")
   
-  #prot_expanded <- prot_expanded[!grepl("\\,chr", prot_expanded$all_mappings),]
-  
   # remove white space and characters
   prot_expanded <- prot_expanded %>% 
     dplyr::mutate(across(where(is.character), ~ gsub(" ", "", .))) %>%
@@ -156,8 +154,7 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
     # filter for proteins with mapped peptides
     df <- df %>% dplyr::filter(PID %in% proteomics_data$PID)
     
-    # filter to remove ORFs with multiple genomic loci
-    # area we need to change
+    # remove multiple genomic location ORFs
     df <- df[!grepl("\\,chr", df$PID),]
     
     df <- df %>% 
@@ -249,8 +246,13 @@ import_fasta <- function(fasta_file, proteomics_data, gtf_file) {
   # remove ORF coords outside transcript ends
   orf_transcriptomic_coords <- orf_transcriptomic_coords %>% dplyr::filter(txend < tx_len)
   
+  # first filter proteomics data to remove peptides mapping to ORFs with multiple loci
+  multi_loci_peptides <- proteomics_data[grepl("\\,chr", proteomics_data$PID),]
+  
+  proteomics_filtered <- proteomics_data %>% dplyr::filter(!(peptide %in% multi_loci_peptides$peptide))
+    
   # combine with proteomics data
-  metadata <- full_join(orf_transcriptomic_coords, proteomics_data, by = "PID")
+  metadata <- full_join(orf_transcriptomic_coords, proteomics_filtered, by = "PID")
   metadata <- metadata[!(base::duplicated(metadata)),]
   metadata <- metadata %>% dplyr::filter(!is.na(transcript_id) & !is.na(txstart))
   
@@ -320,9 +322,22 @@ extract_peptide_coords <- function(metadata_df) {
   
   txcoordsdf_subset$start <- txcoordsdf_subset$txstart + ((txcoordsdf_subset$pep_start-1) * 3)
   txcoordsdf_subset$end <- txcoordsdf_subset$start + (nchar(txcoordsdf_subset$peptide) * 3)
-  #txcoordsdf_subset$width <- txcoordsdf_subset$end - txcoordsdf_subset$start
   txcoordsdf_subset$peptide <- as.factor(txcoordsdf_subset$peptide)
   
+  # sometimes peptide ends are off by 1, if so correct them to transcript end site
+  txcoordsdf_subset <- txcoordsdf_subset %>% 
+    mutate(end_corrected = case_when(
+      (end == txend + 1) ~ txend,
+      TRUE ~ end
+    ))
+  
+  # replace original end col
+  txcoordsdf_subset$end <- txcoordsdf_subset$end_corrected
+  
+  # remove tmp end col
+  txcoordsdf_subset$end_corrected <- NULL
+  
+  # ensure peptides are within transcript coords
   txcoordsdf_subset <- txcoordsdf_subset %>% 
     dplyr::filter(start >= txstart & end <= txend)
   

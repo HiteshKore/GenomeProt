@@ -23,6 +23,10 @@ ui <- dashboardPage(
   dashboardBody(
     useShinyjs(),  # shinyjs
     tags$head(
+      tags$link(rel = "shortcut icon", href = "favicon.ico"),
+      tags$link(rel = "apple-touch-icon", sizes = "180x180", href = "favicon.ico"),
+      tags$link(rel = "icon", type = "image/png", sizes = "32x32", href = "/favicon-32x32.png"),
+      tags$link(rel = "icon", type = "image/png", sizes = "16x16", href = "/favicon-16x16.png"),
       tags$style(HTML("
         .spinner {
           margin: 0 auto;
@@ -108,7 +112,7 @@ ui <- dashboardPage(
                                     choices = c("FASTQs" = "fastq_input",
                                                 "BAMs" = "bam_input",
                                                 "GTF (and/or transcript counts)" = "gtf_input")),
-                       checkboxInput("vcf_option", "Incoporate SNVs into protein sequences.", value = FALSE),
+                       checkboxInput("vcf_option", "Incoporate SNVs into protein sequences", value = FALSE),
                        
                        # Constant options
                        selectInput("organism", label = "Organism:", 
