@@ -344,8 +344,19 @@ database_server <- function(input, output, session) {
   if (!is.null(db_counts_file)) {
     
     if (!is.null(input$user_vcf_file)){
-      command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_reference_genome$datapath )
-      print(command_generate_proteome)
+      if(input$input_type == "fastq_input"){
+        command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_reference_genome$datapath )
+        print(command_generate_proteome)
+      } else if (input$input_type == "bam_input")
+      {
+        command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_reference_genome_bam$datapath )
+        print(command_generate_proteome)
+      }else if (input$input_type == "gtf_input")
+      {
+        command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_genome_gtf$datapath )
+        print(command_generate_proteome)
+      }
+      
       
     }else{
       command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -c ", db_counts_file, " -m ", input$minimum_tx_count, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -s ", outdir_db)
@@ -357,8 +368,23 @@ database_server <- function(input, output, session) {
   } else {
     
     if (!is.null(input$user_vcf_file)){
+      
+      if(input$input_type == "fastq_input"){
       command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_reference_genome$datapath )
       print(command_generate_proteome)
+      
+      }else if (input$input_type == "bam_input")
+      {
+        command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_reference_genome_bam$datapath)
+        print(command_generate_proteome)
+      }else if (input$input_type == "gtf_input")
+      {
+        command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -v ", input$user_vcf_file$datapath," -s ", outdir_db, " -G ",input$user_genome_gtf$datapath)
+        print(command_generate_proteome)
+      }
+      
+      
+      
       
     }else{
     command_generate_proteome <- paste0("Rscript bin/database_module/generate_proteome.R -g ", db_gtf_file, " -r ", input$user_reference_gtf$datapath, " -o ", input$organism, " -l ", input$min_orf_length, " -u ", input$user_find_utr_5_orfs, " -d ", input$user_find_utr_3_orfs, " -s ", outdir_db)

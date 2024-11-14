@@ -157,8 +157,11 @@ ui <- dashboardPage(
                        conditionalPanel(
                          condition = "input.input_type == 'bam_input'",
                          numericInput("user_threads", label = "CPUs:", value = 4, min = 1, max = 46, step = 1),
-                         conditionalPanel(condition = "input.sequencing_type == 'short-read'",
+                         conditionalPanel(
+                                          condition="(input.sequencing_type == 'short-read') || ( input.vcf_option == true)" #condition = "input.sequencing_type == 'short-read'"
+                                          ,
                                           fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)),
+                         
                          fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
                        ),
                        conditionalPanel(
@@ -169,6 +172,10 @@ ui <- dashboardPage(
                        conditionalPanel(
                          condition = "input.input_type == 'gtf_input' & input.sequencing_type == 'short-read'",
                          fileInput("user_tx_count_file", "Upload transcript counts:", NULL, buttonLabel = "Browse...", multiple = FALSE)
+                       ),
+                       conditionalPanel(
+                         condition = "input.input_type == 'gtf_input' & input.vcf_option == true",
+                         fileInput("user_genome_gtf", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)
                        ),
                        actionButton("db_submit_button", "Submit", class = "btn btn-primary")
                 ),
