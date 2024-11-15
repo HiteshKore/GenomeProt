@@ -158,7 +158,7 @@ ui <- dashboardPage(
                          condition = "input.input_type == 'bam_input'",
                          numericInput("user_threads", label = "CPUs:", value = 4, min = 1, max = 46, step = 1),
                          conditionalPanel(
-                                          condition="(input.sequencing_type == 'short-read') || ( input.vcf_option == true)" #condition = "input.sequencing_type == 'short-read'"
+                                          condition="(input.sequencing_type == 'short-read') || ( input.vcf_option == true)" 
                                           ,
                                           fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)),
                          
