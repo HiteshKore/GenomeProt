@@ -3,6 +3,17 @@
 ## Access GenomeProt online
 https://genomeprot.researchsoftware.unimelb.edu.au/
 
+## Contents
+
+[Installation](#installation)
+
+[General usage](#general-usage)
+
+[Detailed input and output descriptions](#detailed-input-and-output-descriptions)
+
+[General usage](#general-usage)
+
+
 ## Installation
 
 ### Option 1 (recommended): Run the shiny application with Docker
