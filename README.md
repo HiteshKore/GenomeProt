@@ -5,14 +5,15 @@ https://genomeprot.researchsoftware.unimelb.edu.au/
 
 ## Contents
 
-[Installation](#installation)
-
-[General usage](#general-usage)
-
-[Detailed input and output descriptions](#detailed-input-and-output-descriptions)
-
-[General usage](#general-usage)
-
+- [Installation](#installation)
+- [General usage](#general-usage)
+    - [Database generation](#1-database-generation)
+    - [Integration](#2-integration)
+    - [Visualisation](#3-visualisation)
+- [Detailed input and output descriptions](#detailed-input-and-output-descriptions)
+    - [Database generation](#1-database-generation-1)
+    - [Integration](#2-integration-1)
+    - [Visualisation](#3-visualisation-1)
 
 ## Installation
 
@@ -65,17 +66,13 @@ Rscript -e "shiny::runApp('path/to/app/GenomeProt/', host='0.0.0.0', port=3838)"
 
 Otherwise open the app (server.R, ui.R) in RStudio and click 'Run app'.
 
-##### Troubleshooting a local installation
+#### Troubleshooting a local installation
 The app executes command line tools. Sometimes the local app can't find these tools and it might be easier to install them all into a conda environemnt.
 If you do this, you'll need to open the server.R file and replace all instances of 'genomeprot_env' with your conda env name, uncomment out these lines, and comment out the commands which don't include the conda command. You should be able to now run the app as usual, except it will execute command line arguments using your specified conda env. 
 
 ## General usage 
 
-GenomeProt has three modules: 
-
-**1. Database generation**  
-**2. Integration**  
-**3. Visualisation**  
+GenomeProt is an integrated proteogenomics platform with three modules: 1) database generation, 2) integration, and 3) visualisation.
 
 ### 1. Database generation
 
@@ -83,37 +80,47 @@ The first module generates a custom proteome database to perform proteomics sear
 
 For long-read data, transcript discovery is performed with Bambu. For short-read data, no discovery steps are performed, transcripts are instead directly quantified based on the reference transcriptome using Salmon. GenomeProt currently supports open reading frame (ORF)   identification and database generation for six model organisms: fruit fly, roundworm, zebrafish, rat, mouse, and human. Users can specify an option to include short upstream ORF (uORF) and downstream ORF (dORF) protein sequences >10 amino acids (AA). Protein   sequences are generated based on a user defined minimum length set to >30 AA by default. Users can also optionally provide a VCF file to incorporate single nucleotide variants (SNVs) into the genome to generate variant protein sequences. 
 
-The first module generates a custom proteome database for proteomics searches. It accepts:
+#### Inputs:
 
-- RNA sequencing FASTQ files  
-- BAM files  
-- GTF annotation files  
+One of the following:
 
-Supported sequencing platforms include Illumina, Oxford Nanopore, and PacBio.  
+  a) RNA sequencing FASTQ files, or  
+  b) BAM files, or  
+  c) a GTF annotation file  
 
-**Optional input:**
-- VCF file to incorporate single nucleotide variants (SNVs).  
+Supported sequencing platforms include short-read Illumina, long-read Oxford Nanopore and long-read PacBio.  
 
-**Outputs:**
-- **FASTA file** with candidate protein sequences  
-- **Metadata file** detailing each candidate protein  
+Optional input:
 
-#### Key features:
-- Long-read transcript discovery with **Bambu**.  
-- Short-read transcript quantification with **Salmon**.  
-- Supports ORF identification for six model organisms: fruit fly, roundworm, zebrafish, rat, mouse, and human.  
-- Includes optional **uORF** and **dORF** protein sequences.
+- VCF file to incorporate single nucleotide variants (SNVs)
 
-Proteome database FASTA header format examples:  
+#### Outputs:
+
+- FASTA file with candidate protein sequences  
+- Metadata file detailing each candidate protein  
+
+#### Features:
+
+- Long-read transcript discovery with Bambu  
+- Short-read transcript quantification with Salmon
+- Supports ORF identification for six model organisms: fruit fly, roundworm, zebrafish, rat, mouse, and human  
+- Includes optional uORF and dORF protein sequences
+
+Proteome FASTA examples and header formats:  
 ```
 >protein_accession|CO=genomic_coordinates GA=gene_accession GN=gene_name TA=transcript_accession
 MCGNNMSAPMPAVVPAARKATAAVIFLHGLGDTGHGWAEAFAGIKSPHIKYICPHAPVMPVTLNMNMAMPSWFDIVGLSPDSQEDESGIKQAAETVKALIDQEVKNGIPSNRIILGGFSQGPINSANRDISVLQCHGDCDPLVPLMFGSLTVERLKALINPANVTFKIYEGMMHSSCQQEMMDVKHFIDKLLPPID
 >P10711|CO=chr1:4928137-4966584 GA=ENSMUSG00000033813.16 GN=Tcea1 TA=ENSMUST00000081551.14
 MEDEVVRIAKKMDKMVQKKNAAGALDLLKELKNIPMTLELLQSTRIGMSVNALRKQSTDEEVTSLAKSLIKSWKKLLDGPSTDKDPEEKKKEPAISSQNSPEAREESSSSSNVSSRKDETNARDTYVSSFPRAPSTSDSVRLKCREMLAAALRTGDDYVAIGADEEELGSQIEEAIYQEIRNTDMKYKNRVRSRISNLKDAKNPNLRKNVLCGNIPPDLFARMTAEEMASDELKEMRKNLTKEAIREHQMAKTGGTQTDLFTCGKCKKKNCTYTQVQTRSADEPMTTFVVCNECGNRWKFC
+>P10711|CO=chr1:4928137-4966584 GA=ENSMUSG00000033813.16 GN=Tcea1 TA=ENSMUST00000081551.14
+MEDEVVRIAKKMDKMVQKKNAAGALDLLKELKNIPMTLELLQSTRIGMSVNALRKQSTDEEVTSLAKSLIKSWKKLLDGPSTDKDPEEKKKEPAISSQNSPEAREESSSSSNVSSRKDETNARDTYVSSFPRAPSTSDSVRLKCREMLAAALRTGDDYVAIGADEEELGSQIEEAIYQEIRNTDMKYKNRVRSRISNLKDAKNPNLRKNVLCGNIPPDLFARMTAEEMASDELKEMRKNLTKEAIREHQMAKTGGTQTDLFTCGKCKKKNCTYTQVQTRSADEPMTTFVVCNECGNRWKFC
+>ORF_3|CO=chr2:53029193-53081430 GA=ENSMUSG00000061136.17 GN=Prpf40a TA=ENSMUST00000209364.3
+MQATPSEAGGESPQSCLSVSRSDWTVGKPVSLLAPLIPPRSSGQPLPFGPGGRQPLRSLLVGMCSGSGRRRSSLSPTMRPGTGAERGGLMMGHPGMHYAPMGMHPMGQRANMPPVPHGMMPQMMPPMGG
 ```
-Unannotated ORFs are denoted by "ORF_" and variant proteins by “mORF_” followed by a unique number. UniProt or RefSeq accessions are retained for annotated proteins.
+**Note:** Unannotated ORFs are denoted by "ORF_" and variant proteins by “mORF_” followed by a unique number. UniProt or RefSeq accessions are retained for annotated proteins.
 
-Open reading frame (ORF) category definitions:
+#### Open reading frame (ORF) category definitions:
+
 | Type           | Definition                                                                                           |
 |----------------|-----------------------------------------------------------------------------------------------------|
 | CDS            | Annotated in UniProt or RefSeq                                                                      |
@@ -130,18 +137,13 @@ The second module integrates proteomics and transcriptomics data. Peptides are a
 
 #### Key outputs:
 
-- **Peptide-to-transcript mappings** with spliced genomic coordinates.  
-- **BED12 files** for visualisation in UCSC genome browser.  
-- **HTML report** summarising identified transcripts, peptides and ORFs.  
+- Peptide-to-transcript mappings with spliced genomic coordinates.  
+- BED12 files for visualisation in UCSC genome browser.  
+- HTML report summarising identified transcripts, peptides and ORFs.  
 
 ### 3. Visualisation
 
 The final visualisation module generates peptide mapping plots along transcript isoforms alongside quantitative peptide intensity and transcript expression data. This allows users to visualise transcript and peptide abundance across different experimental conditions.  This module requires the combined GTF file generated in module 2, and optionally inputs transcript counts from module 1 and peptide intensities from external proteomics analysis.
-
-The final module generates visualisations for:  
-- Peptide mappings to transcript isoforms  
-- Quantitative peptide intensity  
-- Transcript expression data  
 
 #### Features:
 
@@ -239,6 +241,7 @@ The final module generates visualisations for:
 
 
 #### Description of 'peptides_info.csv' output:
+
 | Column Name                    | Description                                                                            | Class        |
 |--------------------------------|----------------------------------------------------------------------------------------|--------------|
 | peptide                        | Peptide sequence                                                                       | character    |
@@ -260,7 +263,7 @@ The final module generates visualisations for:
 | molecular_weight(kDA)          | Molecular weight of protein (KDa)                                                     | numeric      |
 | isoelectric_point              | Isoelectric point of ORF calculated using pKa scale EMBOSS (Rice et al., 2000)         | numeric      |
 | hydrophobicity                 | Hydrophobicity profile of ORF calculated using Kyte-Doolittle scale (Kyte et al., 1982) | numeric      |
-| aliphatic_index                | Aliphatic index of ORF calculated according to Ikai (1980)                             | numeric      |
+| aliphatic_index                | Aliphatic index of ORF (Ikai 1980)                             | numeric      |
 | longest_orf_in_transcript      | Longest ORF in the transcript (longest within CDS regions for known proteins)          | true/false   |
 | peptide_ids_gene               | Is peptide uniquely mapped to gene?                                                   | true/false   |
 | peptide_ids_orf                | Is peptide uniquely mapped to ORF?                                                    | true/false   |
@@ -279,5 +282,5 @@ The final module generates visualisations for:
 | Transcript counts (transcript_counts.txt)              | TXT/CSV   | No        | Generated in module 1, transcript counts per sample                                  |
 | Peptide intensities            | TXT       | No        | Peptide intensity data ‘report.pr_matrix.tsv’           |
 
-There is an option to download plots as a PDF.
+**Note:** There is an option to download plots as a PDF.
 
