@@ -217,7 +217,7 @@ The final visualisation module generates peptide mapping plots along transcript 
 | Transcript counts (FASTQ or BAM input only) | transcript_counts.txt       | TXT        | Transcript count file with samples as columns and transcripts as rows                      |
 | Bambu transcript class codes (long-read FASTQ or BAM input only) | novel_transcript_classes.csv       | CSV        | Bambu transcript classification (see Bambu documentation)                                  |
 | GFFcompare transcript class codes (long-read FASTQ or BAM input only) | gffcompare.tmap.txt                | TXT        | GFFcompare transcript classification (see GFFcompare documentation)                       |
-| Genome aligned reads (long-read FASTQ only) | sample1.bam, sample2.bam          | BAM        |                                                                                             |
+| Genome aligned reads (long-read FASTQ only) | sample1.bam, sample2.bam          | BAM        | Genome aligned reads. Only output if the input was FASTQ reads                                                                                            |
 
 
 ### 2. Integration
