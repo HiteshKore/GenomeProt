@@ -3,28 +3,28 @@
 # define visualisation function
 plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcounts=NA, min_intron_len=500) {
   
-  if (startsWith(gene_symbol, "ENSG")) {
+  if (startsWith(gene_symbol, "ENSG")) { # if esng id
     ensg_id <- gene_symbol
     tx_res <- tx_res %>% 
       dplyr::filter(!is.na(gene_id), gene_id == gene_symbol)
-  } else if (startsWith(gene_symbol, "Bambu")) {
+  } else if (startsWith(gene_symbol, "Bambu")) { # if bambu gene
     ensg_id <- gene_symbol
     tx_res <- tx_res %>% 
       dplyr::filter(!is.na(gene_id), gene_id == gene_symbol)
-  } else {
+  } else { # gene name 
     tx_res <- tx_res %>% 
       dplyr::filter(!is.na(gene_name), gene_name == gene_symbol)
     ensg_id <- tx_res$gene_id[1]
   }
   
-  # filter for selected gene
+  # filter transcripts gtf for selected gene
   tx_res <- tx_res %>% 
     mutate(feature_type = "Transcripts",
            peptide_type = "Transcripts",
            ORF_id = NA) %>% 
     dplyr::select(seqnames,start,end,strand,type,gene_id,transcript_id,feature_type,peptide_type,exon_number,ORF_id)
   
-  # filter for selected gene
+  # filter peptides gtf for selected gene
   pep_res$transcript_id <- pep_res$peptide
   pep_res <- pep_res %>% 
     dplyr::filter(!is.na(gene_id), gene_id == ensg_id) %>% 
@@ -41,9 +41,8 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
     separate(ORF_id, into="ORF_id", sep="\\|") %>% 
     dplyr::select(seqnames,start,end,strand,type,gene_id,transcript_id,tx_id,feature_type,peptide_type,exon_number,ORF_id,peptide_ids_orf,orf_identified)
   
-  # filter for selected gene
+  # filter ORFs gtf for selected gene
   orf_res$ORF_id <- NULL
-  
   orf_res <- orf_res %>% 
     dplyr::filter(transcript_id %in% pep_res$tx_id) %>% 
     mutate(type = "CDS",
@@ -61,14 +60,12 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
     separate(ORF_id, into="ORF_id", sep="\\_denovo") %>%
     dplyr::select(seqnames,start,end,strand,type,gene_id,transcript_id,feature_type,peptide_type,exon_number,ORF_id,orf_identified)
   
-  # filter for exons only in transcripts gtf
+  # filter for exons features only in transcripts gtf
   gtf_exons <- tx_res %>% 
     dplyr::filter(type == "exon" & transcript_id %in% pep_res$tx_id)
   
   pep_res$tx_id <- NULL
-  
   orf_res$peptide_ids_orf <- NA
-  
   gtf_exons$peptide_ids_orf <- NA
   gtf_exons$orf_identified <- NA
   
@@ -88,27 +85,29 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
       feature_type == "Peptides" & peptide_type != "high" & exon_number != 1 ~ NA
     ))
   
+  # separate into peptides
   pep_gtf_to_plot <- gtf_to_plot %>% 
     dplyr::filter(feature_type == "Peptides")
-  
+  # remove duplicate rows
   pep_gtf_to_plot <- pep_gtf_to_plot[!(base::duplicated(pep_gtf_to_plot)),]
   
+  # separate into transcripts 
   tx_gtf_to_plot <- gtf_to_plot %>% 
     dplyr::filter(feature_type == "Transcripts")
   
-  # define CDS as the ORFs
+  # define CDS as the detected ORFs
   gtf_cds <- tx_gtf_to_plot %>% 
     dplyr::filter(type == "CDS") %>% 
     mutate(ORF_id = NA)
   
-  # number of unique transcripts and peptides for panel heights
+  # number of unique transcripts and peptides to set the panel heights
   n_tx <- length(unique(tx_res$transcript_id))
   n_pep <- length(unique(pep_res$transcript_id))
   
   # before plotting, check for consistent transcripts and peptides
   if (missing(txcounts) & missing(pepcounts)) {
     
-    #skip
+    # skip
     
   } else {
     
@@ -124,6 +123,7 @@ plot_gene <- function(gene_symbol, tx_res, pep_res, orf_res, txcounts=NA, pepcou
     
     tx_gtf_to_plot <- tx_gtf_to_plot %>% 
       dplyr::filter(transcript_id %in% txcounts$transcript_id)
+    
     pep_gtf_to_plot <- pep_gtf_to_plot %>% 
       dplyr::filter(transcript_id %in% pepcounts$peptide)
     
