@@ -9,7 +9,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   # import bambu gtf
   bambu_data <- rtracklayer::import(customgtf)
   
-  if (!missing(tx_counts)) {
+  if (!missing(tx_counts)) { # if counts file has been uploaded
     
     # define default value
     if (missing(min_count)) {
@@ -35,7 +35,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   # remove scaffolds and weird chromosomes
   bambu_data <- bambu_data[grep("chr", seqnames(bambu_data))]
   
-  # keep rows without _ or . in the chromosomes
+  # remove rows with _ or . in the chromosome
   keep_rows <- !grepl("[._]", seqnames(bambu_data))
   
   # subset the GRanges
@@ -67,7 +67,6 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   
   # merge results 
   bambu_merged <- merge(bambu_df, gene_df, by.x="ensg_id", by.y="query", all.x=T, all.y=F)
-  
   bambu_merged$ensg_id <- NULL
   
   # make GRanges including new names
@@ -76,17 +75,16 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
                                             seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
                                             starts.in.df.are.0based=FALSE)
   
-  #write_tsv(data.frame(bambu_data_gr), paste0(outdir, "/bambu_data_gr.tsv"))
-  
   # remove extra mcols
   columns_present <- all(c("gene_name.x", "gene_name.y") %in%  colnames(data.frame(bambu_data_gr)))
   
-  if (columns_present){
+  if (columns_present) {
     mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name.x","gene_name.y", "exon_number")]
-  }else{
+  } else {
     mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name", "exon_number")]
   }
   
+  # separate for sorting
   bambu_exons <- bambu_data_gr[bambu_data_gr$type == "exon"]
   bambu_transcripts <- bambu_data_gr[bambu_data_gr$type == "transcript"]
   
@@ -97,6 +95,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   bambu_exons <- sort(bambu_exons)
   bambu_transcripts <- sort(bambu_transcripts)
   
+  # recombine for export
   bambu_export <- c(bambu_transcripts, bambu_exons)
   
   # export filtered gtf
@@ -106,8 +105,8 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   
 }
 
-# fetch variant protein sequences based on variants provided in VCF file
-get_variant_protein_seqs <- function (custom_genome, custom_gtf, organism, wt_orfome, outdir, orf_len) {
+# fetch variant protein sequences based on VCF file
+get_variant_protein_seqs <- function(custom_genome, custom_gtf, organism, wt_orfome, outdir, orf_len) {
   
   if (file.exists(custom_genome)) {
     # import filtered gtf as a txdb
@@ -117,6 +116,7 @@ get_variant_protein_seqs <- function (custom_genome, custom_gtf, organism, wt_or
     txs_grl <- GRangesList(txs)
     alt_genome_fa <- FaFile(custom_genome)
     indexFa(custom_genome)
+    
     # fetch variant transcript sequences
     mut_sequences <- GenomicFeatures::extractTranscriptSeqs(alt_genome_fa, txs_grl)
     
@@ -170,9 +170,9 @@ get_variant_protein_seqs <- function (custom_genome, custom_gtf, organism, wt_or
     )
     
     #############
+    
     # wild type
     
-    # select genome
     # set organism
     if (organism == "human") {
       library(BSgenome.Hsapiens.UCSC.hg38)
@@ -206,15 +206,15 @@ get_variant_protein_seqs <- function (custom_genome, custom_gtf, organism, wt_or
     # merge wild type and mutant transcript ids based on transcript ids
     fasta_df_merged <- left_join(fasta_df_mut,fasta_df_wt,by="transcript")
   
-    # Function to calculate the number of variable nucleiotides
+    # function to calculate the number of variable nucleiotides
     count_variable_nucleotides <- function(mut_seq, wt_seq) {
       sum(strsplit(mut_seq, "")[[1]] != strsplit(wt_seq, "")[[1]])
     }
     
-    # Apply the function to the dataframe
+    # apply the function to the dataframe
     fasta_df_merged$variable_nucleotides <- mapply(count_variable_nucleotides, fasta_df_merged$mut_seq, fasta_df_merged$wt_seq)
     
-    # Remove sequences with variable nucleotides == 0 using dplyr
+    # remove sequences with no variable nucleotides
     fasta_df_merged_mutant <- fasta_df_merged %>%
       filter(variable_nucleotides != 0) %>% 
       dplyr::select(transcript,mut_seq) %>%
@@ -224,33 +224,33 @@ get_variant_protein_seqs <- function (custom_genome, custom_gtf, organism, wt_or
     orf_aa_seq_df_genome_coord_filtered <- orf_aa_seq_df_genome_coord %>%
       filter(transcript %in% fasta_df_merged_mutant$transcript)
     
-    # Adding the transcript_id column by splitting ORF_id and taking the first part
+    # adding the transcript_id column by splitting ORF_id and taking the first part
     orfome_wt_df <- wt_orfome %>% 
       mutate(transcript = sapply(strsplit(ORF_id, "_"), `[`, 1)) %>%
       dplyr::select(ORF_sequence,transcript)
     
-    #merge wild type protein sequences from ORFome_aa dataframe and dataframe (orf_aa_seq_df_genome_coord_filtered) containing variants and wild type sequences based on transcript ids
+    # merge wild type protein sequences from ORFome_aa dataframe and dataframe (orf_aa_seq_df_genome_coord_filtered) containing variants and wild type sequences based on transcript ids
     mutated_transcript_orfs_combined <- inner_join(orf_aa_seq_df_genome_coord_filtered,orfome_wt_df,by = "transcript") %>% 
       mutate(ORF_sequence=str_replace(ORF_sequence,"\\*", ""))
     
-    #remove the wild type sequences from protein_sequence column of orf_aa_seq_df_genome_coord_filtered
+    # remove the wild type sequences from protein_sequence column of orf_aa_seq_df_genome_coord_filtered
     mutated_transcript_orfs_combined_flt <- mutated_transcript_orfs_combined %>%
       group_by(transcript) %>%
       filter(protein_sequence!=ORF_sequence) %>%
       ungroup()
     
-    # Function to perform global alignment and calculate identical residues
+    # function to perform global alignment and calculate identical residues
     calculate_identity_info <- function(orf_seq, protein_seq) {
-      # Perform global alignment
+      # perform global alignment
       alignment <- pairwiseAlignment(orf_seq, protein_seq, substitutionMatrix = "BLOSUM62", type = "global")
       
-      # Extract the number of identical residues
+      # extract the number of identical residues
       identical_residues <- nmatch(alignment)
       
-      # Get the total alignment length (length of the aligned sequences)
+      # get the total alignment length (length of the aligned sequences)
       alignment_length <- nchar(pattern(alignment))
       
-      # Calculate percent identity
+      # calculate percent identity
       percent_identity <- (identical_residues / alignment_length) * 100
       
       return(c(identical_residues,percent_identity))
@@ -278,13 +278,15 @@ get_variant_protein_seqs <- function (custom_genome, custom_gtf, organism, wt_or
     write_tsv(variant_protein_seqs, paste0(outdir, "/Mutant_ORFome_aa.txt"))
 
   } else {
+    
     print("File does not exist")
+  
   }
  
 }
 
-# export FASTA of transcript sequences
-get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_orfs=FALSE, find_UTR_3_orfs=FALSE, referencegtf, outdir) {
+# generate FASTA of transcript sequences
+get_transcript_orfs <- function(filteredgtf, organism, orf_len=30, find_UTR_5_orfs=FALSE, find_UTR_3_orfs=FALSE, referencegtf, outdir) {
   
   # set organism
   if (organism == "human") {
@@ -335,6 +337,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
     # unlist GRL
     ORFs_unlisted <- unlist(ORFs) %>% as_tibble()
     
+    # add width column, filter for ORFs of defined length
     orf_genome_coordinates <- ORFs_unlisted %>% 
       rowwise() %>% 
       dplyr::mutate(width = end - start) %>% 
@@ -355,7 +358,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
     orf_genome_coordinates$ORF_id <- orf_genome_coordinates$names
     orf_genome_coordinates$names <- NULL
     
-    # convert these ORF coordinates into nt sequence
+    # convert these ORF coordinates into nucleotide sequences
     orf_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, ORFs)
     
     # convert the nucleotide sequences to amino acid sequences
@@ -364,6 +367,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
     # create data frame of all possible ORFs
     orf_aa_seq_df <- data.frame(ORF_id = orf_aa_seq@ranges@NAMES,ORF_sequence = orf_aa_seq, row.names=NULL) 
     
+    # merge with coordinates
     orf_aa_seq_df_genomic_coordinates <- left_join(orf_aa_seq_df, orf_genome_coordinates, by = "ORF_id")
     
     return(orf_aa_seq_df_genomic_coordinates)
@@ -372,7 +376,6 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   
   # ORF discovery
   
-  # extract main ORFs
   # set ORF max length to large number (to disable)
   # set longestORF to FALSE to ensure we identify CDS
   all_ORFs <- apply_orfik(txs_grl, as.numeric(orf_len), 100000, FALSE)
@@ -383,6 +386,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   # extract 5UTR ORFs
   if (find_UTR_5_orfs == TRUE) {
     
+    # extract 5' UTR regions from ref gtf
     utrs5 <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs5_filtered <- utrs5[names(utrs5) %in% names(txs)]
     
@@ -398,6 +402,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   # extract 3UTR ORFs
   if (find_UTR_3_orfs == TRUE) {
     
+    # extract 3' UTR regions from ref gtf
     utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
     utrs3_filtered <- utrs3[names(utrs3) %in% names(txs)]
     
@@ -431,6 +436,7 @@ get_transcript_orfs <- function (filteredgtf, organism, orf_len=30, find_UTR_5_o
   
 }
 
+# define options
 option_list = list(
   make_option(c("-g", "--gtf"), type="character", default=NULL,
               help="custom user GTF", metavar="character"),
@@ -459,6 +465,7 @@ option_list = list(
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
+# define inputs
 gtf_path <- opt$gtf
 reference_gtf <- opt$reference
 tx_count_path <- opt$counts
@@ -472,26 +479,28 @@ vcf_file <- opt$vcf
 output_directory <- opt$savepath
 
 #  run filter_custom_gtf, check if counts are present
-if (!is.null(tx_count_path)) {
+if (!is.null(tx_count_path)) { # if counts have been uploaded
  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, tx_counts=tx_count_path, min_count=minimum_tx_count, outdir=output_directory)
-} else {
+} else { # no counts
  filtered_gtf <- filter_custom_gtf(customgtf=gtf_path, organism=organism, outdir=output_directory)
 }
 
-# run orfik to find ORFs
+# use standard function to find WT ORFs
 wt_orfome <- get_transcript_orfs(filteredgtf=paste0(output_directory, "/proteome_database_transcripts.gtf"), organism=organism, orf_len=min_orf_length, find_UTR_5_orfs=find_5_orfs, find_UTR_3_orfs=find_3_orfs, referencegtf=reference_gtf, outdir=output_directory)
- 
+
 # generate custom genome
-if (!is.null(ref_genome) && !is.null(vcf_file)) {
- custom_genome_command <- paste0("bash bin/database_module/generate_custom_genome.sh -g  ", ref_genome, " -r ", reference_gtf, " -v ", vcf_file, " -o ", output_directory, "/")
- system(custom_genome_command)
+if (!is.null(ref_genome) && !is.null(vcf_file)) { # if a genome and vcf have been uploaded
+  
+  # define bash script command to inject variants into genome
+  custom_genome_command <- paste0("bash bin/database_module/generate_custom_genome.sh -g  ", ref_genome, " -r ", reference_gtf, " -v ", vcf_file, " -o ", output_directory, "/")
+  system(custom_genome_command)
  
  # fetch variant protein sequences based on variants provided in VCF file
- genome_alt <- paste0(output_directory, "/", basename(ref_genome)
-                      %>% str_replace(.,".fa","_alt.fa"))
+ genome_alt <- paste0(output_directory, "/", basename(ref_genome) %>% str_replace(., ".fa", "_alt.fa"))
  
- # apply function
+ # apply variant protein function
  get_variant_protein_seqs(custom_genome=genome_alt, custom_gtf=paste0(output_directory, "/proteome_database_transcripts.gtf"), organism=organism, wt_orfome=wt_orfome, outdir=output_directory, min_orf_length)
+
 }
  
  
