@@ -427,20 +427,31 @@ database_server <- function(input, output, session) {
   
   print("Annotated proteome")
   
+  top_level_dir <- getwd()
+  
   # zip results
   if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf")) && !file.exists(paste0(outdir_db, "/orf_temp.txt"))) {
     if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
       bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE)
-      files_to_zip <- c(bam_files, paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
+      files_to_zip_db <- c(bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-      files_to_zip <- c(paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/bambu_transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
+      files_to_zip_db <- c("../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     } else if (input$sequencing_type == "short-read"){
-      files_to_zip <- c(paste0(session_id, "/mapping_output/counts_matrix.tsv"), paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"))
+      files_to_zip_db <- c("../mapping_output/counts_matrix.tsv", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     }else if (input$input_type == "gtf_input") {
-      files_to_zip <- c(paste0(session_id, "/database_output/proteome_database.fasta"), paste0(session_id, "/database_output/proteome_database_metadata.txt"), paste0(session_id, "/database_output/proteome_database_transcripts.gtf"))
+      files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     }
-    zipfile_path <- paste0(session_id, "/database_results.zip")
-    zip(zipfile = zipfile_path, files = files_to_zip)
+    
+    # set the path to the ZIP file (in the session_id directory)
+    zipfile_path_db <- file.path("../database_results.zip")
+    
+    # temp change the working dir to outdir_db
+    tmp_wd <- setwd(outdir_db)
+    
+    zip(zipfile = zipfile_path_db, files = files_to_zip_db)
+    
+    # back to starting wd
+    setwd(top_level_dir)
   }
   
 }
@@ -511,6 +522,7 @@ integration_server <- function(input, output, session) {
   # }
   
   if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
+    
     # create a zip file with results
     files_to_zip_int <- c("summary_report.html", "peptide_info.csv", 
                           "combined_annotations.gtf", "peptides.bed12", 
