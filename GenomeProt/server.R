@@ -721,6 +721,63 @@ server <- function(input, output, session) {
   data_storage <- reactiveValues()
   
   # run visualisation function when submit is pressed
+  observe({ 
+    
+    if (file_available_integ()) {
+      
+      # import the GTF with rtracklayer and remove version number from gene_id
+      data_storage$gtf_import <- rtracklayer::import(paste0(session_id, "/integ_output/combined_annotations.gtf"), format="gtf") %>% as_tibble() %>% 
+        separate(gene_id, into = c("gene_id"), sep = "\\.")
+      
+      # create separate dfs for each feature type
+      data_storage$res_tx_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "transcripts")
+      data_storage$res_ORF_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "ORFs")
+      data_storage$res_pep_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "peptides")
+      
+      # get genes in both peptides and transscripts GTF
+      ensembl_ids <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
+      
+      # create list of genes
+      genes_list <- data_storage$res_tx_import %>% 
+        dplyr::filter(gene_id %in% ensembl_ids)
+      
+      # use gene name if available
+      if ("gene_name" %in% colnames(genes_list)) {
+        genes_available <- unique(genes_list$gene_name)
+      } else {
+        genes_available <- unique(genes_list$gene_id)
+      }
+      
+      # filter genes by high confidence peptide status if check box is selected
+      if (input$uniq_map_peptides) {
+        
+        # filter peptide GTF for peptides that identify an ORF
+        high_conf_peptides <- data_storage$res_pep_import %>%
+          dplyr::filter(peptide_ids_orf == TRUE)
+        
+        # update gene list
+        genes_list <- data_storage$res_tx_import %>% 
+          dplyr::filter(gene_id %in% high_conf_peptides$gene_id)
+        
+        # update available genes
+        if ("gene_name" %in% colnames(genes_list)) {
+          genes_available <- unique(genes_list$gene_name)
+        } else {
+          genes_available <- unique(genes_list$gene_id)
+        }
+        
+      }
+      
+      # set genes in the drop down menu based on genes_available
+      updateSelectInput(session, "gene_selector", choices = genes_available)
+      
+    }
+    
+  })
+  
+  
+  
+  # run visualisation function when submit is pressed
   observeEvent(input$vis_submit_button, { 
     
     session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # disable submit button
