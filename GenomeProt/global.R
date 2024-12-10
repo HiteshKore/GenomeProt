@@ -30,6 +30,7 @@ suppressPackageStartupMessages({
   library(reshape2)
   library(stringr)
   library(Rsamtools)
+  library(RColorBrewer)
 })
 
 options(shiny.maxRequestSize = 21474836480) # 20GB

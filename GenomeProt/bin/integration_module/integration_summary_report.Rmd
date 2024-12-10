@@ -18,6 +18,7 @@ library(gplots)
 library(dplyr)
 library(RColorBrewer)
 library(data.table)
+
 options(scipen=999)
 
 df <- read.csv(paste0(params$directory, "/", params$file))
@@ -298,8 +299,62 @@ pepplot <- ggplot(plot1) +
 
 suppressWarnings(print(pepplot))
 
+
 ```
 
+
+
+#### Number of UMPs per ORF (shown for UMPs>10)
+
+```{r, eval=TRUE, echo=FALSE}
+
+umps_per_protein <- df %>% 
+  dplyr::filter(orf_identified == TRUE) %>% 
+  group_by(PID) %>%
+  summarise(number_ump = length(unique(peptide)))
+
+tallied <- umps_per_protein %>% 
+  group_by(number_ump) %>% 
+  tally() %>% 
+  dplyr::filter(n>10)
+
+ump_per_protein_plot <- ggplot(tallied) +
+  geom_bar(aes(x=number_ump, y=n, fill=number_ump), stat="identity") +
+  ylab("Number of ORFs") +
+  xlab("Number of UMPs per ORF") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+suppressWarnings(print(ump_per_protein_plot))
+
+```
+
+
+
+#### Number of UMPs per unannotated ORF
+
+```{r, eval=TRUE, echo=FALSE}
+
+umps_per_novel_protein <- df %>% 
+  dplyr::filter(orf_identified == TRUE & startsWith(PID, "ORF")) %>% 
+  group_by(PID) %>%
+  summarise(number_ump = length(unique(peptide)))
+
+tallied_novel <- umps_per_novel_protein %>% 
+  group_by(number_ump) %>% 
+  tally() %>% 
+  dplyr::filter(n>10)
+
+ump_per_unannotated_protein_plot <- ggplot(tallied_novel) +
+  geom_bar(aes(x=number_ump, y=n, fill=number_ump), stat="identity") +
+  ylab("Number of ORFs") +
+  xlab("Number of UMPs per unannotated ORF") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+suppressWarnings(print(ump_per_unannotated_protein_plot))
+
+```
 
 
 #### Peptides by number of exons spanned
@@ -342,6 +397,7 @@ plot_orf_local <- ggplot(summary_df) +
   geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
   ylab("Total") +
   xlab("ORF localisation") +
+  scale_fill_brewer(palette = "Dark2") +
   theme_bw() +
   theme(legend.position = "none")
 
@@ -359,13 +415,14 @@ summary_df <- df %>% group_by(PID, transcript_id) %>% dplyr::filter(orf_identifi
             slice_head(n=1) %>% 
             ungroup() %>% 
             dplyr::filter(startsWith(PID, "ORF")) %>%
-            group_by(transcript_biotype) %>%
+            group_by(simplified_biotype) %>%
             summarise(total = n())
 
 plot_orf_biotype <- ggplot(summary_df) +
-  geom_bar(aes(x=transcript_biotype, y=total, fill=transcript_biotype), stat="identity") +
+  geom_bar(aes(x=simplified_biotype, y=total, fill=simplified_biotype), stat="identity") +
   ylab("Total") +
   xlab("Transcript biotype") +
+  scale_fill_brewer(palette = "Set3") +
   theme_bw() +
   theme(legend.position = "none", 
         axis.text.x = element_text(angle = -45, hjust = 0, vjust = 1))
@@ -383,25 +440,55 @@ suppressWarnings(print(plot_orf_biotype))
 summary_df <- df %>% dplyr::filter(orf_identified == TRUE) %>% 
             group_by(PID) %>% slice_head(n=1) %>% ungroup()
 
-# plot_orf_lengths <- ggplot(summary_df) +
-#   geom_boxplot(aes(x=orf_type, y=protein_length, fill=orf_type), outlier.shape=NA) +
-#   ylab("Length") +
-#   xlab("ORF type") +
-#   theme_bw() +
-#   ylim(0,1000) +
-#   theme(legend.position = "none", 
-#         axis.text.x = element_text(angle = -45, hjust = 0, vjust = 1))
-
 plot_orf_lengths <- ggplot(summary_df) +
   geom_density(aes(x=protein_length, y=..scaled.., color=orf_type)) +
   ylab("Scaled density") +
   xlab("ORF Length (0-1000 AA)") +
+  scale_color_brewer(palette = "Paired") +
   theme_bw() +
   xlim(0,1000)
 
 suppressWarnings(print(plot_orf_lengths))
 
 ```
+
+
+
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
+
+# save all PDFs
+
+pdf(paste0(params$directory,"/report_images/peptides-by-mapping-status.pdf"), w=12, h=10)
+suppressWarnings(print(pepplot))
+invisible(dev.off())
+
+pdf(paste0(params$directory,"/report_images/umps-per-orf.pdf"), w=12, h=10)
+suppressWarnings(print(ump_per_protein_plot))
+invisible(dev.off())
+
+pdf(paste0(params$directory,"/report_images/umps-per-unannotated-orf.pdf"), w=12, h=10)
+suppressWarnings(print(ump_per_unannotated_protein_plot))
+invisible(dev.off())
+
+pdf(paste0(params$directory,"/report_images/exons-spanned-by-peptides.pdf"), w=12, h=10)
+suppressWarnings(print(exons_plot))
+invisible(dev.off())
+
+pdf(paste0(params$directory,"/report_images/unannotated-orf-localisations.pdf"), w=12, h=10)
+suppressWarnings(print(plot_orf_local))
+invisible(dev.off())
+
+pdf(paste0(params$directory,"/report_images/unannotated-orf-tx-biotypes.pdf"), w=12, h=10)
+suppressWarnings(print(plot_orf_biotype))
+invisible(dev.off())
+
+pdf(paste0(params$directory,"/report_images/lengths-annotated-v-unannotated-orfs.pdf"), w=12, h=10)
+suppressWarnings(print(plot_orf_lengths))
+invisible(dev.off())
+
+```
+
+
 
 
 

@@ -248,8 +248,28 @@ combined_peptide_result$PID <- gsub(",", ".", combined_peptide_result$PID)
 combined_peptide_result <- combined_peptide_result[!(base::duplicated(combined_peptide_result)),]
 combined_peptide_result$transcript_length <- combined_peptide_result$tx_len
 
+combined_peptide_result <- combined_peptide_result %>% 
+  mutate(simplified_biotype = case_when(
+    transcript_biotype %in% c("protein_coding", "protein_coding_LoF", "protein_coding_CDS_not_defined") ~ "protein_coding",
+    transcript_biotype %in% c("polymorphic_pseudogene", "pseudogene", "processed_pseudogene", 
+                              "transcribed_unprocessed_pseudogene", "transcribed_processed_pseudogene",
+                              "unprocessed_pseudogene", "transcribed_unitary_pseudogene", "translated_processed_pseudogene",
+                              "translated_unprocessed_pseudogene", "unitary_pseudogene") ~ "pseudogene",
+    transcript_biotype %in% c("nonsense_mediated_decay", "non_stop_decay") ~ "NMD",
+    transcript_biotype %in% c("retained_intron") ~ "retained_intron",
+    transcript_biotype %in% c("lncRNA") ~ "lncRNA",
+    transcript_biotype %in% c("novel") ~ "novel",
+    TRUE ~ "other"
+  ))
+
 # rearrange columns for output
-combined_peptide_result <- combined_peptide_result %>% dplyr::select(peptide,accession,PID,transcript_id,gene_id,gene_name,strand,number_exons,transcript_length,transcript_biotype,protein_length,orf_genomic_coordinates,orf_type,localisation,uniprot_status,openprot_id,`molecular_weight(kDA)`,isoelectric_point,hydrophobicity,aliphatic_index,longest_orf_in_transcript,peptide_ids_gene,peptide_ids_orf,peptide_ids_transcript,shared_novel_protein_peptide,orf_identified,gene_identified,transcript_identified)
+combined_peptide_result <- combined_peptide_result %>% dplyr::select(peptide,accession,PID,transcript_id,gene_id,gene_name,strand,
+                                                                     number_exons,transcript_length,transcript_biotype,simplified_biotype,
+                                                                     protein_length,orf_genomic_coordinates,orf_type,localisation,uniprot_status,
+                                                                     openprot_id,`molecular_weight(kDA)`,isoelectric_point,hydrophobicity,
+                                                                     aliphatic_index,longest_orf_in_transcript,peptide_ids_gene,peptide_ids_orf,
+                                                                     peptide_ids_transcript,shared_novel_protein_peptide,orf_identified,
+                                                                     gene_identified,transcript_identified)
 
 # export summary data
 write.csv(combined_peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)

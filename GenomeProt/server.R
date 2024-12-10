@@ -531,6 +531,8 @@ integration_server <- function(input, output, session) {
   # get the top level dir
   top_level_dir <- getwd()
   
+  system(paste0("mkdir ", outdir_integ, "/report_images"))
+  
   # create report
   rmarkdown::render(input = paste0(top_level_dir, "/bin/integration_module/integration_summary_report.Rmd"),
                     output_file = paste0(top_level_dir, "/", outdir_integ, "/summary_report.html"),
@@ -544,7 +546,7 @@ integration_server <- function(input, output, session) {
   if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
     
     # create a zip file with results
-    files_to_zip_int <- c("summary_report.html", "peptide_info.csv", 
+    files_to_zip_int <- c("summary_report.html", "peptide_info.csv", "report_images/",
                           "combined_annotations.gtf", "peptides.bed12", 
                           "ORFs.bed12", "transcripts.bed12")
     
