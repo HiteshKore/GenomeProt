@@ -24,7 +24,7 @@ options(scipen=999)
 
 df <- read.csv(paste0(params$directory, "/", params$file))
 
-df <- fread("/Users/josieg/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/2024-10-29_1042_integration_results/peptide_info.csv")
+#df <- fread("/Users/josieg/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/2024-10-29_1042_integration_results/peptide_info.csv")
 
 bad_pep <- df %>% dplyr::filter(is.na(transcript_id))
 
