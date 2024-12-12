@@ -776,10 +776,8 @@ server <- function(input, output, session) {
   
   # run visualisation function when submit is pressed
   observeEvent(input$vis_submit_button, { 
-    print("Running")
+    
     session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # disable submit button
-    
-    
     
     # require the GTF file 
     req(input$user_vis_gtf_file)

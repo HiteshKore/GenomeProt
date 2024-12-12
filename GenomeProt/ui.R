@@ -252,11 +252,11 @@ ui <- dashboardPage(
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
               conditionalPanel(
                 condition = "input.show_isovis_steps % 2 == 1",
-                p("Step 1: Click 'Upload data'. For the 'Stack data' upload 'gencode.v31.filtered.gtf'. For the 'Heatmap data' upload 'transcript_counts.csv'."),
-                p("Step 2: Check the box 'Show m6A sites data upload options'."),
-                p("Step 3: For the 'm6A sites data' upload 'genomic_m6a_positions.bed'. For the 'm6A modification level data' upload 'genomic_m6a_rates_updated.csv'. Then click 'Apply'."),
+                p("Step 1: Click 'Upload data'. For the 'Stack data' upload 'transcripts_and_ORFs_for_isovis.gtf'. For the 'Heatmap data' upload 'bambu_transcript_counts.txt'."),
+                p("Step 2: Check the box 'Show peptide data upload options'."),
+                p("Step 3: For the 'Peptide sites data' upload 'peptides.bed12'. For the 'Peptide intensities data' upload the intensities file. Then click 'Apply'."),
                 p("Step 4: Type a gene to view and press enter."),
-                p("Step 5: Click 'Stack options' and select 'm6A sites' from the drop-down menu.")
+                p("Step 5: Click 'Stack options' and select 'Peptide sites' from the drop-down menu.")
               ),
               fluidRow(
                 column(12,
