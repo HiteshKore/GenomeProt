@@ -718,82 +718,80 @@ server <- function(input, output, session) {
   
   
   # VISUALISATION MODULE
+  
   data_storage <- reactiveValues()
   
-  # run visualisation function when submit is pressed
-  observe({ 
-    if (file_available_integ()) {
-      
-      # import the GTF with rtracklayer and remove version number from gene_id
-      data_storage$gtf_import <- rtracklayer::import(paste0(session_id, "/integ_output/combined_annotations.gtf"), format="gtf") %>% as_tibble() %>% 
-        separate(gene_id, into = c("gene_id"), sep = "\\.")
-      
-      # create separate dfs for each feature type
-      data_storage$res_tx_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "transcripts")
-      data_storage$res_ORF_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "ORFs")
-      data_storage$res_pep_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "peptides")
-      
-      # get genes in both peptides and transscripts GTF
-      ensembl_ids <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
-      
-      # create list of genes
-      genes_list <- data_storage$res_tx_import %>% 
-        dplyr::filter(gene_id %in% ensembl_ids)
-      
-      # use gene name if available
-      if ("gene_name" %in% colnames(genes_list)) {
-        genes_available <- unique(genes_list$gene_name)
-      } else {
-        genes_available <- unique(genes_list$gene_id)
-      }
-      
-      # filter genes by high confidence peptide status if check box is selected
-      if (input$uniq_map_peptides) {
-        
-        # filter peptide GTF for peptides that identify an ORF
-        high_conf_peptides <- data_storage$res_pep_import %>%
-          dplyr::filter(peptide_ids_orf == TRUE)
-        
-        # update gene list
-        genes_list <- data_storage$res_tx_import %>% 
-          dplyr::filter(gene_id %in% high_conf_peptides$gene_id)
-        
-        # update available genes
-        if ("gene_name" %in% colnames(genes_list)) {
-          genes_available <- unique(genes_list$gene_name)
-        } else {
-          genes_available <- unique(genes_list$gene_id)
-        }
-        
-      }
-      
-      # set genes in the drop down menu based on genes_available
-      updateSelectInput(session, "gene_selector", choices = genes_available)
-      
+  # function to import and process combined gtf
+  import_and_preprocess_gtf <- function(gtf_path) {
+    # import gtf and remove gene_id version number
+    gtf_import <- rtracklayer::import(gtf_path, format = "gtf") %>%
+      as_tibble() %>%
+      separate(gene_id, into = c("gene_id"), sep = "\\.")
+    # separate gtf into multiple features
+    list(
+      gtf_import = gtf_import,
+      res_tx_import = gtf_import %>% dplyr::filter(group_id == "transcripts"),
+      res_ORF_import = gtf_import %>% dplyr::filter(group_id == "ORFs"),
+      res_pep_import = gtf_import %>% dplyr::filter(group_id == "peptides")
+    )
+  }
+  
+  # function to update gene list
+  update_gene_list <- function(res_tx_import, res_pep_import, filter_high_conf = FALSE) {
+    # if check box is ticked
+    if (filter_high_conf) {
+      high_conf_peptides <- res_pep_import %>% dplyr::filter(peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% high_conf_peptides$gene_id)
     }
     
+    # ensure gene_id overlaps
+    ensembl_ids <- intersect(res_pep_import$gene_id, res_tx_import$gene_id)
+    # filter for list
+    genes_list <- res_tx_import %>% dplyr::filter(gene_id %in% ensembl_ids)
+    
+    # use gene name instead of ensembl
+    if ("gene_name" %in% colnames(genes_list)) {
+      unique(genes_list$gene_name)
+    } else {
+      unique(genes_list$gene_id)
+    }
+  }
+  
+  # function to update gene selection
+  update_gene_selector <- function(session, genes_available) {
+    updateSelectInput(session, "gene_selector", choices = genes_available)
+  }
+  
+  # observe integration module file availability
+  observe({
+    # if the integration module has been run, use the output from this to display visualisation automatically
+    if (file_available_integ()) {
+      gtf_data <- import_and_preprocess_gtf(paste0(session_id, "/integ_output/combined_annotations.gtf"))
+      data_storage$gtf_import <- gtf_data$gtf_import
+      data_storage$res_tx_import <- gtf_data$res_tx_import
+      data_storage$res_ORF_import <- gtf_data$res_ORF_import
+      data_storage$res_pep_import <- gtf_data$res_pep_import
+      
+      genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides)
+      update_gene_selector(session, genes_available)
+    }
   })
   
-  # run visualisation function when submit is pressed
-  observeEvent(input$vis_submit_button, { 
+  # observe visualisation submit button
+  observeEvent(input$vis_submit_button, {
+    # if the submit button is pressed, import files
+    session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container"))
     
-    session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # disable submit button
-    
-    # require the GTF file 
     req(input$user_vis_gtf_file)
     
-    # import the GTF with rtracklayer and remove version number from gene_id
-    data_storage$gtf_import <- rtracklayer::import(input$user_vis_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
-      separate(gene_id, into = c("gene_id"), sep = "\\.")
+    gtf_data <- import_and_preprocess_gtf(input$user_vis_gtf_file$datapath)
+    data_storage$gtf_import <- gtf_data$gtf_import
+    data_storage$res_tx_import <- gtf_data$res_tx_import
+    data_storage$res_ORF_import <- gtf_data$res_ORF_import
+    data_storage$res_pep_import <- gtf_data$res_pep_import
     
-    # create separate dfs for each feature type
-    data_storage$res_tx_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "transcripts")
-    data_storage$res_ORF_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "ORFs")
-    data_storage$res_pep_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "peptides")
-    
-    # if there are counts files uploaded
+    # if there are transcript counts and peptide intensities uploaded
     if (!is.null(input$user_vis_tx_count_file) & !is.null(input$user_pep_count_file)) {
-      
       print("Counts detected")
       
       # import counts files
@@ -811,6 +809,7 @@ server <- function(input, output, session) {
       # filter GTF transcripts for those with counts
       data_storage$res_tx_import <- data_storage$res_tx_import %>% 
         dplyr::filter(transcript_id %in% data_storage$countst$transcript_id)
+      
       # filter GTF ORFs for those with counts
       data_storage$res_ORF_import <- data_storage$res_ORF_import %>% 
         dplyr::filter(transcript_id %in% data_storage$countst$transcript_id)
@@ -842,11 +841,13 @@ server <- function(input, output, session) {
       
       # convert to matrix
       countsp_matrix <- as.matrix(data_storage$countsp[,-1])
+      
       # set rownames as peptide IDs
       rownames(countsp_matrix) <- data_storage$countsp$Peptide
       
       # run VSN for normalisation of peptide intensities
       vsnp <- as.data.frame(justvsn(countsp_matrix))
+      
       # create column of peptide IDs
       vsnp$peptide <- rownames(vsnp)
       
@@ -862,48 +863,13 @@ server <- function(input, output, session) {
                                               variable.name = "sample_id", value.name = "count")
       # set levels for plotting
       data_storage$countstm$sample_id <- factor(as.character(data_storage$countstm$sample_id), level =  sample_names)
-      
-    } 
-    
-    # get genes in both peptides and transscripts GTF
-    ensembl_ids <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
-    
-    # create list of genes
-    genes_list <- data_storage$res_tx_import %>% 
-      dplyr::filter(gene_id %in% ensembl_ids)
-    
-    # use gene name if available
-    if ("gene_name" %in% colnames(genes_list)) {
-      genes_available <- unique(genes_list$gene_name)
-    } else {
-      genes_available <- unique(genes_list$gene_id)
     }
     
-    # filter genes by high confidence peptide status if check box is selected
-    if (input$uniq_map_peptides) {
-      
-      # filter peptide GTF for peptides that identify an ORF
-      high_conf_peptides <- data_storage$res_pep_import %>%
-        dplyr::filter(peptide_ids_orf == TRUE)
-      
-      # update gene list
-      genes_list <- data_storage$res_tx_import %>% 
-        dplyr::filter(gene_id %in% high_conf_peptides$gene_id)
-      
-      # update available genes
-      if ("gene_name" %in% colnames(genes_list)) {
-        genes_available <- unique(genes_list$gene_name)
-      } else {
-        genes_available <- unique(genes_list$gene_id)
-      }
-      
-    }
+    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides)
+    update_gene_selector(session, genes_available)
     
-    # set genes in the drop down menu based on genes_available
-    updateSelectInput(session, "gene_selector", choices = genes_available)
-    
-    session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # re-enable submit button
-    
+    # re-enable submit button after data is processed
+    session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container"))
   })
   
   # when a gene is selected from the drop down
