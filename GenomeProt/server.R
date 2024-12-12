@@ -718,11 +718,12 @@ server <- function(input, output, session) {
   
   
   # VISUALISATION MODULE
+  data_storage <- reactiveValues()
   
   # run visualisation function when submit is pressed
   observe({ 
     if (file_available_integ()) {
-      data_storage <- reactiveValues()
+      
       # import the GTF with rtracklayer and remove version number from gene_id
       data_storage$gtf_import <- rtracklayer::import(paste0(session_id, "/integ_output/combined_annotations.gtf"), format="gtf") %>% as_tibble() %>% 
         separate(gene_id, into = c("gene_id"), sep = "\\.")
@@ -778,8 +779,7 @@ server <- function(input, output, session) {
     print("Running")
     session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # disable submit button
     
-    # VISUALISATION MODULE
-    data_storage <- reactiveValues()
+    
     
     # require the GTF file 
     req(input$user_vis_gtf_file)
@@ -803,7 +803,7 @@ server <- function(input, output, session) {
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
       
       # rename as per bambu counts output
-      if ("TXNAME"  %in% colnames(data_storage$countst) & "GENEID" %in% colnames(data_storage$countst)) {
+      if ("TXNAME" %in% colnames(data_storage$countst) & "GENEID" %in% colnames(data_storage$countst)) {
         data_storage$countst$transcript_id <- data_storage$countst$TXNAME
         data_storage$countst$GENEID <- NULL
       } else if ("TXNAME" %in% colnames(data_storage$countst)) {
