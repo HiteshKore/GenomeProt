@@ -312,53 +312,31 @@ suppressWarnings(print(pepplot))
 umps_per_protein <- df %>% 
   dplyr::filter(orf_identified == TRUE) %>% 
   group_by(PID) %>%
-  summarise(number_ump = length(unique(peptide)))
+  summarise(number_ump = length(unique(peptide))) %>% 
+  ungroup() %>% 
+  mutate(orf_type = case_when(
+    startsWith(PID, "ORF") ~ "unannotated",
+    TRUE ~ "annotated"
+  ))
 
 tallied <- umps_per_protein %>% 
-  group_by(number_ump) %>% 
-  tally() %>% 
+  group_by(orf_type, number_ump) %>% 
+  summarise(n = n()) %>% 
   dplyr::filter(n>10)
 
 ump_per_protein_plot <- ggplot(tallied) +
-  geom_bar(aes(x=number_ump, y=n), fill="darkgreen", stat="identity") +
+  geom_bar(aes(x=number_ump, y=n, fill=orf_type), position="stack", stat="identity") +
   ylab("Number of ORFs") +
   xlab("Number of UMPs per ORF") +
-  scale_x_continuous(breaks = pretty_breaks()) + 
+  scale_x_continuous(breaks = pretty_breaks()) +
   scale_y_continuous(breaks = pretty_breaks()) +
-  theme_bw() +
-  theme(legend.position = "none")
+  scale_fill_manual(values=c("unannotated" = "deepskyblue3", "annotated" = "darkgreen")) +
+  theme_bw()
 
 suppressWarnings(print(ump_per_protein_plot))
 
 ```
 
-
-
-#### Number of UMPs per unannotated ORF
-
-```{r, eval=TRUE, echo=FALSE}
-
-umps_per_novel_protein <- df %>% 
-  dplyr::filter(orf_identified == TRUE & startsWith(PID, "ORF")) %>% 
-  group_by(PID) %>%
-  summarise(number_ump = length(unique(peptide)))
-
-tallied_novel <- umps_per_novel_protein %>% 
-  group_by(number_ump) %>% 
-  tally() 
-
-ump_per_unannotated_protein_plot <- ggplot(tallied_novel) +
-  geom_bar(aes(x=number_ump, y=n), fill="deepskyblue3", stat="identity") +
-  ylab("Number of ORFs") +
-  xlab("Number of UMPs per unannotated ORF") +
-  scale_x_continuous(breaks = pretty_breaks()) + 
-  scale_y_continuous(breaks = pretty_breaks()) +
-  theme_bw() +
-  theme(legend.position = "none")
-
-suppressWarnings(print(ump_per_unannotated_protein_plot))
-
-```
 
 
 #### Peptides by number of exons spanned
@@ -462,31 +440,27 @@ suppressWarnings(print(plot_orf_lengths))
 
 # save all PDFs
 
-pdf(paste0(params$directory,"/report_images/peptides-by-mapping-status.pdf"), w=12, h=10)
+pdf(paste0(params$directory,"/report_images/peptides-by-mapping-status.pdf"), w=6, h=4)
 suppressWarnings(print(pepplot))
 invisible(dev.off())
 
-pdf(paste0(params$directory,"/report_images/umps-per-orf.pdf"), w=12, h=10)
+pdf(paste0(params$directory,"/report_images/umps-per-orf.pdf"), w=6, h=4)
 suppressWarnings(print(ump_per_protein_plot))
 invisible(dev.off())
 
-pdf(paste0(params$directory,"/report_images/umps-per-unannotated-orf.pdf"), w=12, h=10)
-suppressWarnings(print(ump_per_unannotated_protein_plot))
-invisible(dev.off())
-
-pdf(paste0(params$directory,"/report_images/exons-spanned-by-peptides.pdf"), w=12, h=10)
+pdf(paste0(params$directory,"/report_images/exons-spanned-by-peptides.pdf"), w=6, h=4)
 suppressWarnings(print(exons_plot))
 invisible(dev.off())
 
-pdf(paste0(params$directory,"/report_images/unannotated-orf-localisations.pdf"), w=12, h=10)
+pdf(paste0(params$directory,"/report_images/unannotated-orf-localisations.pdf"), w=6, h=4)
 suppressWarnings(print(plot_orf_local))
 invisible(dev.off())
 
-pdf(paste0(params$directory,"/report_images/unannotated-orf-tx-biotypes.pdf"), w=12, h=10)
+pdf(paste0(params$directory,"/report_images/unannotated-orf-tx-biotypes.pdf"), w=6, h=4)
 suppressWarnings(print(plot_orf_biotype))
 invisible(dev.off())
 
-pdf(paste0(params$directory,"/report_images/lengths-annotated-v-unannotated-orfs.pdf"), w=12, h=10)
+pdf(paste0(params$directory,"/report_images/lengths-annotated-v-unannotated-orfs.pdf"), w=6, h=4)
 suppressWarnings(print(plot_orf_lengths))
 invisible(dev.off())
 
