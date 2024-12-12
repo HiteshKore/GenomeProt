@@ -18,12 +18,13 @@ library(gplots)
 library(dplyr)
 library(RColorBrewer)
 library(data.table)
+library(scales)
 
 options(scipen=999)
 
 df <- read.csv(paste0(params$directory, "/", params$file))
 
-#df <- fread("/Users/josieg/Documents/peptide_info.csv")
+df <- fread("/Users/josieg/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/2024-10-29_1042_integration_results/peptide_info.csv")
 
 bad_pep <- df %>% dplyr::filter(is.na(transcript_id))
 
@@ -304,7 +305,7 @@ suppressWarnings(print(pepplot))
 
 
 
-#### Number of UMPs per ORF (shown for UMPs>10)
+#### Number of UMPs per ORF (shown for >10 ORFs)
 
 ```{r, eval=TRUE, echo=FALSE}
 
@@ -319,9 +320,11 @@ tallied <- umps_per_protein %>%
   dplyr::filter(n>10)
 
 ump_per_protein_plot <- ggplot(tallied) +
-  geom_bar(aes(x=number_ump, y=n, fill=number_ump), stat="identity") +
+  geom_bar(aes(x=number_ump, y=n), fill="darkgreen", stat="identity") +
   ylab("Number of ORFs") +
   xlab("Number of UMPs per ORF") +
+  scale_x_continuous(breaks = pretty_breaks()) + 
+  scale_y_continuous(breaks = pretty_breaks()) +
   theme_bw() +
   theme(legend.position = "none")
 
@@ -342,13 +345,14 @@ umps_per_novel_protein <- df %>%
 
 tallied_novel <- umps_per_novel_protein %>% 
   group_by(number_ump) %>% 
-  tally() %>% 
-  dplyr::filter(n>10)
+  tally() 
 
 ump_per_unannotated_protein_plot <- ggplot(tallied_novel) +
-  geom_bar(aes(x=number_ump, y=n, fill=number_ump), stat="identity") +
+  geom_bar(aes(x=number_ump, y=n), fill="deepskyblue3", stat="identity") +
   ylab("Number of ORFs") +
   xlab("Number of UMPs per unannotated ORF") +
+  scale_x_continuous(breaks = pretty_breaks()) + 
+  scale_y_continuous(breaks = pretty_breaks()) +
   theme_bw() +
   theme(legend.position = "none")
 
@@ -407,7 +411,7 @@ suppressWarnings(print(plot_orf_local))
 
 
 
-#### Unannotated ORFs (with UMPs) by transcript biotype
+#### Unannotated ORFs (with UMPs) by simplified transcript biotype
 
 ```{r, eval=TRUE, echo=FALSE}
 
@@ -444,7 +448,7 @@ plot_orf_lengths <- ggplot(summary_df) +
   geom_density(aes(x=protein_length, y=..scaled.., color=orf_type)) +
   ylab("Scaled density") +
   xlab("ORF Length (0-1000 AA)") +
-  scale_color_brewer(palette = "Paired") +
+  scale_color_manual(values = c("annotated" = "darkgreen", "unannotated" = "deepskyblue3")) +
   theme_bw() +
   xlim(0,1000)
 

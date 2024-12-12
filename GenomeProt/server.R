@@ -547,8 +547,8 @@ integration_server <- function(input, output, session) {
     
     # create a zip file with results
     files_to_zip_int <- c("summary_report.html", "peptide_info.csv", "report_images/",
-                          "combined_annotations.gtf", "peptides.bed12", 
-                          "ORFs.bed12", "transcripts.bed12")
+                          "combined_annotations.gtf", "transcripts_and_ORFs_for_isovis.gtf",
+                          "peptides.bed12", "ORFs.bed12", "transcripts.bed12")
     
     # set the path to the ZIP file (in the session_id directory)
     zipfile_path_int <- file.path("../integration_results.zip")
