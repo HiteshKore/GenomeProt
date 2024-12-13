@@ -737,19 +737,43 @@ server <- function(input, output, session) {
   }
   
   # function to update gene list
-  update_gene_list <- function(res_tx_import, res_pep_import, uniq_map_peptides = FALSE, lncRNA_peptides = FALSE) {
+  update_gene_list <- function(res_tx_import, res_pep_import, uniq_map_peptides = FALSE, lncRNA_peptides = FALSE, novel_txs = FALSE, novel_txs_distinguished = FALSE, unann_orfs = FALSE, uorf_5 = FALSE, dorf_3 = FALSE) {
     
     # if check box is ticked
     if (uniq_map_peptides) {
-      high_conf_peptides <- res_pep_import %>% dplyr::filter(peptide_ids_orf == TRUE)
-      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% high_conf_peptides$gene_id)
+      filtered_peptides <- res_pep_import %>% dplyr::filter(peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
     }
     
     if (lncRNA_peptides) {
-      lncRNApep <- res_pep_import %>% dplyr::filter(transcript_biotype == "lncRNA")
-      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% lncRNApep$gene_id)
+      filtered_peptides <- res_pep_import %>% dplyr::filter(transcript_biotype == "lncRNA" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
     }
     
+    if (novel_txs) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(transcript_biotype == "novel" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (novel_txs_distinguished) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(transcript_biotype == "novel" & peptide_ids_orf == TRUE & peptide_ids_transcript == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (unann_orfs) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(orf_type == "unannotated" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (uorf_5) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(localisation == "5UTR" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (dorf_3) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(localisation == "3UTR" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
     
     # ensure gene_id overlaps
     ensembl_ids <- intersect(res_pep_import$gene_id, res_tx_import$gene_id)
@@ -779,7 +803,7 @@ server <- function(input, output, session) {
       data_storage$res_ORF_import <- gtf_data$res_ORF_import
       data_storage$res_pep_import <- gtf_data$res_pep_import
       
-      genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides, input$lncRNA_peptides)
+      genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides, input$lncRNA_peptides, input$novel_txs, input$novel_txs_distinguished, input$unann_orfs, input$uorf_5, input$dorf_3)
       update_gene_selector(session, genes_available)
     }
   })
@@ -872,50 +896,49 @@ server <- function(input, output, session) {
       data_storage$countstm$sample_id <- factor(as.character(data_storage$countstm$sample_id), level =  sample_names)
     }
     
-    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides, input$lncRNA_peptides)
+    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides, input$lncRNA_peptides, input$novel_txs, input$unann_orfs, input$uorf_5, input$dorf_3)
     update_gene_selector(session, genes_available)
     
     # re-enable submit button after data is processed
     session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container"))
   })
   
+  # make reactive list of checkbox filters
+  checkbox_filters <- reactive({
+    list(
+      uniq_map_peptides = input$uniq_map_peptides,
+      lncRNA_peptides = input$lncRNA_peptides,
+      novel_txs = input$novel_txs,
+      novel_txs_distinguished = input$novel_txs_distinguished,
+      unann_orfs = input$unann_orfs,
+      uorf_5 = input$uorf_5,
+      dorf_3 = input$dorf_3
+    )
+  })
   
-  
-  
-  # observe changes in the uniq_map_peptides checkbox
-  observeEvent(input$uniq_map_peptides, {
-    
-    # ensure gtfs are available
+  # observe changes in any checkbox
+  observe({
+    # ensure GTFs are available
     req(data_storage$res_tx_import, data_storage$res_pep_import)
     
-    # update the gene list based on the checkbox state
-    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, uniq_map_peptides = input$uniq_map_peptides, lncRNA_peptides = input$lncRNA_peptides)
+    # update gene list based on current checkbox states
+    genes_available <- update_gene_list(
+      data_storage$res_tx_import, 
+      data_storage$res_pep_import, 
+      uniq_map_peptides = checkbox_filters()$uniq_map_peptides,
+      lncRNA_peptides = checkbox_filters()$lncRNA_peptides,
+      novel_txs = checkbox_filters()$novel_txs,
+      novel_txs_distinguished = checkbox_filters()$novel_txs_distinguished,
+      unann_orfs = checkbox_filters()$unann_orfs,
+      uorf_5 = checkbox_filters()$uorf_5,
+      dorf_3 = checkbox_filters()$dorf_3
+    )
     
     # update the gene selector with the new list
     update_gene_selector(session, genes_available)
-    
   })
   
-  # observe changes in the lncRNA_peptides checkbox
-  observeEvent(input$lncRNA_peptides, {
-    
-    # ensure gtfs are available
-    req(data_storage$res_tx_import, data_storage$res_pep_import)
-    
-    # update the gene list based on the checkbox state
-    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, uniq_map_peptides = input$uniq_map_peptides, lncRNA_peptides = input$lncRNA_peptides)
-    
-    # update the gene selector with the new list
-    update_gene_selector(session, genes_available)
-    
-  })
-  
-  
-  
-  
-  
-  
-  # when a gene is selected from the drop down
+  # gene selection in drop down menu
   observeEvent(input$gene_selector, {
     
     req(input$gene_selector)
