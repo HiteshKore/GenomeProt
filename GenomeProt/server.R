@@ -737,12 +737,19 @@ server <- function(input, output, session) {
   }
   
   # function to update gene list
-  update_gene_list <- function(res_tx_import, res_pep_import, filter_high_conf = FALSE) {
+  update_gene_list <- function(res_tx_import, res_pep_import, uniq_map_peptides = FALSE, lncRNA_peptides = FALSE) {
+    
     # if check box is ticked
-    if (filter_high_conf) {
+    if (uniq_map_peptides) {
       high_conf_peptides <- res_pep_import %>% dplyr::filter(peptide_ids_orf == TRUE)
       res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% high_conf_peptides$gene_id)
     }
+    
+    if (lncRNA_peptides) {
+      lncRNApep <- res_pep_import %>% dplyr::filter(transcript_biotype == "lncRNA")
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% lncRNApep$gene_id)
+    }
+    
     
     # ensure gene_id overlaps
     ensembl_ids <- intersect(res_pep_import$gene_id, res_tx_import$gene_id)
@@ -772,7 +779,7 @@ server <- function(input, output, session) {
       data_storage$res_ORF_import <- gtf_data$res_ORF_import
       data_storage$res_pep_import <- gtf_data$res_pep_import
       
-      genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides)
+      genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides, input$lncRNA_peptides)
       update_gene_selector(session, genes_available)
     }
   })
@@ -865,12 +872,48 @@ server <- function(input, output, session) {
       data_storage$countstm$sample_id <- factor(as.character(data_storage$countstm$sample_id), level =  sample_names)
     }
     
-    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides)
+    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides, input$lncRNA_peptides)
     update_gene_selector(session, genes_available)
     
     # re-enable submit button after data is processed
     session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container"))
   })
+  
+  
+  
+  
+  # observe changes in the uniq_map_peptides checkbox
+  observeEvent(input$uniq_map_peptides, {
+    
+    # ensure gtfs are available
+    req(data_storage$res_tx_import, data_storage$res_pep_import)
+    
+    # update the gene list based on the checkbox state
+    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, uniq_map_peptides = input$uniq_map_peptides, lncRNA_peptides = input$lncRNA_peptides)
+    
+    # update the gene selector with the new list
+    update_gene_selector(session, genes_available)
+    
+  })
+  
+  # observe changes in the lncRNA_peptides checkbox
+  observeEvent(input$lncRNA_peptides, {
+    
+    # ensure gtfs are available
+    req(data_storage$res_tx_import, data_storage$res_pep_import)
+    
+    # update the gene list based on the checkbox state
+    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, uniq_map_peptides = input$uniq_map_peptides, lncRNA_peptides = input$lncRNA_peptides)
+    
+    # update the gene selector with the new list
+    update_gene_selector(session, genes_available)
+    
+  })
+  
+  
+  
+  
+  
   
   # when a gene is selected from the drop down
   observeEvent(input$gene_selector, {
