@@ -16,7 +16,8 @@ ui <- dashboardPage(
                 # commenting out proteomics for now
                 #menuItem("Analyse MS proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
                 menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
-                menuItem("Visualise results", tabName = "visualisation", icon = icon("chart-bar"))
+                menuItem("Visualise results", tabName = "visualisation", icon = icon("chart-bar")),
+                menuItem("IsoVis", tabName = "isovis", icon = icon("eye"))
     )
   ),
   # body
@@ -227,9 +228,9 @@ ui <- dashboardPage(
               )
       ),
       tabItem(tabName = "visualisation", 
-              h2("Visualise results"),
-              h5("Plots your results using the GTFs created in the integration module."),
               fluidRow(
+                h2("Visualise results"),
+                h5("Plots your results using the GTFs created in the integration module."),
                 column(4,
                        fileInput("user_vis_gtf_file", "Upload 'combined_annotations.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_vis_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
@@ -237,13 +238,42 @@ ui <- dashboardPage(
                        actionButton("vis_submit_button", "Submit", class = "btn btn-primary")
                 ),
                 column(8,
-                       selectInput("gene_selector", "Select Gene", choices = NULL),
-                       checkboxInput("uniq_map_peptides", "Only display genes encoding ORFs with uniquely mapped peptides", value = FALSE),
+                       selectInput("gene_selector", "Select a gene:", choices = NULL),
+                       strong(p("Filter gene list for:")),
+                       p("UMP = uniquely mapped peptide. Peptides that only mapped to a single protein entry in the protein database."),
+                       checkboxInput("uniq_map_peptides", "ORFs with UMPs", value = FALSE),
+                       checkboxInput("lncRNA_peptides", "long non-coding RNAs with UMPs", value = FALSE),
+                       checkboxInput("novel_txs", "novel transcript isoforms with UMPs", value = FALSE),
+                       checkboxInput("novel_txs_distinguished", "novel transcript isoforms distinguished by UMPs", value = FALSE),
+                       checkboxInput("unann_orfs", "unannotated ORFs with UMPs", value = FALSE),
+                       checkboxInput("uorf_5", "5' uORFs with UMPs", value = FALSE),
+                       checkboxInput("dorf_3", "3' dORFs with UMPs", value = FALSE),
                        div(id = "vis-loading-container", class = "loading-container", div(class = "spinner")),
                        plotOutput("plot"),
                        downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing") # initially disabled
                 )
               )
+      ),
+      tabItem(tabName = "isovis", 
+              h2("Visualise results with IsoVis"),
+              h5("The IsoVis website is displayed below for convenience. It is also accessible directly at: https://isomix.org/isovis/"),
+              h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
+              conditionalPanel(
+                condition = "input.show_isovis_steps % 2 == 1",
+                p("Step 1: Click 'Upload data'. For the 'Stack data' upload 'transcripts_and_ORFs_for_isovis.gtf'. For the 'Heatmap data' upload 'bambu_transcript_counts.txt'."),
+                p("Step 2: Check the box 'Show peptide data upload options'."),
+                p("Step 3: For the 'Peptide sites data' upload 'peptides.bed12'. For the 'Peptide intensities data' upload the intensities file. Then click 'Apply'."),
+                p("Step 4: Type a gene to view and press enter."),
+                p("Step 5: Click 'Stack options' and select 'Peptide sites' from the drop-down menu.")
+              ),
+              fluidRow(
+                column(12,
+                    tags$iframe(src = "https://isomix.org/isovis/", 
+                                width = "100%", 
+                                height = "800px",
+                                style = "border:none;"))
+              )
+  
       )
     )
   ),  
