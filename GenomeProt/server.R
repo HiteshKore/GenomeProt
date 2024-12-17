@@ -436,10 +436,10 @@ database_server <- function(input, output, session) {
   #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
   
   if (!is.null(input$user_vcf_file)) { # if there is a VCF file uploaded
-    command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt"))
+    command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt"))
     print(command_annotate_proteome)
   } else { # if no VCF file uploaded
-    command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None")
+    command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None")
     print(command_annotate_proteome)
   }
   
@@ -720,6 +720,18 @@ server <- function(input, output, session) {
   # VISUALISATION MODULE
   
   data_storage <- reactiveValues()
+  
+  observeEvent(input$toggle_filters, {
+    # check status
+    filters_visible <- shinyjs::toggle(id = "filters_container")
+    
+    # update the toggle button text
+    if (input$toggle_filters %% 2 == 1) { # odd number clicks
+      updateActionLink(session, "toggle_filters", label = "▲ Hide filtering options")
+    } else { # even number clicks
+      updateActionLink(session, "toggle_filters", label = "▼ Gene list filtering options")
+    }
+  })
   
   # function to import and process combined gtf
   import_and_preprocess_gtf <- function(gtf_path) {

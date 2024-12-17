@@ -101,7 +101,7 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "db_generation", 
               h2("Generate a custom proteogenomics database"),
-              h5("Creates an amino acid FASTA of all ORFs in your data to use as input for FragPipe/MaxQuant etc."),
+              h5("Creates an amino acid FASTA of all ORFs in your data for proteomics."),
               fluidRow(
                 column(6,
                        
@@ -211,7 +211,7 @@ ui <- dashboardPage(
       # ),
       tabItem(tabName = "integration", 
               h2("Integrate proteomics results with transcriptomics"),
-              h5("Creates BED12s and GTFs of peptides, ORFs and transcripts for visualisation and produces summary data"),
+              h5("Creates a combined GTF and BED12s of peptides, ORFs and transcripts for visualisation, along with summary data and a report."),
               fluidRow(
                 column(6,
                        fileInput("user_proteomics_file", "Upload proteomics results:", NULL, buttonLabel = "Browse...", multiple = FALSE),
@@ -229,8 +229,11 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "visualisation", 
               fluidRow(
-                h2("Visualise results"),
-                h5("Plots your results using the GTFs created in the integration module."),
+                column(12, 
+                       h2("Visualise results", align = "left") 
+                )
+              ),
+              fluidRow(
                 column(4,
                        fileInput("user_vis_gtf_file", "Upload 'combined_annotations.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_vis_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
@@ -239,18 +242,21 @@ ui <- dashboardPage(
                 ),
                 column(8,
                        selectInput("gene_selector", "Select a gene:", choices = NULL),
-                       strong(p("Filter gene list for:")),
-                       p("UMP = uniquely mapped peptide. Peptides that only mapped to a single protein entry in the protein database."),
-                       checkboxInput("uniq_map_peptides", "ORFs with UMPs", value = FALSE),
-                       checkboxInput("lncRNA_peptides", "long non-coding RNAs with UMPs", value = FALSE),
-                       checkboxInput("novel_txs", "novel transcript isoforms with UMPs", value = FALSE),
-                       checkboxInput("novel_txs_distinguished", "novel transcript isoforms distinguished by UMPs", value = FALSE),
-                       checkboxInput("unann_orfs", "unannotated ORFs with UMPs", value = FALSE),
-                       checkboxInput("uorf_5", "5' uORFs with UMPs", value = FALSE),
-                       checkboxInput("dorf_3", "3' dORFs with UMPs", value = FALSE),
+                       # toggle filtering options
+                       actionLink("toggle_filters", "▼ Gene list filtering options", class = "toggle-filters"),
+                       div(id = "filters_container", style = "display:none;", # hidden by default
+                           p("UMP = uniquely mapped peptide. Peptides that only mapped to a single protein entry in the protein database."),
+                           checkboxInput("uniq_map_peptides", "ORFs with UMPs", value = FALSE),
+                           checkboxInput("lncRNA_peptides", "long non-coding RNAs with UMPs", value = FALSE),
+                           checkboxInput("novel_txs", "novel transcript isoforms with UMPs", value = FALSE),
+                           checkboxInput("novel_txs_distinguished", "novel transcript isoforms distinguished by UMPs", value = FALSE),
+                           checkboxInput("unann_orfs", "unannotated ORFs with UMPs", value = FALSE),
+                           checkboxInput("uorf_5", "5' uORFs with UMPs", value = FALSE),
+                           checkboxInput("dorf_3", "3' dORFs with UMPs", value = FALSE)
+                       ),
                        div(id = "vis-loading-container", class = "loading-container", div(class = "spinner")),
                        plotOutput("plot"),
-                       downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing") # initially disabled
+                       downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing")
                 )
               )
       ),
