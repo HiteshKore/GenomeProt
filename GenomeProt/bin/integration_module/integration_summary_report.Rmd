@@ -24,8 +24,6 @@ options(scipen=999)
 
 df <- read.csv(paste0(params$directory, "/", params$file))
 
-#df <- fread("/Users/josieg/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/2024-10-29_1042_integration_results/peptide_info.csv")
-
 bad_pep <- df %>% dplyr::filter(is.na(transcript_id))
 
 df <- df %>% dplyr::filter(!is.na(transcript_id))
@@ -278,7 +276,7 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 
 #### Peptides by mapping status
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 plot1 <- data.frame(
   metric = c("total", "gene-specific", "UMP"),
@@ -307,7 +305,7 @@ suppressWarnings(print(pepplot))
 
 #### Number of UMPs per ORF (shown for >10 ORFs)
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 umps_per_protein <- df %>% 
   dplyr::filter(orf_identified == TRUE) %>% 
@@ -341,7 +339,7 @@ suppressWarnings(print(ump_per_protein_plot))
 
 #### Peptides by number of exons spanned
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 summary_df <- df %>% 
   group_by(peptide) %>% 
@@ -365,7 +363,7 @@ suppressWarnings(print(exons_plot))
 
 #### Unannotated ORFs (with UMPs) by localisation
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 summary_df <- df %>% group_by(peptide) %>% 
             dplyr::filter(length(unique(PID)) == 1) %>%
@@ -391,7 +389,7 @@ suppressWarnings(print(plot_orf_local))
 
 #### Unannotated ORFs (with UMPs) by simplified transcript biotype
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 summary_df <- df %>% group_by(PID, transcript_id) %>% dplyr::filter(orf_identified == TRUE) %>% 
             slice_head(n=1) %>% 
@@ -417,18 +415,20 @@ suppressWarnings(print(plot_orf_biotype))
 
 #### Lengths of annotated and unannotated ORFs (with UMPs)
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 summary_df <- df %>% dplyr::filter(orf_identified == TRUE) %>% 
             group_by(PID) %>% slice_head(n=1) %>% ungroup()
 
+min_orf_length <- min(as.numeric(df$protein_length), na.rm=T)
+
 plot_orf_lengths <- ggplot(summary_df) +
   geom_density(aes(x=protein_length, y=..scaled.., color=orf_type)) +
   ylab("Scaled density") +
-  xlab("ORF Length (0-1000 AA)") +
+  xlab(paste0("ORF Length (", min_orf_length, "-1000 AA)")) +
   scale_color_manual(values = c("annotated" = "darkgreen", "unannotated" = "deepskyblue3")) +
   theme_bw() +
-  xlim(0,1000)
+  xlim(min_orf_length,1000)
 
 suppressWarnings(print(plot_orf_lengths))
 
