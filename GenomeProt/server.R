@@ -442,9 +442,6 @@ database_server <- function(input, output, session) {
     ref_proteome <- "data/openprot_uniprotDb_zebrafish.txt"
   }
   
-  # run python script using conda env
-  #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
-  
   if (!is.null(input$user_vcf_file)) { # if there is a VCF file uploaded
     message("VCF file was provided")
     # supply conda env here if local installation
