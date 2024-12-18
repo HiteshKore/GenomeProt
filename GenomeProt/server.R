@@ -452,7 +452,7 @@ database_server <- function(input, output, session) {
     print(command_annotate_proteome)
     if (!file.exists(paste0(outdir_db, "/Mutant_ORFome_aa.txt"))) {
       message("Generate variant proteome database failed")
-      break()
+      break
     }
   } else { # if no VCF file uploaded
     # supply conda env here if local installation
