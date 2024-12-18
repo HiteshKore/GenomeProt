@@ -1,7 +1,5 @@
 # GenomeProt: an integrated proteogenomics analysis platform for long-read RNA-Seq datasets
 
-## Access GenomeProt online
-https://genomeprot.researchsoftware.unimelb.edu.au/
 
 ## Contents
 
@@ -17,12 +15,15 @@ https://genomeprot.researchsoftware.unimelb.edu.au/
 
 ## Installation
 
-### Option 1 (recommended): Run the shiny application with Docker
+### Option 1 (recommended): Access GenomeProt online
+https://genomeprot.researchsoftware.unimelb.edu.au/
+
+### Option 2: Run the shiny application with Docker
 Make sure you have [Docker](https://docs.docker.com/engine/install/) installed and the application running in the background before you begin.
 
 Open your terminal application and run:
 ```
-docker run --rm -p 3838:3838 josieg/genomeprot:dev
+docker run --rm -p 3838:3838 josieg/genomeprot:v1
 ```
 This will take approximately 10-20 minutes to download the Docker image the first time the app is run.
 The --rm removes the container after it’s stopped and the -p 3838:3838 maps your local port 3838 to the same port inside the container.
@@ -33,46 +34,38 @@ You can now upload all files and run the steps in your web browser. Although the
 
 To stop the container, close the web browser tab and head back to the terminal where Docker is running and press ctrl+c.
 
-### Option 2: Locally install the shiny application
+### Option 3: Locally install the shiny application
 
-The application has substantial dependencies (R requirements found in global.R).
-
-Python (tested with 3.9):
-- biopython==1.77
-- py-cdhit
-- peptides
-
-Command line:
-- minimap2
-- samtools
-- cd-hit
-- gffread
-- gffcompare
+The application has substantial dependencies that we have provided as a conda environment file. 
 
 Clone this repository:
 ```
 git clone https://github.com/josiegleeson/GenomeProt.git
 ```
 
-Unzip the uniprot+openport reference file in the GenomeProt/data directory.
+Build the conda environment:
 ```
-unzip GenomeProt/data/openprot_uniprotDb_hs.txt.zip
+cd GenomeProt
+conda env create -f conda_env.yaml
 ```
 
-Run the app from the command line:
+Unzip the uniprot+openprot reference file in the GenomeProt/data directory.
 ```
+cd GenomeProt/GenomeProt/data
+unzip openprot_uniprotDb_hs.txt.zip
+unzip *
+```
+
+Activate the environment and then run the app from the command line:
+```
+conda activate GenomeProt_env
 Rscript -e "shiny::runApp('path/to/app/GenomeProt/', host='0.0.0.0', port=3838)"
 ```
 
-Otherwise open the app (server.R, ui.R) in RStudio and click 'Run app'.
-
-#### Troubleshooting a local installation
-The app executes command line tools. Sometimes the local app can't find these tools and it might be easier to install them all into a conda environemnt.
-If you do this, you'll need to open the server.R file and replace all instances of 'genomeprot_env' with your conda env name, uncomment out these lines, and comment out the commands which don't include the conda command. You should be able to now run the app as usual, except it will execute command line arguments using your specified conda env. 
 
 ## General usage 
 
-GenomeProt is an integrated proteogenomics platform with three modules: 1) database generation, 2) integration, and 3) visualisation.
+GenomeProt is an integrated proteogenomics platform with four modules: 1) database generation, 2) proteomics (under development), 3) integration, and 4) visualisation.
 
 ### 1. Database generation
 
@@ -128,8 +121,11 @@ MQATPSEAGGESPQSCLSVSRSDWTVGKPVSLLAPLIPPRSSGQPLPFGPGGRQPLRSLLVGMCSGSGRRRSSLSPTMRP
 | gene_overlap   | Encoded by a transcript that overlaps a region with annotated protein-coding genes                  |
 | intergenic     | Encoded by a transcript that does not overlap a region with annotated protein-coding genes          |
 
+### 2. Run proteomics
 
-### 2. Integration
+Currently under development. Please use FragPipe to process proteomics data with the custom database.
+
+### 3. Integration
 
 The second module integrates proteomics and transcriptomics data. Peptides are associated back to transcript isoforms and mapped to spliced genomic coordinates for downstream visualisation. This generates BED12 file of transcripts, ORFs   and peptides for visualisation in the UCSC genome browser and a combined GTF file for visualisation within the app. An html report is also created that provides a summary of identified known and novel transcripts, uniquely mapping peptides, and known and novel ORFs.
 
@@ -139,7 +135,7 @@ The second module integrates proteomics and transcriptomics data. Peptides are a
 - BED12 files for visualisation in UCSC genome browser.  
 - HTML report summarising identified transcripts, peptides and ORFs.  
 
-### 3. Visualisation
+### 4. Visualisation
 
 The final visualisation module generates peptide mapping plots along transcript isoforms alongside quantitative peptide intensity and transcript expression data. This allows users to visualise transcript and peptide abundance across different experimental conditions.  This module requires the combined GTF file generated in module 2, and optionally inputs transcript counts from module 1 and peptide intensities from external proteomics analysis.
 
@@ -217,8 +213,12 @@ The final visualisation module generates peptide mapping plots along transcript 
 | GFFcompare transcript class codes (long-read FASTQ or BAM input only) | gffcompare.tmap.txt                | TXT        | GFFcompare transcript classification (see GFFcompare documentation)                       |
 | Genome aligned reads (long-read FASTQ only) | sample1.bam, sample2.bam          | BAM        | Genome aligned reads. Only output if the input was FASTQ reads                                                                                            |
 
+### 2. Proteomics
 
-### 2. Integration
+The output file required is typically 'peptides.txt' or 'report.pr_matrix.tsv'.
+
+
+### 3. Integration
 
 | Input                              | File Type | Required? | Description                                                                                   |
 |------------------------------------|-----------|-----------|-----------------------------------------------------------------------------------------------|
@@ -272,7 +272,9 @@ The final visualisation module generates peptide mapping plots along transcript 
 | transcript_identified          | Is transcript identified with unique peptide evidence?                                 | true/false   |
 
 
-### 3. Visualisation
+### 4. Visualisation
+
+#### 4a. Visualisation: custom
 
 | Input                          | File Type | Required? | Description                                             |
 |--------------------------------|-----------|-----------|---------------------------------------------------------|
@@ -281,4 +283,13 @@ The final visualisation module generates peptide mapping plots along transcript 
 | Peptide intensities            | TXT       | No        | Peptide intensity data ‘report.pr_matrix.tsv’           |
 
 **Note:** There is an option to download plots as a PDF.
+
+#### 4a. Visualisation: IsoVis
+
+| Input                          | File Type | Required? | Description                                             |
+|--------------------------------|-----------|-----------|---------------------------------------------------------|
+| Transcript annotations (combined_annotations.gtf)           | GTF       | Yes       | Generated in module 2, annotations of peptides, ORFs, and transcripts                                  |
+| Transcript counts (transcript_counts.txt)              | TXT/CSV   | No        | Generated in module 1, transcript counts per sample                                  |
+| Peptide intensities            | TXT       | No        | Peptide intensity data ‘report.pr_matrix.tsv’           |
+
 

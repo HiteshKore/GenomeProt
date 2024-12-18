@@ -50,6 +50,7 @@ fastq_server <- function(input, output, session) {
     index_file <- paste0(outdir_bam, "/", str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")), ".mmi")
     
     # define minimap2 command to index genome
+    # supply conda env here if local installation
     minimap2_index_command <- paste0("minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
     
     print(minimap2_index_command)
@@ -64,6 +65,7 @@ fastq_server <- function(input, output, session) {
       file_prefix <- user_fastq_files_df$file_prefix[i] # get file prefix
       
       # define command to map fastq file reads to the indexed genome file with minimap2
+      # supply conda env here if local installation
       minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
       
       print(minimap2_command)
@@ -81,6 +83,7 @@ fastq_server <- function(input, output, session) {
       command_generate_decoy <- paste0("bash -c \"grep '^>' <(gunzip -c ", input$user_reference_genome$datapath, ") | cut -d ' ' -f 1 >", outdir_bam, "/decoys.txt",'\"')
       command_sed <- paste0("sed -i -e 's/>//g' ", outdir_bam, "/decoys.txt")
       command_ref_file <- paste0("cat ", input$transcriptome_file$datapath, " ", input$user_reference_genome$datapath, " >", outdir_bam, "/gentrome.fa.gz")
+      # supply conda env here if local installation
       command_index <- paste0("salmon index -t  ", outdir_bam, "/gentrome.fa.gz -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
       
     } else {
@@ -88,6 +91,7 @@ fastq_server <- function(input, output, session) {
       command_generate_decoy <- paste0("grep '^>' ", input$user_reference_genome$datapath, " | cut -d \" \" -f 1 >", outdir_bam, "/decoys.txt")
       command_sed <- paste0("sed -i -e 's/>//g' ", outdir_bam, "/decoys.txt")
       command_ref_file <- paste0("cat ", input$transcriptome_file$datapath, " ", input$user_reference_genome$datapath, " >", outdir_bam, "/gentrome.fa")
+      # supply conda env here if local installation
       command_index <- paste0("salmon index -t  ", outdir_bam, "/gentrome.fa -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
       
     }
@@ -141,6 +145,7 @@ fastq_server <- function(input, output, session) {
           cat("Base Name:", base_name, "\t","R1 Path:", R1_path, "R2 Path:", R2_path, "\n")
           
           # define salmon command
+          # supply conda env here if local installation
           command_salmon <- paste0("salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A -1 ", R1_path," -2 ", R2_path, " --validateMappings -o ", outdir_bam,"/", base_name)
           print(command_salmon)
           # run salmon
@@ -157,6 +162,7 @@ fastq_server <- function(input, output, session) {
         print(single_end[[base_name]])
         
         # define salmon command
+        # supply conda env here if local installation
         command_salmon <- paste0("salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A -r ", single_end[[base_name]]," --validateMappings -o ", outdir_bam,"/", base_name)
         print(command_salmon)
         # run salmon
@@ -224,10 +230,12 @@ bam_server <- function(input, output, session) {
     command_decompress <- paste0("gzip -c -d ", input$user_reference_genome_bam$datapath, " >", outdir_bam, "/genome.fa")
     print(command_decompress)
     system(command_decompress)
+    # supply conda env here if local installation
     command_gffread <- paste0("gffread -w ", outdir_bam, "/transcript.fa -g ", outdir_bam, "/genome.fa ", input$user_reference_gtf$datapath)
     
   } else {
     
+    # supply conda env here if local installation
     command_gffread <- paste0("gffread -w ", outdir_bam, "/transcript.fa -g ", input$user_reference_genome_bam$datapath, " ", input$user_reference_gtf$datapath)
     
   }
@@ -248,6 +256,7 @@ bam_server <- function(input, output, session) {
     file_prefix <- user_bam_files_df$file_prefix[i]
     
     # define salmon command
+    # supply conda env here if local installation
     command_salmon <- paste0("salmon quant -t ", outdir_bam, "/transcript.fa -p ", input$user_threads , " -l A  -a ", bam_file , " -o ", outdir_bam, "/", file_prefix)
     
     print(command_salmon)
@@ -343,7 +352,7 @@ bambu_server <- function(input, output, session) {
   system(paste0("mv ",  outdir_bambu, "/extended_annotations.gtf ", outdir_bambu, "/bambu_transcript_annotations.gtf"))
   
   # define gffcompare command for bambu gtf
-  #command_gff_compare <- paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
+  # supply conda env here if local installation
   command_gff_compare <- paste0("gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
   print(command_gff_compare)
   # run gffcompare
@@ -373,6 +382,7 @@ database_server <- function(input, output, session) {
     if (input$sequencing_type == "long-read") {
       db_gtf_file <- paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf")
       db_counts_file <- paste0(session_id, "/bambu_output/transcript_counts.txt")
+      bambu_files <- c(paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"))
     } else if (input$sequencing_type == "short-read") {
       db_gtf_file <- input$user_reference_gtf$datapath
       db_counts_file <- paste0(session_id, "/mapping_output/transcript_counts.txt")
@@ -436,9 +446,16 @@ database_server <- function(input, output, session) {
   #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
   
   if (!is.null(input$user_vcf_file)) { # if there is a VCF file uploaded
+    message("VCF file was provided")
+    # supply conda env here if local installation
     command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt"))
     print(command_annotate_proteome)
+    if (!file.exists(paste0(outdir_db, "/Mutant_ORFome_aa.txt"))) {
+      message("Generate variant proteome database failed")
+      break()
+    }
   } else { # if no VCF file uploaded
+    # supply conda env here if local installation
     command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None")
     print(command_annotate_proteome)
   }
@@ -454,12 +471,27 @@ database_server <- function(input, output, session) {
   # zip all results files depending on input types
   if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf")) && !file.exists(paste0(outdir_db, "/orf_temp.txt"))) {
     if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
-      bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE)
-      files_to_zip_db <- c(bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy bam files into db output
+      bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE) # get files
+      file.copy(bam_files, outdir_db) # copy files
+      bam_files_zip <- list.files(path = outdir_db, "\\.bam$", full.names = FALSE) # get new file names
+      # copy bambu output into db output
+      file.copy(bambu_files, outdir_db)
+      files_to_zip_db <- c(bam_files_zip, "bambu_transcript_annotations.gtf", "transcript_counts.txt", "novel_transcript_classes.csv", "gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-      files_to_zip_db <- c("../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy bambu output into db output
+      file.copy(bambu_files, outdir_db)
+      files_to_zip_db <- c("bambu_transcript_annotations.gtf", "transcript_counts.txt", "novel_transcript_classes.csv", "gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$sequencing_type == "short-read") {
-      files_to_zip_db <- c("../mapping_output/transcript_counts.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy short-read counts into db output
+      file.copy(paste0(session_id, "/mapping_output/transcript_counts.txt"), outdir_db)
+      files_to_zip_db <- c("transcript_counts.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$input_type == "gtf_input") {
       files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     }

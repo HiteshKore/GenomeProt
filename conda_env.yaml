@@ -7,6 +7,7 @@ channels:
   - defaults
 dependencies:
   - samtools
+  - bcftools
   - salmon
   - gffread
   - gffcompare
@@ -37,6 +38,8 @@ dependencies:
   - r-gplots
   - r-reshape2
   - r-phylotools
+  - r-scales
+  - r-rcolorbrewer
   - bioconductor-bambu
   - bioconductor-genomicfeatures
   - bioconductor-biostrings
@@ -46,7 +49,9 @@ dependencies:
   - bioconductor-vsn
   - bioconductor-mygene
   - bioconductor-tximport
+  - bioconductor-rsamtools
   - bioconductor-bsgenome.hsapiens.ucsc.hg38
+  - bioconductor-bsgenome.mmusculus.ucsc.mm39
   - pip:
     - biopython==1.77
     - py-cdhit
