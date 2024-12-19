@@ -58,15 +58,15 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   gene_df <- as.data.frame(gene_query[["response"]])
   
   # if there was no name found, use original ID
-  gene_df <- gene_df %>% 
-    mutate(gene_name = case_when(
+  gene_df_formatted <- gene_df %>% 
+    dplyr::mutate(gene_name = case_when(
       is.na(symbol) ~ query,
       !is.na(symbol) ~ symbol
     )) %>% 
     dplyr::select(query, gene_name)
   
   # merge results 
-  bambu_merged <- merge(bambu_df, gene_df, by.x="ensg_id", by.y="query", all.x=T, all.y=F)
+  bambu_merged <- merge(bambu_df, gene_df_formatted, by.x="ensg_id", by.y="query", all.x=T, all.y=F)
   bambu_merged$ensg_id <- NULL
   
   # make GRanges including new names
@@ -492,14 +492,15 @@ wt_orfome <- get_transcript_orfs(filteredgtf=paste0(output_directory, "/proteome
 if (!is.null(ref_genome) && !is.null(vcf_file)) { # if a genome and vcf have been uploaded
   
   # define bash script command to inject variants into genome
+  # supply conda env here if local installation
   custom_genome_command <- paste0("bash bin/database_module/generate_custom_genome.sh -g  ", ref_genome, " -r ", reference_gtf, " -v ", vcf_file, " -o ", output_directory, "/")
   system(custom_genome_command)
  
- # fetch variant protein sequences based on variants provided in VCF file
- genome_alt <- paste0(output_directory, "/", basename(ref_genome) %>% str_replace(., ".fa", "_alt.fa"))
+  # fetch variant protein sequences based on variants provided in VCF file
+  genome_alt <- paste0(output_directory, "/", basename(ref_genome) %>% str_replace(., ".fa", "_alt.fa"))
  
- # apply variant protein function
- get_variant_protein_seqs(custom_genome=genome_alt, custom_gtf=paste0(output_directory, "/proteome_database_transcripts.gtf"), organism=organism, wt_orfome=wt_orfome, outdir=output_directory, min_orf_length)
+  # apply variant protein function
+  get_variant_protein_seqs(custom_genome=genome_alt, custom_gtf=paste0(output_directory, "/proteome_database_transcripts.gtf"), organism=organism, wt_orfome=wt_orfome, outdir=output_directory, min_orf_length)
 
 }
  

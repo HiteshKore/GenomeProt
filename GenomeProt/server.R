@@ -50,6 +50,7 @@ fastq_server <- function(input, output, session) {
     index_file <- paste0(outdir_bam, "/", str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")), ".mmi")
     
     # define minimap2 command to index genome
+    # supply conda env here if local installation
     minimap2_index_command <- paste0("minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
     
     print(minimap2_index_command)
@@ -64,6 +65,7 @@ fastq_server <- function(input, output, session) {
       file_prefix <- user_fastq_files_df$file_prefix[i] # get file prefix
       
       # define command to map fastq file reads to the indexed genome file with minimap2
+      # supply conda env here if local installation
       minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
       
       print(minimap2_command)
@@ -81,6 +83,7 @@ fastq_server <- function(input, output, session) {
       command_generate_decoy <- paste0("bash -c \"grep '^>' <(gunzip -c ", input$user_reference_genome$datapath, ") | cut -d ' ' -f 1 >", outdir_bam, "/decoys.txt",'\"')
       command_sed <- paste0("sed -i -e 's/>//g' ", outdir_bam, "/decoys.txt")
       command_ref_file <- paste0("cat ", input$transcriptome_file$datapath, " ", input$user_reference_genome$datapath, " >", outdir_bam, "/gentrome.fa.gz")
+      # supply conda env here if local installation
       command_index <- paste0("salmon index -t  ", outdir_bam, "/gentrome.fa.gz -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
       
     } else {
@@ -88,6 +91,7 @@ fastq_server <- function(input, output, session) {
       command_generate_decoy <- paste0("grep '^>' ", input$user_reference_genome$datapath, " | cut -d \" \" -f 1 >", outdir_bam, "/decoys.txt")
       command_sed <- paste0("sed -i -e 's/>//g' ", outdir_bam, "/decoys.txt")
       command_ref_file <- paste0("cat ", input$transcriptome_file$datapath, " ", input$user_reference_genome$datapath, " >", outdir_bam, "/gentrome.fa")
+      # supply conda env here if local installation
       command_index <- paste0("salmon index -t  ", outdir_bam, "/gentrome.fa -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
       
     }
@@ -141,6 +145,7 @@ fastq_server <- function(input, output, session) {
           cat("Base Name:", base_name, "\t","R1 Path:", R1_path, "R2 Path:", R2_path, "\n")
           
           # define salmon command
+          # supply conda env here if local installation
           command_salmon <- paste0("salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A -1 ", R1_path," -2 ", R2_path, " --validateMappings -o ", outdir_bam,"/", base_name)
           print(command_salmon)
           # run salmon
@@ -157,6 +162,7 @@ fastq_server <- function(input, output, session) {
         print(single_end[[base_name]])
         
         # define salmon command
+        # supply conda env here if local installation
         command_salmon <- paste0("salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A -r ", single_end[[base_name]]," --validateMappings -o ", outdir_bam,"/", base_name)
         print(command_salmon)
         # run salmon
@@ -224,10 +230,12 @@ bam_server <- function(input, output, session) {
     command_decompress <- paste0("gzip -c -d ", input$user_reference_genome_bam$datapath, " >", outdir_bam, "/genome.fa")
     print(command_decompress)
     system(command_decompress)
+    # supply conda env here if local installation
     command_gffread <- paste0("gffread -w ", outdir_bam, "/transcript.fa -g ", outdir_bam, "/genome.fa ", input$user_reference_gtf$datapath)
     
   } else {
     
+    # supply conda env here if local installation
     command_gffread <- paste0("gffread -w ", outdir_bam, "/transcript.fa -g ", input$user_reference_genome_bam$datapath, " ", input$user_reference_gtf$datapath)
     
   }
@@ -248,6 +256,7 @@ bam_server <- function(input, output, session) {
     file_prefix <- user_bam_files_df$file_prefix[i]
     
     # define salmon command
+    # supply conda env here if local installation
     command_salmon <- paste0("salmon quant -t ", outdir_bam, "/transcript.fa -p ", input$user_threads , " -l A  -a ", bam_file , " -o ", outdir_bam, "/", file_prefix)
     
     print(command_salmon)
@@ -343,7 +352,7 @@ bambu_server <- function(input, output, session) {
   system(paste0("mv ",  outdir_bambu, "/extended_annotations.gtf ", outdir_bambu, "/bambu_transcript_annotations.gtf"))
   
   # define gffcompare command for bambu gtf
-  #command_gff_compare <- paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
+  # supply conda env here if local installation
   command_gff_compare <- paste0("gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
   print(command_gff_compare)
   # run gffcompare
@@ -373,6 +382,7 @@ database_server <- function(input, output, session) {
     if (input$sequencing_type == "long-read") {
       db_gtf_file <- paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf")
       db_counts_file <- paste0(session_id, "/bambu_output/transcript_counts.txt")
+      bambu_files <- c(paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"))
     } else if (input$sequencing_type == "short-read") {
       db_gtf_file <- input$user_reference_gtf$datapath
       db_counts_file <- paste0(session_id, "/mapping_output/transcript_counts.txt")
@@ -432,14 +442,18 @@ database_server <- function(input, output, session) {
     ref_proteome <- "data/openprot_uniprotDb_zebrafish.txt"
   }
   
-  # run python script using conda env
-  #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
-  
   if (!is.null(input$user_vcf_file)) { # if there is a VCF file uploaded
-    command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt"))
+    message("VCF file was provided")
+    # supply conda env here if local installation
+    command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt"))
     print(command_annotate_proteome)
+    if (!file.exists(paste0(outdir_db, "/Mutant_ORFome_aa.txt"))) {
+      message("Generate variant proteome database failed")
+      break
+    }
   } else { # if no VCF file uploaded
-    command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None")
+    # supply conda env here if local installation
+    command_annotate_proteome <- paste0("python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None")
     print(command_annotate_proteome)
   }
   
@@ -454,12 +468,27 @@ database_server <- function(input, output, session) {
   # zip all results files depending on input types
   if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf")) && !file.exists(paste0(outdir_db, "/orf_temp.txt"))) {
     if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
-      bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE)
-      files_to_zip_db <- c(bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy bam files into db output
+      bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE) # get files
+      file.copy(bam_files, outdir_db) # copy files
+      bam_files_zip <- list.files(path = outdir_db, "\\.bam$", full.names = FALSE) # get new file names
+      # copy bambu output into db output
+      file.copy(bambu_files, outdir_db)
+      files_to_zip_db <- c(bam_files_zip, "bambu_transcript_annotations.gtf", "transcript_counts.txt", "novel_transcript_classes.csv", "gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-      files_to_zip_db <- c("../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy bambu output into db output
+      file.copy(bambu_files, outdir_db)
+      files_to_zip_db <- c("bambu_transcript_annotations.gtf", "transcript_counts.txt", "novel_transcript_classes.csv", "gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$sequencing_type == "short-read") {
-      files_to_zip_db <- c("../mapping_output/transcript_counts.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy short-read counts into db output
+      file.copy(paste0(session_id, "/mapping_output/transcript_counts.txt"), outdir_db)
+      files_to_zip_db <- c("transcript_counts.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$input_type == "gtf_input") {
       files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     }
@@ -547,8 +576,8 @@ integration_server <- function(input, output, session) {
     
     # create a zip file with results
     files_to_zip_int <- c("summary_report.html", "peptide_info.csv", "report_images/",
-                          "combined_annotations.gtf", "peptides.bed12", 
-                          "ORFs.bed12", "transcripts.bed12")
+                          "combined_annotations.gtf", "transcripts_and_ORFs_for_isovis.gtf",
+                          "peptides.bed12", "ORFs.bed12", "transcripts.bed12")
     
     # set the path to the ZIP file (in the session_id directory)
     zipfile_path_int <- file.path("../integration_results.zip")
@@ -718,28 +747,123 @@ server <- function(input, output, session) {
   
   
   # VISUALISATION MODULE
+  
   data_storage <- reactiveValues()
   
-  # run visualisation function when submit is pressed
-  observeEvent(input$vis_submit_button, { 
+  observeEvent(input$toggle_filters, {
+    # check status
+    filters_visible <- shinyjs::toggle(id = "filters_container")
     
-    session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # disable submit button
+    # update the toggle button text
+    if (input$toggle_filters %% 2 == 1) { # odd number clicks
+      updateActionLink(session, "toggle_filters", label = "▲ Hide filtering options")
+    } else { # even number clicks
+      updateActionLink(session, "toggle_filters", label = "▼ Gene list filtering options")
+    }
+  })
+  
+  # function to import and process combined gtf
+  import_and_preprocess_gtf <- function(gtf_path) {
+    # import gtf and remove gene_id version number
+    gtf_import <- rtracklayer::import(gtf_path, format = "gtf") %>%
+      as_tibble() %>%
+      separate(gene_id, into = c("gene_id"), sep = "\\.")
+    # separate gtf into multiple features
+    list(
+      gtf_import = gtf_import,
+      res_tx_import = gtf_import %>% dplyr::filter(group_id == "transcripts"),
+      res_ORF_import = gtf_import %>% dplyr::filter(group_id == "ORFs"),
+      res_pep_import = gtf_import %>% dplyr::filter(group_id == "peptides")
+    )
+  }
+  
+  # function to update gene list
+  update_gene_list <- function(res_tx_import, res_pep_import, uniq_map_peptides = FALSE, lncRNA_peptides = FALSE, novel_txs = FALSE, novel_txs_distinguished = FALSE, unann_orfs = FALSE, uorf_5 = FALSE, dorf_3 = FALSE) {
     
-    # require the GTF file 
+    # if check box is ticked
+    if (uniq_map_peptides) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (lncRNA_peptides) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(transcript_biotype == "lncRNA" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (novel_txs) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(transcript_biotype == "novel" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (novel_txs_distinguished) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(transcript_biotype == "novel" & peptide_ids_orf == TRUE & peptide_ids_transcript == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (unann_orfs) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(orf_type == "unannotated" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (uorf_5) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(localisation == "5UTR" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    if (dorf_3) {
+      filtered_peptides <- res_pep_import %>% dplyr::filter(localisation == "3UTR" & peptide_ids_orf == TRUE)
+      res_tx_import <- res_tx_import %>% dplyr::filter(gene_id %in% filtered_peptides$gene_id)
+    }
+    
+    # ensure gene_id overlaps
+    ensembl_ids <- intersect(res_pep_import$gene_id, res_tx_import$gene_id)
+    # filter for list
+    genes_list <- res_tx_import %>% dplyr::filter(gene_id %in% ensembl_ids)
+    
+    # use gene name instead of ensembl
+    if ("gene_name" %in% colnames(genes_list)) {
+      unique(genes_list$gene_name)
+    } else {
+      unique(genes_list$gene_id)
+    }
+  }
+  
+  # function to update gene selection
+  update_gene_selector <- function(session, genes_available) {
+    updateSelectInput(session, "gene_selector", choices = genes_available)
+  }
+  
+  # observe integration module file availability
+  observe({
+    # if the integration module has been run, use the output from this to display visualisation automatically
+    if (file_available_integ()) {
+      gtf_data <- import_and_preprocess_gtf(paste0(session_id, "/integ_output/combined_annotations.gtf"))
+      data_storage$gtf_import <- gtf_data$gtf_import
+      data_storage$res_tx_import <- gtf_data$res_tx_import
+      data_storage$res_ORF_import <- gtf_data$res_ORF_import
+      data_storage$res_pep_import <- gtf_data$res_pep_import
+      
+      genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides, input$lncRNA_peptides, input$novel_txs, input$novel_txs_distinguished, input$unann_orfs, input$uorf_5, input$dorf_3)
+      update_gene_selector(session, genes_available)
+    }
+  })
+  
+  # observe visualisation submit button
+  observeEvent(input$vis_submit_button, {
+    # if the submit button is pressed, import files
+    session$sendCustomMessage("disableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container"))
+    
     req(input$user_vis_gtf_file)
     
-    # import the GTF with rtracklayer and remove version number from gene_id
-    data_storage$gtf_import <- rtracklayer::import(input$user_vis_gtf_file$datapath, format="gtf") %>% as_tibble() %>% 
-      separate(gene_id, into = c("gene_id"), sep = "\\.")
+    gtf_data <- import_and_preprocess_gtf(input$user_vis_gtf_file$datapath)
+    data_storage$gtf_import <- gtf_data$gtf_import
+    data_storage$res_tx_import <- gtf_data$res_tx_import
+    data_storage$res_ORF_import <- gtf_data$res_ORF_import
+    data_storage$res_pep_import <- gtf_data$res_pep_import
     
-    # create separate dfs for each feature type
-    data_storage$res_tx_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "transcripts")
-    data_storage$res_ORF_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "ORFs")
-    data_storage$res_pep_import <- data_storage$gtf_import %>% dplyr::filter(group_id == "peptides")
-    
-    # if there are counts files uploaded
+    # if there are transcript counts and peptide intensities uploaded
     if (!is.null(input$user_vis_tx_count_file) & !is.null(input$user_pep_count_file)) {
-      
       print("Counts detected")
       
       # import counts files
@@ -747,7 +871,7 @@ server <- function(input, output, session) {
       data_storage$countsp <- fread(input$user_pep_count_file$datapath)
       
       # rename as per bambu counts output
-      if ("TXNAME"  %in% colnames(data_storage$countst) & "GENEID" %in% colnames(data_storage$countst)) {
+      if ("TXNAME" %in% colnames(data_storage$countst) & "GENEID" %in% colnames(data_storage$countst)) {
         data_storage$countst$transcript_id <- data_storage$countst$TXNAME
         data_storage$countst$GENEID <- NULL
       } else if ("TXNAME" %in% colnames(data_storage$countst)) {
@@ -757,6 +881,7 @@ server <- function(input, output, session) {
       # filter GTF transcripts for those with counts
       data_storage$res_tx_import <- data_storage$res_tx_import %>% 
         dplyr::filter(transcript_id %in% data_storage$countst$transcript_id)
+      
       # filter GTF ORFs for those with counts
       data_storage$res_ORF_import <- data_storage$res_ORF_import %>% 
         dplyr::filter(transcript_id %in% data_storage$countst$transcript_id)
@@ -788,11 +913,13 @@ server <- function(input, output, session) {
       
       # convert to matrix
       countsp_matrix <- as.matrix(data_storage$countsp[,-1])
+      
       # set rownames as peptide IDs
       rownames(countsp_matrix) <- data_storage$countsp$Peptide
       
       # run VSN for normalisation of peptide intensities
       vsnp <- as.data.frame(justvsn(countsp_matrix))
+      
       # create column of peptide IDs
       vsnp$peptide <- rownames(vsnp)
       
@@ -808,51 +935,51 @@ server <- function(input, output, session) {
                                               variable.name = "sample_id", value.name = "count")
       # set levels for plotting
       data_storage$countstm$sample_id <- factor(as.character(data_storage$countstm$sample_id), level =  sample_names)
-      
-    } 
-    
-    # get genes in both peptides and transscripts GTF
-    ensembl_ids <- intersect(data_storage$res_pep_import$gene_id, data_storage$res_tx_import$gene_id)
-    
-    # create list of genes
-    genes_list <- data_storage$res_tx_import %>% 
-      dplyr::filter(gene_id %in% ensembl_ids)
-    
-    # use gene name if available
-    if ("gene_name" %in% colnames(genes_list)) {
-      genes_available <- unique(genes_list$gene_name)
-    } else {
-      genes_available <- unique(genes_list$gene_id)
     }
     
-    # filter genes by high confidence peptide status if check box is selected
-    if (input$uniq_map_peptides) {
-      
-      # filter peptide GTF for peptides that identify an ORF
-      high_conf_peptides <- data_storage$res_pep_import %>%
-        dplyr::filter(peptide_ids_orf == TRUE)
-      
-      # update gene list
-      genes_list <- data_storage$res_tx_import %>% 
-        dplyr::filter(gene_id %in% high_conf_peptides$gene_id)
-      
-      # update available genes
-      if ("gene_name" %in% colnames(genes_list)) {
-        genes_available <- unique(genes_list$gene_name)
-      } else {
-        genes_available <- unique(genes_list$gene_id)
-      }
-      
-    }
+    genes_available <- update_gene_list(data_storage$res_tx_import, data_storage$res_pep_import, input$uniq_map_peptides, input$lncRNA_peptides, input$novel_txs, input$unann_orfs, input$uorf_5, input$dorf_3)
+    update_gene_selector(session, genes_available)
     
-    # set genes in the drop down menu based on genes_available
-    updateSelectInput(session, "gene_selector", choices = genes_available)
-    
-    session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container")) # re-enable submit button
-    
+    # re-enable submit button after data is processed
+    session$sendCustomMessage("enableButton", list(id = "vis_submit_button", spinnerId = "vis-loading-container"))
   })
   
-  # when a gene is selected from the drop down
+  # make reactive list of checkbox filters
+  checkbox_filters <- reactive({
+    list(
+      uniq_map_peptides = input$uniq_map_peptides,
+      lncRNA_peptides = input$lncRNA_peptides,
+      novel_txs = input$novel_txs,
+      novel_txs_distinguished = input$novel_txs_distinguished,
+      unann_orfs = input$unann_orfs,
+      uorf_5 = input$uorf_5,
+      dorf_3 = input$dorf_3
+    )
+  })
+  
+  # observe changes in any checkbox
+  observe({
+    # ensure GTFs are available
+    req(data_storage$res_tx_import, data_storage$res_pep_import)
+    
+    # update gene list based on current checkbox states
+    genes_available <- update_gene_list(
+      data_storage$res_tx_import, 
+      data_storage$res_pep_import, 
+      uniq_map_peptides = checkbox_filters()$uniq_map_peptides,
+      lncRNA_peptides = checkbox_filters()$lncRNA_peptides,
+      novel_txs = checkbox_filters()$novel_txs,
+      novel_txs_distinguished = checkbox_filters()$novel_txs_distinguished,
+      unann_orfs = checkbox_filters()$unann_orfs,
+      uorf_5 = checkbox_filters()$uorf_5,
+      dorf_3 = checkbox_filters()$dorf_3
+    )
+    
+    # update the gene selector with the new list
+    update_gene_selector(session, genes_available)
+  })
+  
+  # gene selection in drop down menu
   observeEvent(input$gene_selector, {
     
     req(input$gene_selector)

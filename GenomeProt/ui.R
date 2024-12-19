@@ -11,12 +11,13 @@ ui <- dashboardPage(
                   )),
   # tabs
   dashboardSidebar(
-    sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
-                menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
-                # commenting out proteomics for now
-                #menuItem("Analyse MS proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
-                menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
-                menuItem("Visualise results", tabName = "visualisation", icon = icon("chart-bar"))
+    sidebarMenu(menuItem("Welcome", tabName = "welcome"),
+                menuItem("README", tabName = "readme"),
+                menuItem("1. Generate database", tabName = "db_generation", icon = icon("database")),
+                menuItem("2. Run proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
+                menuItem("3. Integrate data", tabName = "integration", icon = icon("arrows-turn-to-dots")),
+                menuItem("4a. Visualisation: ggtranscript", tabName = "visualisation", icon = icon("chart-simple")),
+                menuItem("4b. Visualisation: IsoVis", tabName = "isovis", icon = icon("chart-simple"))
     )
   ),
   # body
@@ -98,9 +99,18 @@ ui <- dashboardPage(
                 )
               )
       ),
+      tabItem(tabName = "readme",
+              fluidRow(
+                column(12,
+                       div(class = "box box-primary", style = "padding-right: 5%; padding-left: 5%; font-size:110%", 
+                           div(class = "box-body", shiny::includeMarkdown("../README.md")),
+                       )
+                )
+              )
+      ),
       tabItem(tabName = "db_generation", 
               h2("Generate a custom proteogenomics database"),
-              h5("Creates an amino acid FASTA of all ORFs in your data to use as input for FragPipe/MaxQuant etc."),
+              h5("Creates an amino acid FASTA of all ORFs in your data for proteomics."),
               fluidRow(
                 column(6,
                        
@@ -123,8 +133,8 @@ ui <- dashboardPage(
                                                   "Rat (R. rattus)" = "rat", 
                                                   "Zebrafish (D. rerio)" = "zebrafish"), 
                                    selected = "human"),
-                       selectInput("database_type", label = "ORFs to be included in proteomedb:", 
-                                   choices = list("canonical", "all"),
+                       selectInput("database_type", label = "ORFs to include:", 
+                                   choices = list("longest per transcript" = "canonical", "all" = "all"),
                                    selected = "all"),
                        numericInput("min_orf_length", 
                                     label = "ORF length (amino acids):", 
@@ -186,31 +196,31 @@ ui <- dashboardPage(
                 )
               )
       ),
-      # tabItem(tabName = "analyse_proteomics", 
-      #         h2("Run MetaMorpheus with your custom proteogenomics database to analyse MS proteomics data"),
-      #         h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
-      #         fluidRow(
-      #           column(4,
-      #                  selectInput("protease", label = "Protease:", 
-      #                              choices = list("trypsin" = "trypsin"), 
-      #                              selected = "trypsin"),
-      #                  numericInput("mm_cpu", 
-      #                               label = "CPUs", 
-      #                               value = 1),
-      #                  fileInput("user_mm_fasta", "Upload 'proteome_database.fasta'", NULL, buttonLabel = "Browse...", multiple = FALSE),
-      #                  fileInput("user_mm_data", "Upload mzML/raw file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
-      #                  actionButton("proteomics_submit_button", "Submit", class = "btn btn-primary")
-      #           ),
-      #           column(6,
-      #                  HTML("<h3>Download your results:</h3>"),
-      #                  downloadButton("proteomics_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
-      #                  div(id = "proteomics-loading-container", class = "loading-container", div(class = "spinner"))
-      #           )
-      #         )
-      # ),
+      tabItem(tabName = "analyse_proteomics",
+              h2("Perform proteomics searches using your custom database"),
+              h5("This module is under development. Currently, users need to run FragPipe externally and return once complete."),
+              # fluidRow(
+              #   column(4,
+              #          selectInput("protease", label = "Protease:",
+              #                      choices = list("trypsin" = "trypsin"),
+              #                      selected = "trypsin"),
+              #          numericInput("mm_cpu",
+              #                       label = "CPUs",
+              #                       value = 1),
+              #          fileInput("user_mm_fasta", "Upload 'proteome_database.fasta'", NULL, buttonLabel = "Browse...", multiple = FALSE),
+              #          fileInput("user_mm_data", "Upload mzML/raw file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
+              #          actionButton("proteomics_submit_button", "Submit", class = "btn btn-primary")
+              #   ),
+              #   column(6,
+              #          HTML("<h3>Download your results:</h3>"),
+              #          downloadButton("proteomics_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
+              #          div(id = "proteomics-loading-container", class = "loading-container", div(class = "spinner"))
+              #   )
+              # )
+      ),
       tabItem(tabName = "integration", 
               h2("Integrate proteomics results with transcriptomics"),
-              h5("Creates BED12s and GTFs of peptides, ORFs and transcripts for visualisation and produces summary data"),
+              h5("Creates a combined GTF and BED12s of peptides, ORFs and transcripts for visualisation, along with summary data and a report."),
               fluidRow(
                 column(6,
                        fileInput("user_proteomics_file", "Upload proteomics results:", NULL, buttonLabel = "Browse...", multiple = FALSE),
@@ -227,8 +237,11 @@ ui <- dashboardPage(
               )
       ),
       tabItem(tabName = "visualisation", 
-              h2("Visualise results"),
-              h5("Plots your results using the GTFs created in the integration module."),
+              fluidRow(
+                column(12, 
+                       h2("Visualise results", align = "left") 
+                )
+              ),
               fluidRow(
                 column(4,
                        fileInput("user_vis_gtf_file", "Upload 'combined_annotations.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
@@ -237,13 +250,44 @@ ui <- dashboardPage(
                        actionButton("vis_submit_button", "Submit", class = "btn btn-primary")
                 ),
                 column(8,
-                       selectInput("gene_selector", "Select Gene", choices = NULL),
-                       checkboxInput("uniq_map_peptides", "Only display genes encoding ORFs with uniquely mapped peptides", value = FALSE),
+                       selectInput("gene_selector", "Select a gene:", choices = NULL),
+                       actionLink("toggle_filters", "▼ Gene list filtering options", class = "toggle-filters"), # toggle filtering options
+                       div(id = "filters_container", style = "display:none;", # hidden by default
+                           p("UMP = uniquely mapped peptide. Peptides that only mapped to a single protein entry in the protein database."),
+                           checkboxInput("uniq_map_peptides", "ORFs with UMPs", value = FALSE),
+                           checkboxInput("lncRNA_peptides", "long non-coding RNAs with UMPs", value = FALSE),
+                           checkboxInput("novel_txs", "novel transcript isoforms with UMPs", value = FALSE),
+                           checkboxInput("novel_txs_distinguished", "novel transcript isoforms distinguished by UMPs", value = FALSE),
+                           checkboxInput("unann_orfs", "unannotated ORFs with UMPs", value = FALSE),
+                           checkboxInput("uorf_5", "5' uORFs with UMPs", value = FALSE),
+                           checkboxInput("dorf_3", "3' dORFs with UMPs", value = FALSE)
+                       ),
                        div(id = "vis-loading-container", class = "loading-container", div(class = "spinner")),
                        plotOutput("plot"),
-                       downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing") # initially disabled
+                       downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing")
                 )
               )
+      ),
+      tabItem(tabName = "isovis", 
+              h2("Visualise results with IsoVis"),
+              h5("The IsoVis website is displayed below for convenience. It is also accessible directly at: https://isomix.org/isovis/"),
+              h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
+              conditionalPanel(
+                condition = "input.show_isovis_steps % 2 == 1",
+                p("Step 1: Click 'Upload data'. For the 'Stack data' upload 'transcripts_and_ORFs_for_isovis.gtf'. For the 'Heatmap data' upload 'bambu_transcript_counts.txt'."),
+                p("Step 2: Check the box 'Show peptide data upload options'."),
+                p("Step 3: For the 'Peptide sites data' upload 'peptides.bed12'. For the 'Peptide intensities data' upload the intensities file. Then click 'Apply'."),
+                p("Step 4: Type a gene to view and press enter."),
+                p("Step 5: Click 'Stack options' and select 'Peptide sites' from the drop-down menu.")
+              ),
+              fluidRow(
+                column(12,
+                    tags$iframe(src = "https://isomix.org/isovis/", 
+                                width = "100%", 
+                                height = "800px",
+                                style = "border:none;"))
+              )
+  
       )
     )
   ),  

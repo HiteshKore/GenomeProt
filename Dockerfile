@@ -34,7 +34,10 @@ RUN R -e 'install.packages(c(\
               "devtools", \
               "ggrepel", \
               "reshape2", \
-              "phylotools", \
+              "stringr", \
+              "stringi", \
+              "RColorBrewer", \
+              "scales", \
               "gplots", \
               "optparse"), \
               repos="https://packagemanager.rstudio.com/cran/__linux__/focal/2021-04-23")'
@@ -59,10 +62,9 @@ RUN R -e 'BiocManager::install(ask = F)' && R -e 'BiocManager::install(c("rtrack
 # install ggtranscript from github with devtools
 RUN R -e "devtools::install_github('dzhang32/ggtranscript')"
 
-RUN wget https://github.com/lh3/minimap2/releases/download/v2.27/minimap2-2.27.tar.bz2 && \
-    tar -xvjf minimap2-2.27.tar.bz2 && \
-    cd minimap2-2.27 && \
-    make && \
+RUN wget https://github.com/lh3/minimap2/releases/download/v2.28/minimap2-2.28_x64-linux.tar.bz2 && \
+    tar -xvjf minimap2-2.28_x64-linux.tar.bz2 && \
+    cd minimap2-2.28_x64-linux && \
     cp minimap2 /usr/bin/
 
 # download and install samtools version 1.19.2
@@ -71,7 +73,21 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.19.2/samtools-
     cd samtools-1.19.2 && \
     ./configure && \
     make && \
-	  make install
+	make install
+
+RUN wget https://github.com/samtools/bcftools/releases/download/1.21/bcftools-1.21.tar.bz2 && \
+    tar -xvjf bcftools-1.21.tar.bz2 && \
+    cd bcftools-1.21 && \
+    ./configure && \
+    make && \
+	make install
+
+RUN wget https://github.com/samtools/htslib/releases/download/1.21/htslib-1.21.tar.bz2 && \
+    tar -xvjf htslib-1.21.tar.bz2 && \
+    cd htslib-1.21 && \
+    ./configure && \
+    make && \
+    make install
 
 # install miniconda (adjust the version as needed)
 ENV MINICONDA_VERSION py39_24.5.0-0
@@ -87,7 +103,7 @@ ENV PATH $CONDA_DIR/bin:$PATH
     
 # make conda activate command available from /bin/bash --login shells
 RUN echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.profile
-    
+
 # make conda activate command available from /bin/bash --interative shells
 RUN conda init bash
 
