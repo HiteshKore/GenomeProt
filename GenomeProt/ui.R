@@ -16,7 +16,7 @@ ui <- dashboardPage(
                 menuItem("1. Generate database", tabName = "db_generation", icon = icon("database")),
                 menuItem("2. Run proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
                 menuItem("3. Integrate data", tabName = "integration", icon = icon("arrows-turn-to-dots")),
-                menuItem("4a. Visualisation: custom", tabName = "visualisation", icon = icon("chart-simple")),
+                menuItem("4a. Visualisation: ggtranscript", tabName = "visualisation", icon = icon("chart-simple")),
                 menuItem("4b. Visualisation: IsoVis", tabName = "isovis", icon = icon("chart-simple"))
     )
   ),

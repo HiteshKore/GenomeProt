@@ -226,7 +226,7 @@ We recommend installing and running [FragPipe](https://github.com/Nesvilab/FragP
 | Mass spec data  | mzML, RAW  | Yes  | Mass spec files  |
 | Database (proteome_database.fasta) | FASTA | Yes  | Generated in Module 1. Amino acid sequences of all ORFs in the data  |
 
-The output file generated is typically 'peptides.txt' or 'report.pr_matrix.tsv'.
+The output file generated is typically `peptides.txt` or `report.pr_matrix.tsv`.
 
 
 ### 3. Integration
@@ -250,7 +250,7 @@ The output file generated is typically 'peptides.txt' or 'report.pr_matrix.tsv'.
 | Transcript coordinates  | transcripts.bed12  | BED12 | Transcript spliced genomic coordinates |
 
 
-#### Description of 'peptides_info.csv' output:
+#### Description of `peptides_info.csv` output:
 
 | Column Name | Description     | Class  |
 |--------------------------------|----------------------------------------------------------------------------------------|--------------|
@@ -306,4 +306,4 @@ The output file generated is typically 'peptides.txt' or 'report.pr_matrix.tsv'.
 | Transcript counts (transcript_counts.txt)   | TXT/CSV  | No  | Generated in Module 1, transcript counts per sample    |
 | Peptide intensities  | TXT  | No  | Peptide intensity data ‘report.pr_matrix.tsv’  |
 
-**Note:** This tool is interactiev and there is an option to download plots as a PDF.
+**Note:** This tool is interactive and there is an option to download plots as a PDF.
