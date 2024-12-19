@@ -117,7 +117,7 @@ This module integrates proteomics and transcriptomics data. Peptides are associa
 
 ### 4. Visualisation
 
-There are currently two visualisation options included. The first (4a.) is a custom tool that generates peptide mapping plots along transcript isoforms with quantitative peptide intensities and transcript expression data. This allows users to visualise transcript and peptide abundance across different experimental conditions. This module requires the combined GTF file generated in the integration step, and optionally inputs transcript counts from Module 1 and peptide intensities from external proteomics analysis. The advantage of this tool is the included gene filtering options to quickly search for features of interest. The other tool (4b.) included is IsoVis, a webserver that can be accessed within the app or externally. This is a more comprehensive tool that requires the `transcripts_and_ORFs_for_isovis.gtf` file and optionally the peptide intensities and transcript expression data.
+There are currently two visualisation options included. The first (4a) is a custom tool using ggtranscript that generates peptide mapping plots along transcript isoforms with quantitative peptide intensities and transcript expression data. This allows users to visualise transcript and peptide abundance across different experimental conditions. This module requires the combined GTF file generated in the integration step, and optionally inputs transcript counts from Module 1 and peptide intensities from external proteomics analysis. The advantage of this tool is the included gene filtering options to quickly search for features of interest. The other tool (4b) included is IsoVis, a webserver that can be accessed within the app or externally. This is a more comprehensive tool that requires the `transcripts_and_ORFs_for_isovis.gtf` file and optionally the peptide intensities and transcript expression data.
 
 #### Features:
 
@@ -287,7 +287,7 @@ The output file generated is typically 'peptides.txt' or 'report.pr_matrix.tsv'.
 
 ### 4. Visualisation
 
-#### 4a. Visualisation: custom
+#### 4a. Visualisation: ggtranscript
 
 | Input  | File Type | Required? | Description   |
 |--------------------------------|-----------|-----------|---------------------------------------------------------|
@@ -297,7 +297,7 @@ The output file generated is typically 'peptides.txt' or 'report.pr_matrix.tsv'.
 
 **Note:** There is an option to download plots as a PDF.
 
-#### 4a. Visualisation: IsoVis
+#### 4b. Visualisation: IsoVis
 
 | Input  | File Type | Required? | Description   |
 |--------------------------------|-----------|-----------|---------------------------------------------------------|
