@@ -3,4 +3,6 @@
 .RData
 .Ruserdata
 GenomeProt.Rproj
-./GenomeProt/data/
+GenomeProt/data/
+GenomeProt/bin/__pycache__/
+*.pyc

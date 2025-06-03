@@ -1,6 +1,9 @@
 
 library(shiny)
 library(shinyjs)
+library(reticulate)
+
+conda_path=conda_binary() #sometimes r environment doesn't recognize the conda path
 
 # internal server functions
 fastq_server <- function(input, output, session) {
@@ -50,7 +53,7 @@ fastq_server <- function(input, output, session) {
     index_file <- paste0(outdir_bam, "/", str_replace_all(input$user_reference_genome$name, c("\\.fa$" = "", "\\.fasta$" = "")), ".mmi")
     
     # define minimap2 command to index genome
-    minimap2_index_command <- paste0("minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
+    minimap2_index_command <- paste0(conda_path," run -n GenomeProt_env minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
     
     print(minimap2_index_command)
     
@@ -64,7 +67,7 @@ fastq_server <- function(input, output, session) {
       file_prefix <- user_fastq_files_df$file_prefix[i] # get file prefix
       
       # define command to map fastq file reads to the indexed genome file with minimap2
-      minimap2_command <- paste0("minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
+      minimap2_command <- paste0(conda_path," run -n GenomeProt_env minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
       
       print(minimap2_command)
       
@@ -81,14 +84,14 @@ fastq_server <- function(input, output, session) {
       command_generate_decoy <- paste0("bash -c \"grep '^>' <(gunzip -c ", input$user_reference_genome$datapath, ") | cut -d ' ' -f 1 >", outdir_bam, "/decoys.txt",'\"')
       command_sed <- paste0("sed -i -e 's/>//g' ", outdir_bam, "/decoys.txt")
       command_ref_file <- paste0("cat ", input$transcriptome_file$datapath, " ", input$user_reference_genome$datapath, " >", outdir_bam, "/gentrome.fa.gz")
-      command_index <- paste0("salmon index -t  ", outdir_bam, "/gentrome.fa.gz -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
+      command_index <- paste0(conda_path," run -n GenomeProt_env salmon index -t ", outdir_bam, "/gentrome.fa.gz -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
       
     } else {
       
       command_generate_decoy <- paste0("grep '^>' ", input$user_reference_genome$datapath, " | cut -d \" \" -f 1 >", outdir_bam, "/decoys.txt")
       command_sed <- paste0("sed -i -e 's/>//g' ", outdir_bam, "/decoys.txt")
       command_ref_file <- paste0("cat ", input$transcriptome_file$datapath, " ", input$user_reference_genome$datapath, " >", outdir_bam, "/gentrome.fa")
-      command_index <- paste0("salmon index -t  ", outdir_bam, "/gentrome.fa -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
+      command_index <- paste0(conda_path," run -n GenomeProt_env salmon index -t ", outdir_bam, "/gentrome.fa -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
       
     }
     
@@ -141,7 +144,7 @@ fastq_server <- function(input, output, session) {
           cat("Base Name:", base_name, "\t","R1 Path:", R1_path, "R2 Path:", R2_path, "\n")
           
           # define salmon command
-          command_salmon <- paste0("salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A -1 ", R1_path," -2 ", R2_path, " --validateMappings -o ", outdir_bam,"/", base_name)
+          command_salmon <- paste0(conda_path," run -n GenomeProt_env salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A -1 ", R1_path," -2 ", R2_path, " --validateMappings -o ", outdir_bam,"/", base_name)
           print(command_salmon)
           # run salmon
           system(command_salmon)
@@ -157,7 +160,7 @@ fastq_server <- function(input, output, session) {
         print(single_end[[base_name]])
         
         # define salmon command
-        command_salmon <- paste0("salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A -r ", single_end[[base_name]]," --validateMappings -o ", outdir_bam,"/", base_name)
+        command_salmon <- paste0(conda_path," run -n GenomeProt_env salmon quant -i ", outdir_bam,"/salmon_index -p ", input$user_threads ," -l A -r ", single_end[[base_name]]," --validateMappings -o ", outdir_bam,"/", base_name)
         print(command_salmon)
         # run salmon
         system(command_salmon)
@@ -179,9 +182,9 @@ fastq_server <- function(input, output, session) {
     
     # use tximport to import salmon quantification files
     txi <- tximport(files, type = "salmon", txOut = TRUE)
-    
+    print(input$user_reference_gtf$datapath)
     # import gtf to add gene information
-    gtf_data <- import(input$user_reference_gtf$datapath, format = "gtf")
+    gtf_data <- rtracklayer::import(input$user_reference_gtf$datapath, format = "gtf")
     
     # convert GTF data to a data frame
     gtf_df <- as.data.frame(gtf_data)
@@ -221,14 +224,14 @@ bam_server <- function(input, output, session) {
   # check if file is compressed
   if (grepl("\\.gz$", input$user_reference_genome_bam$datapath)) {
     
-    command_decompress <- paste0("gzip -c -d ", input$user_reference_genome_bam$datapath, " >", outdir_bam, "/genome.fa")
+    command_decompress <- paste0(conda_path," run -n GenomeProt_env gzip -c -d ", input$user_reference_genome_bam$datapath, " >", outdir_bam, "/genome.fa")
     print(command_decompress)
     system(command_decompress)
-    command_gffread <- paste0("gffread -w ", outdir_bam, "/transcript.fa -g ", outdir_bam, "/genome.fa ", input$user_reference_gtf$datapath)
+    command_gffread <- paste0(conda_path," run -n GenomeProt_env gffread -w ", outdir_bam, "/transcript.fa -g ", outdir_bam, "/genome.fa ", input$user_reference_gtf$datapath)
     
   } else {
     
-    command_gffread <- paste0("gffread -w ", outdir_bam, "/transcript.fa -g ", input$user_reference_genome_bam$datapath, " ", input$user_reference_gtf$datapath)
+    command_gffread <- paste0(conda_path," run -n GenomeProt_env gffread -w ", outdir_bam, "/transcript.fa -g ", input$user_reference_genome_bam$datapath, " ", input$user_reference_gtf$datapath)
     
   }
   
@@ -248,7 +251,7 @@ bam_server <- function(input, output, session) {
     file_prefix <- user_bam_files_df$file_prefix[i]
     
     # define salmon command
-    command_salmon <- paste0("salmon quant -t ", outdir_bam, "/transcript.fa -p ", input$user_threads , " -l A  -a ", bam_file , " -o ", outdir_bam, "/", file_prefix)
+    command_salmon <- paste0(conda_path," run -n GenomeProt_env salmon quant -t ", outdir_bam, "/transcript.fa -p ", input$user_threads , " -l A  -a ", bam_file , " -o ", outdir_bam, "/", file_prefix)
     
     print(command_salmon)
     system(command_salmon)
@@ -268,7 +271,7 @@ bam_server <- function(input, output, session) {
   txi <- tximport(files, type = "salmon", txOut = TRUE)
   
   # import gtf to add gene information
-  gtf_data <- import(input$user_reference_gtf$datapath, format = "gtf")
+  gtf_data <- rtracklayer::import(input$user_reference_gtf$datapath, format = "gtf")
   
   # convert GTF data to a data frame
   gtf_df <- as.data.frame(gtf_data)
@@ -303,40 +306,42 @@ bambu_server <- function(input, output, session) {
   # create output dir
   system(paste0("mkdir ", outdir_bambu))
   
-  if (input$input_type == "bam_input") { # if user input bam files
+  
+   if (input$input_type == "bam_input") { # if user input bam files
+     req(input$user_bam_files$datapath, input$user_reference_gtf$datapath, input$organism)  # required
+     
+     #print(input$user_bam_files)
+     
+     bam_df=as.data.frame(input$user_bam_files)
+     
+     #print(bam_df)
+     
+     bamdir=dirname(input$user_bam_files$datapath)
+     
+     # Specify new filenames (you can adjust based on logic)
+     new_names <- paste0(bamdir[1],"/", input$user_bam_files$name)
+     print(new_names)
+     # Rename the files
+     file.rename(input$user_bam_files$datapath, new_names)
+     print(input$user_bam_files)
     
-    req(input$user_bam_files$datapath, input$user_reference_gtf$datapath, input$organism)  # required
-    
-    # create list of BAMs
-    bam_file_list <- Rsamtools::BamFileList(as.vector(input$user_bam_files$datapath))
-    print(bam_file_list)
-    # get original names
-    bam_file_names <- as.vector(input$user_bam_files$name)
-    # remove bam extension
-    bam_file_names <- str_remove(bam_file_names,".bam")
-    # rename list to original names
-    names(bam_file_list) <- bam_file_names
-    print(bam_file_list)
-    
-  } else if (input$input_type == "fastq_input") { # if user input fastq files
-    
-    # create list of BAMs
-    bam_files <- list.files(path = outdir_bam, "\\.bam$", full.names = TRUE)
-    print(bam_files)
-    bam_file_list <- Rsamtools::BamFileList(bam_files)
-    print(bam_file_list)
-    
-    # remove bam extension
-    bam_files_names <- list.files(path = outdir_bam, "\\.bam$", full.names = FALSE)
-    bam_file_names <- str_remove(bam_files_names, ".bam")
-    # rename list to original names
-    names(bam_file_list) <- bam_file_names
-    print(bam_file_list)
+     command_bambu= paste0(conda_path," run -n GenomeProt_env && Rscript bin/database_module/run_bambu.R -b ", bamdir[1],
+     "/ -g ",input$user_reference_gtf$datapath," -o ", outdir_bambu," -s ", input$organism)
+     
+     
+
+   
+    } else if (input$input_type == "fastq_input") { # if user input fastq files
+  
+     command_bambu= paste0(conda_path, " run -n GenomeProt_env && Rscript bin/database_module/run_bambu.R -b ", outdir_bam,
+                           " -g ",input$user_reference_gtf$datapath," -o ", outdir_bambu," -s ", input$organism)
+     
     
   }
   
-  # run bambu function from R/ dir
-  run_bambu_function(bam_file_list, input$user_reference_gtf$datapath, input$organism, outdir_bambu)
+  #execute bambu command
+  print(command_bambu)
+  system(command_bambu)
   
   # rename bambu output files
   system(paste0("mv ",  outdir_bambu, "/counts_transcript.txt ", outdir_bambu, "/transcript_counts.txt"))
@@ -344,7 +349,7 @@ bambu_server <- function(input, output, session) {
   
   # define gffcompare command for bambu gtf
   #command_gff_compare <- paste0("source activate IsoLamp; gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
-  command_gff_compare <- paste0("gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
+  command_gff_compare <- paste0(conda_path," run -n GenomeProt_env gffcompare -r ", input$user_reference_gtf$datapath, " ", outdir_bambu, "/bambu_transcript_annotations.gtf")
   print(command_gff_compare)
   # run gffcompare
   system(command_gff_compare)
@@ -395,7 +400,7 @@ database_server <- function(input, output, session) {
   
   # construct the command
   command_generate_proteome <- paste0(
-    "Rscript bin/database_module/generate_proteome.R",
+    conda_path," run -n GenomeProt_env && Rscript bin/database_module/generate_proteome.R",
     " -g ", db_gtf_file,
     " -r ", input$user_reference_gtf$datapath,
     counts_arg, # include counts file only if provided
@@ -418,28 +423,27 @@ database_server <- function(input, output, session) {
   print("Generated ORFs")
   
   # set reference protein database per organism 
-  if (input$organism == "human") {
+  if (input$organism == "HUMAN") {
     ref_proteome <- "data/openprot_uniprotDb_hs.txt"
-  } else if (input$organism == "mouse") {
+  } else if (input$organism == "MOUSE") {
     ref_proteome <- "data/openprot_uniprotDb_mm.txt"
-  } else if (input$organism == "celegans") {
+  } else if (input$organism == "CAEEL") {
     ref_proteome <- "data/openprot_uniprotDb_c_elegans.txt"
-  } else if (input$organism == "drosophila") {
+  } else if (input$organism == "DROME") {
     ref_proteome <- "data/openprot_uniprotDb_drosophila.txt"
-  } else if (input$organism == "rat") {
+  } else if (input$organism == "RAT") {
     ref_proteome <- "data/openprot_uniprotDb_rat.txt"
-  } else if (input$organism == "zebrafish") {
+  } else if (input$organism == "DANRE") {
     ref_proteome <- "data/openprot_uniprotDb_zebrafish.txt"
   }
   
   # run python script using conda env
-  #command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length)
-  
+   
   if (!is.null(input$user_vcf_file)) { # if there is a VCF file uploaded
-    command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt"))
+    command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt "),input$organism )
     print(command_annotate_proteome)
   } else { # if no VCF file uploaded
-    command_annotate_proteome <- paste0("source activate py39; python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None")
+    command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None ", input$organism)
     print(command_annotate_proteome)
   }
   
@@ -516,7 +520,7 @@ proteomics_server <- function(input, output, session) {
 
 integration_server <- function(input, output, session) {
   
-  req(input$user_proteomics_file, input$user_post_gtf_file, input$user_fasta_file, input$user_metadata_file)  # GTF is required
+  req(input$user_proteomics_file, input$user_post_gtf_file, input$user_metadata_file)  # GTF is required
   
   # store session ID
   session_id <- session$token
@@ -526,7 +530,7 @@ integration_server <- function(input, output, session) {
   system(paste0("mkdir ", outdir_integ))
   
   # run Rscript
-  system(paste0("Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -f ", input$user_fasta_file$datapath, " -m ", input$user_metadata_file$datapath, " -g ", input$user_post_gtf_file$datapath, " -s ", outdir_integ))
+  system(paste0( conda_path," run -n GenomeProt_env && Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -m ", input$user_metadata_file$datapath, " -g ", input$user_post_gtf_file$datapath, " -s ", outdir_integ))
   
   # get the top level dir
   top_level_dir <- getwd()

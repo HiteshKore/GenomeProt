@@ -10,13 +10,17 @@ dependencies:
   - salmon
   - gffread
   - gffcompare
-  - minimap2
+  - minimap2=2.28
+  - bcftools
+  - tabix
   - python=3.9
   - pip
   - r-base
+  - zlib=1.2.13
   - r-biocmanager
   - r-optparse
   - r-dplyr
+  - r-tidyverse
   - r-devtools
   - r-rmarkdown
   - r-data.table
@@ -37,6 +41,7 @@ dependencies:
   - r-gplots
   - r-reshape2
   - r-phylotools
+  - bioconductor-rsamtools
   - bioconductor-bambu
   - bioconductor-genomicfeatures
   - bioconductor-biostrings
@@ -46,8 +51,18 @@ dependencies:
   - bioconductor-vsn
   - bioconductor-mygene
   - bioconductor-tximport
+  - bioconductor-variantannotation
   - bioconductor-bsgenome.hsapiens.ucsc.hg38
+  - bioconductor-bsgenome.mmusculus.ucsc.mm39
+  - bioconductor-bsgenome.celegans.ucsc.ce11
+  - bioconductor-bsgenome.dmelanogaster.ucsc.dm6
+  - bioconductor-bsgenome.rnorvegicus.ucsc.rn7
+  - bioconductor-bsgenome.drerio.ucsc.danrer11
+  - bioconductor-sparsearray
+  - bioconductor-summarizedexperiment
+
   - pip:
     - biopython==1.77
     - py-cdhit
     - peptides
+    - pysam

@@ -3,14 +3,20 @@ library(shinydashboard)
 library(shinyjs)
 
 ui <- dashboardPage(
-  dashboardHeader(title = "GenomeProt",
+  dashboardHeader(title = tags$img( ##title = "GenomeProt"
+                    src = "images/GenomeProt_logo_Thach.png", 
+                    height = "40px", 
+                    style = "margin-left:1px",
+                    style = "margin-right:1px"
+                  )
+                  ,
                   dropdownMenu(type = "messages",
                                tags$li(HTML('<li><a href="https://biomedicalsciences.unimelb.edu.au/sbs-research-groups/physiology/Parker-laboratory-Metabolic-Proteomics" target="_blank"><i class="fa fa-user"></i><h4>About us</h4><p>Parker Laboratory</p></a></li>')),
                                tags$li(HTML('<li><a href="https://biomedicalsciences.unimelb.edu.au/sbs-research-groups/anatomy-and-physiology-research/stem-cell-and-developmental-biology/clark-lab" target="_blank"><i class="fa fa-user"></i><h4>About us</h4><p>Clark Laboratory</p></a></li>')),
                                tags$li(HTML('<li><a href="mailto:genomeprot@outlook.com" target="_blank"><i class="fa fa-question"></i><h4>Support</h4><p>genomeprot@outlook.com</p></a></li>'))
                   )),
   # tabs
-  dashboardSidebar(
+  dashboardSidebar( width=200,
     sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
                 menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
                 # commenting out proteomics for now
@@ -23,7 +29,16 @@ ui <- dashboardPage(
   # body
   dashboardBody(
     useShinyjs(),  # shinyjs
+    
     tags$head(
+      tags$style(HTML("
+      .main-header .logo {
+        width: 200px;
+      }
+      .main-header .navbar {
+        margin-left: 200px;
+      }
+    ")),
       tags$link(rel = "shortcut icon", href = "favicon.ico"),
       tags$link(rel = "apple-touch-icon", sizes = "180x180", href = "favicon.ico"),
       tags$link(rel = "icon", type = "image/png", sizes = "32x32", href = "/favicon-32x32.png"),
@@ -117,13 +132,13 @@ ui <- dashboardPage(
                        
                        # Constant options
                        selectInput("organism", label = "Organism:", 
-                                   choices = list("Roundworm (C. elegans)" = "celegans", 
-                                                  "Fruit fly (D. melanogaster)" = "drosophila", 
-                                                  "Human (H. sapiens)" = "human", 
-                                                  "Mouse (M. musculus)" = "mouse", 
-                                                  "Rat (R. rattus)" = "rat", 
-                                                  "Zebrafish (D. rerio)" = "zebrafish"), 
-                                   selected = "human"),
+                                   choices = list("Roundworm (C. elegans)" = "CAEEL", 
+                                                  "Fruit fly (D. melanogaster)" = "DROME", 
+                                                  "Human (H. sapiens)" = "HUMAN", 
+                                                  "Mouse (M. musculus)" = "MOUSE", 
+                                                  "Rat (R. rattus)" = "RAT", 
+                                                  "Zebrafish (D. rerio)" = "DANRE"), 
+                                   selected = "HUMAN"),
                        selectInput("database_type", label = "ORFs to be included in proteomedb:", 
                                    choices = list("canonical", "all"),
                                    selected = "all"),
@@ -215,7 +230,6 @@ ui <- dashboardPage(
               fluidRow(
                 column(6,
                        fileInput("user_proteomics_file", "Upload proteomics results:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_fasta_file", "Upload 'proteome_database.fasta':", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_metadata_file", "Upload 'proteome_database_metadata.txt':", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        fileInput("user_post_gtf_file", "Upload 'proteome_database_transcripts.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
                        actionButton("integ_submit_button", "Submit", class = "btn btn-primary")
