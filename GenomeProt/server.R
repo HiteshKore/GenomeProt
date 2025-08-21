@@ -543,16 +543,16 @@ integration_server <- function(input, output, session) {
                     output_format = "html_document",
                     params = list(
                       directory = paste0(top_level_dir, "/", outdir_integ),
-                      file = "peptide_info.csv"
+                      file = "peptide_info.tsv"
                     ))
   
   # zip all results files
-  if (file.exists(paste0(outdir_integ, "/peptide_info.csv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
+  if (file.exists(paste0(outdir_integ, "/peptide_info.tsv")) && file.exists(paste0(outdir_integ, "/summary_report.html"))) {
     
     # create a zip file with results
-    files_to_zip_int <- c("summary_report.html", "peptide_info.csv", "report_images/",
+    files_to_zip_int <- c("summary_report.html", "peptide_info.tsv", "report_images/",
                           "combined_annotations.gtf", "transcripts_and_ORFs_for_isovis.gtf",
-                          "peptides.bed12", "ORFs.bed12", "transcripts.bed12")
+                          "peptides.bed12", "ORFs.bed12", "transcripts.bed12","ncORF_stats.xlsx")
     
     # set the path to the ZIP file (in the session_id directory)
     zipfile_path_int <- file.path("../integration_results.zip")
@@ -567,6 +567,8 @@ integration_server <- function(input, output, session) {
     setwd(top_level_dir)
     
   }
+  
+  
   
 }
 

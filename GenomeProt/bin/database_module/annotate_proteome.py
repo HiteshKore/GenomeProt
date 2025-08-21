@@ -1,7 +1,7 @@
 #This script removes the redundant ORFs and considers longest ORF if ORF is part of longer ORF.
 #It annotates them based on their location on the genome/transcript
 #cd-hit (First install cd-hit commond line tool in linux (command to install:'conda install bioconda/label/cf201901::cd-hit'). Next, install py-cdhit library using  'pip install py-cdhit' command)
-#Usage:python3 annotate_proteome.py gencode.vM33.chr_patch_hapl_scaff.annotation_chrX.gtf openprot_uniprotDb_mm.txt  ORFome_aa.txt proteome_database_transcripts.gtf <outdir> <canonical/all> <orf_length> <M> <organism:HUMAN,CAEEL,MOUSE,RAT,DROME,DANRE>
+#Usage:python3 annotate_proteome.py gencode.vM33.chr_patch_hapl_scaff.annotation_chrX.gtf openprot_uniprotDb_mm.txt  ORFome_aa.txt proteome_database_transcripts.gtf <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism:HUMAN,CAEEL,MOUSE,RAT,DROME,DANRE>
 #######################################################################
 
 import sys
@@ -100,6 +100,7 @@ def main():
               gene_biotype[GP.genename]="novel"
             
     orfome_transcript_gtf.close()
+ 
     
     
     var_transcript_ORF_map={}
@@ -146,13 +147,13 @@ def main():
       return res
     
     #function to annotate protein sequence based on genomic coordinates, biotypes, physioco-chemical properties
-    def get_protein_annotation(transcript,gene_id,gene_name,protein_des,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,orf_type,localisation,openprot_annotations,longest_orf,protein_status,orf_metadata_map):
-      if strand=="-":
-        orf_start=int(orf_coordinate.strip().split(':')[1].split("-")[1])
-        rf=(orf_start - 1) % 3
-      else:
-        orf_start=int(orf_coordinate.strip().split(':')[1].split("-")[0])
-        rf=(orf_start - 1) % 3
+    def get_protein_annotation(transcript,gene_id,gene_name,protein_des,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,orf_type,localisation,openprot_annotations,longest_orf,protein_status,orf_metadata_map,reading_frame_info):
+     #get reading frame information
+      matching_indices=next(
+        (i for i,protein_seq_rf in enumerate(reading_frame_info) if protein_seq in protein_seq_rf),None
+        )
+      
+      rf=reading_frame_info[matching_indices].split("|")[1]
       
       if transcript in var_transcript_ORF_map.keys():
         var_prot_attr=variant_protein_annotations(transcript,var_transcript_ORF_map[transcript],protein_seq) #identify variants and calculate physico-chemical properties
@@ -242,15 +243,16 @@ def main():
     transcript_orf_map={} #stores all orfs for each transcript: k;transcript_id,v:protein_seq|orf_id
     
     annotated_proteins={} #store annotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
-    
+    reading_frame_map={}
     for i in orfome:
       if i.startswith("ORF_id"):
         continue
       else:
         orf_id=i.strip().split('\t')[0].strip()
-        protein_seq=i.strip().split('\t')[1].strip().replace("*","")
+        protein_seq=i.strip().split('\t')[1].strip()
         transcript=orf_id.split("_")[0]
-        
+        reading_frame=i.strip().split('\t')[6]
+        reading_frame_map.setdefault(transcript,[]).append(protein_seq+"|"+reading_frame)
         strand=i.strip().split('\t')[5].strip()
         chr=i.strip().split('\t')[2].strip()
         if strand =="-":
@@ -307,6 +309,8 @@ def main():
           unannotated_protein_coordinates[orf_id+"|"+orf_coordinate]=protein_seq
 
     orfome.close()
+
+
     
     #find longest orf in transcript
     transcript_longest_orf_map={} #stores longest ORF in transcript: k: orf_id v:protein_seq
@@ -346,15 +350,12 @@ def main():
 
     #annotations
     fw_proteomedb=open(outdir+"proteome_database.fasta","w")
-    fw_proteomedb_metadata=open(outdir+"proteome_database_metadata.txt","w")
-      
-    # Create a tab-separated format string
-    fw_proteomedb_metadata.write("accession\tgene\tgene_symbol\tprotein_description\ttranscript\tstrand\ttranscript_biotype\ttranscript_coordinates\torf_genomic_coordinates\treading_frame\torf_type\tlocalisation\topenprot_id\tprotein_sequence\tlongest_orf_in_transcript\tuniprot_status\tamino_acid_change\tmolecular_weight(kDA)\tisoelectric_point\thydrophobicity\taliphatic_index\n")
-        
+       
     longest_orf_anno={} #k:accession v:Y, N
     orfbiotype_transcript_map={} #k:orf, v:transcript|biotype
     #annotations of known proteins
     orf_metadata_annotated_proteins={} #key:protein_seq, val:metadata
+    metadata_records=[]
 
     for k in annotated_proteins.keys():
       protein_seq=k
@@ -362,10 +363,9 @@ def main():
       gene_accession=[]
       gene_symbol=[]
       orf_coordinates=[]
-      
       for orf_id in  annotated_proteins[k]:
+       
         transcript=orf_id.split("|")[1].split("_")[0]
-
         if transcript in transcript_biotypes.keys():
           transcripts.append(transcript)
           transcript_biotype=transcript_biotypes[transcript]
@@ -384,8 +384,11 @@ def main():
           if orf_id.split("|")[1] in transcript_longest_orf_map.keys():
             longest_orf="Y"
           
+          
+
           #uniprot proteins
           if protein_seq in uniprot.keys():
+            
             if uniprot[protein_seq].split("|")[0]=="sp":
               protein_status="reviewed(Swiss-Prot)"
             elif uniprot[protein_seq].split("|")[0]=="tr":
@@ -397,7 +400,8 @@ def main():
             
             orfbiotype_transcript_map.setdefault(protein_accession,[]).append(transcript+"|CDS")
             #annotate ORFs
-            get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"annotated","CDS","-",longest_orf,protein_status,orf_metadata_annotated_proteins)
+            
+            get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"annotated","CDS","-",longest_orf,protein_status,orf_metadata_annotated_proteins, reading_frame_map[transcript])
           
           #Refseq/Ensembl proteins
           elif protein_seq in refprot.keys():
@@ -408,7 +412,7 @@ def main():
             orfbiotype_transcript_map.setdefault(protein_accession,[]).append(transcript+"|CDS")
             
             #annotate ORFs
-            get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"annotated","CDS","-",longest_orf,protein_status,orf_metadata_annotated_proteins)
+            get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"annotated","CDS","-",longest_orf,protein_status,orf_metadata_annotated_proteins,reading_frame_map[transcript])
     #annotated_proteins close
     
     #write output to metadata and fasta file
@@ -416,7 +420,6 @@ def main():
     all_annotated_orf_map={} #k:protein_seq, v:fasta header annotations
 
     for protein_seq,annotations in orf_metadata_annotated_proteins.items():
-
       for protein_anno in annotations:
         #from metadata
 
@@ -430,12 +433,12 @@ def main():
        
         if args[6]=="canonical":
          if longest_orf=="Y":
-            fw_proteomedb_metadata.write(protein_anno)
+            metadata_records.append(protein_anno)
             fa_header=protein_accession+"|"+orf_coordinate+"|"+gene_id+"|"+gene_name+"|"+transcript+"|"+protein_description
             #print(fa_header)
             canonical_annotated_orf_map.setdefault(protein_seq,[]).append(fa_header)
         elif args[6]=="all":
-          fw_proteomedb_metadata.write(protein_anno)
+          metadata_records.append(protein_anno)
           fa_header=protein_accession+"|"+orf_coordinate+"|"+gene_id+"|"+gene_name+"|"+transcript+"|"+protein_description
           #print(fa_header)
           all_annotated_orf_map.setdefault(protein_seq,[]).append(fa_header)
@@ -496,10 +499,10 @@ def main():
                     if len(protein_seq) < int(args[7]): #for short uORFs, remove CDS annotation
                       utr_orf=utr_orf.split(":")[0]
                       #annotate ORF
-                      get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated",utr_orf,openprot_id,longest_orf,protein_status,orf_annotation_map)
+                      get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated",utr_orf,openprot_id,longest_orf,protein_status,orf_annotation_map,reading_frame_map[transcript])
                     else:
                       #annotate ORF
-                      get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated",utr_orf,openprot_id,longest_orf,protein_status,orf_annotation_map)
+                      get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated",utr_orf,openprot_id,longest_orf,protein_status,orf_annotation_map,reading_frame_map[transcript])
                    
                       
                 elif transcript_biotype !="protein_coding":
@@ -511,30 +514,30 @@ def main():
                       if len(protein_seq) < int(args[7]):
                         utr_orf=utr_orf.split(":")[0]
                         #annotate ORF
-                        get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated",utr_orf,openprot_id,longest_orf,protein_status,orf_annotation_map)
+                        get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated",utr_orf,openprot_id,longest_orf,protein_status,orf_annotation_map,reading_frame_map[transcript])
                       else:
                         #annotate ORF
-                        get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated",utr_orf,openprot_id,longest_orf,protein_status,orf_annotation_map)
+                        get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated",utr_orf,openprot_id,longest_orf,protein_status,orf_annotation_map,reading_frame_map[transcript])
                         
                     else:#if ORF is not in UTR regions
                       gene_overlap=AN.isIntergenic(orf_coordinate,protein_coding_gene_coordinates)
 
                       if gene_overlap=="gene_overlap":
                         #annotate ORF
-                        get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated","gene_overlap",openprot_id,longest_orf,protein_status,orf_annotation_map)
+                        get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated","gene_overlap",openprot_id,longest_orf,protein_status,orf_annotation_map,reading_frame_map[transcript])
                       else:
                         #annotate ORF
-                        get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated","intergenic",openprot_id,longest_orf,protein_status,orf_annotation_map)
+                        get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated","intergenic",openprot_id,longest_orf,protein_status,orf_annotation_map,reading_frame_map[transcript])
                   
                   #noncoding RNA transcripts. transcript doesn't have UTRs
                   else:
                     gene_overlap=AN.isIntergenic(orf_coordinate,protein_coding_gene_coordinates)
                     if gene_overlap=="gene_overlap":
                       #annotate ORF
-                      get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated","gene_overlap",openprot_id,longest_orf,protein_status,orf_annotation_map)
+                      get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated","gene_overlap",openprot_id,longest_orf,protein_status,orf_annotation_map,reading_frame_map[transcript])
                     else:
                       #annotate ORF
-                      get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated","intergenic",openprot_id,longest_orf,protein_status,orf_annotation_map)
+                      get_protein_annotation(transcript,gene_id,gene_name,protein_description,var_transcript_ORF_map,protein_seq,protein_accession,strand,transcript_biotype,transcript_coordinates,orf_coordinate,"unannotated","intergenic",openprot_id,longest_orf,protein_status,orf_annotation_map,reading_frame_map[transcript])
 
             #for loop closed
             counter=counter+1
@@ -580,16 +583,27 @@ def main():
             
             canonical_novel_orf_map.setdefault(protein_seq,[]).append(fa_header)
             revised_annotations=protein_annotation.replace(accession,new_accesion)
-            fw_proteomedb_metadata.write(revised_annotations)
+            metadata_records.append(revised_annotations)
             
         if args[6]=="all":
           new_accesion="ORF_"+str(all_novel_orf_ids.index(accession)+1) # +1 as list index starts with zero
           fa_header=new_accesion+"|"+orf_coordinate+"|"+gene_id+"|"+gene_name+"|"+transcript
           all_novel_orf_map.setdefault(protein_seq,[]).append(fa_header)
           revised_annotations=protein_annotation.replace(accession,new_accesion)
-          fw_proteomedb_metadata.write(revised_annotations)
+          metadata_records.append(revised_annotations)
     #loop closed
     
+   
+    metadata_records_uniq = list(dict.fromkeys(metadata_records))
+    
+   
+    #write metadata
+     
+    with open(outdir+"proteome_database_metadata.txt","w") as f:
+          f.write("accession\tgene\tgene_symbol\tprotein_description\ttranscript\tstrand\ttranscript_biotype\ttranscript_coordinates\torf_genomic_coordinates\treading_frame\torf_type\tlocalisation\topenprot_id\tprotein_sequence\tlongest_orf_in_transcript\tuniprot_status\tamino_acid_change\tmolecular_weight(kDA)\tisoelectric_point\thydrophobicity\taliphatic_index\n")
+          f.writelines(metadata_records_uniq)
+
+
     #write fasta output
     if args[6]=="canonical":
       #generate fasta database

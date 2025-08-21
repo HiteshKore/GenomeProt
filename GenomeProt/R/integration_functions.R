@@ -23,63 +23,34 @@ import_proteomics_data <- function(proteomics_file) {
   protfile <- fread(proteomics_file)
   
   # ensure compatibility
-  if (c("Peptide") %in% colnames(protfile)) {
-    # skip
-  } else if (c("Peptide Sequence") %in% colnames(protfile)) {
-    protfile$Peptide <- protfile$`Peptide Sequence`
-    protfile$`Peptide Sequence` <- NULL
-  } else if (c("Stripped.Sequence") %in% colnames(protfile)) {
-    protfile$Peptide <- protfile$Stripped.Sequence
-    protfile$Stripped.Sequence <- NULL
-  }
-  
-  
-  # check if Protein Start is a valid column
-  if (c("Protein Start") %in% colnames(protfile)) {
-    protfile <- protfile %>% dplyr::select(Peptide, Protein, `Protein Start`, `Mapped Proteins`)
-    # add a column of every mapped ORF
+  if (all(c("Peptide","Protein","Mapped_proteins") %in% colnames(protfile))) {
+    protfile <- protfile %>% dplyr::select(Peptide, Protein, Mapped_proteins)
     protfile <- protfile %>% dplyr::mutate(
       all_mappings = case_when(
-        (is.na(`Mapped Proteins`) == TRUE | nchar(`Mapped Proteins`) == 0) ~ paste0(Protein),
-        TRUE ~ paste0(Protein, ", ", `Mapped Proteins`)
-      )
-    )
-  } else if (c("All Mapped Proteins") %in% colnames(protfile)) {
-    protfile <- protfile %>% dplyr::select(Peptide, `All Mapped Proteins`)
-    protfile$all_mappings <- protfile$`All Mapped Proteins`
-    protfile$`All Mapped Proteins` <- NULL
-  }  else {
-    protfile <- protfile %>% dplyr::select(Peptide, Protein, `Mapped Proteins`)
-    # add a column of every mapped ORF
-    protfile <- protfile %>% dplyr::mutate(
-      all_mappings = case_when(
-        (is.na(`Mapped Proteins`) == TRUE | nchar(`Mapped Proteins`) == 0) ~ paste0(Protein),
-        TRUE ~ paste0(Protein, ", ", `Mapped Proteins`)
+        (is.na(Mapped_proteins) == TRUE | nchar(Mapped_proteins) == 0) ~ paste0(Protein),
+        TRUE ~ paste0(Protein, ", ", Mapped_proteins)
       )
     )
   }
+
   
   # separate into one row per mapped ORF
-  prot_expanded <- separate_rows(protfile, all_mappings, sep = "\\,(?!chr)|\\; |\\;|\\, ")
+  prot_expanded <- tidyr::separate_rows(protfile, all_mappings, sep = ",")
   
   # remove white space and characters
   prot_expanded <- prot_expanded %>% 
     dplyr::mutate(across(where(is.character), ~ gsub(" ", "", .))) %>%
-    dplyr::mutate(PID = all_mappings)
+    dplyr::mutate(accession = all_mappings)
   
   # remove any duplications
   prot_expanded <- prot_expanded[!(base::duplicated(prot_expanded)),]
   
   # select columns to keep
-  if (c("Protein Start") %in% colnames(prot_expanded)) {
-    prot_expanded <- prot_expanded %>% dplyr::select(PID, Peptide, `Protein Start`)
-  } else {
-    prot_expanded <- prot_expanded %>% dplyr::select(PID, Peptide)
-  }
+  prot_expanded <- prot_expanded %>% dplyr::select(accession, Peptide)
   
   # remove peptides mapped to reversed sequences
   prot_expanded <- prot_expanded %>% 
-    dplyr::filter(!startsWith(PID, "rev"))
+    dplyr::filter(!startsWith(accession, "rev"))
   
   # rename column
   prot_expanded$peptide <- prot_expanded$Peptide
@@ -99,7 +70,7 @@ import_orf_metadata <- function(metadata_file) {
   orf_data$transcript_id <- orf_data$transcript
   orf_data$transcript <- NULL
   orf_data$PID <- paste0(orf_data$accession, "|CO=", orf_data$orf_genomic_coordinates)
-  orf_data <- orf_data %>% dplyr::select(PID, accession,orf_genomic_coordinates, gene,gene_symbol, transcript_id,strand, transcript_biotype, transcript_coordinates,orf_type, localisation, uniprot_status, openprot_id, 
+  orf_data <- orf_data %>% dplyr::select(PID, accession,protein_description,orf_genomic_coordinates, gene,gene_symbol, transcript_id,strand, transcript_biotype, transcript_coordinates,orf_type, localisation, uniprot_status, openprot_id, 
                                          protein_sequence,`molecular_weight(kDA)`, isoelectric_point, hydrophobicity, aliphatic_index, longest_orf_in_transcript)
   
   return(orf_data)
@@ -112,13 +83,6 @@ import_orf_metadata <- function(metadata_file) {
 integrate_metadata<-function(pd,orf_df){
   
   #subset metadata for proteins detected in proteomics
-
-  pd <- pd %>%
-    mutate(accession = if_else(
-      str_detect(PID, "CO="),          # Check if "CO=" is present in the string
-      str_extract(PID, "^[^|]+"),      # Extract everything before the first "|"
-      str_extract(PID, "(?<=\\|)[^|]+") # Extract everything between two "|"
-    ))
   
   orf_df_protein_detected <- orf_df %>%filter(accession %in% pd$accession) %>%
     rename(gene_id=gene,gene_name=gene_symbol)%>%
@@ -143,9 +107,6 @@ integrate_metadata<-function(pd,orf_df){
   
   # get transcripts for mapping
   txs <- exonsBy(gtf_txdb, by=c("tx"), use.names=T)
-  
-  
-  
   
   orf_df_protein_detected <- left_join(orf_df_protein_detected, tx_lengths, by="transcript_id")
   
