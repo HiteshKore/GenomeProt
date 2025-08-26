@@ -9,8 +9,6 @@ source("R/integration_functions.R")
 option_list = list(
   make_option(c("-p", "--proteomics"), type="character", default=NULL,
               help="Proteomics data file", metavar="character"),
-  make_option(c("-f", "--fasta"), type="character", default=NULL,
-              help="Custom FASTA used for proteomics", metavar="character"),
   make_option(c("-m", "--metadata"), type="character", default=NULL,
               help="Custom metadata used for proteomics", metavar="character"),
   make_option(c("-g", "--gtf"), type="character", default=NULL,
@@ -25,17 +23,15 @@ opt <- parse_args(opt_parser)
 options(scipen=999)
 
 proteomics_import_file <- opt$proteomics
-fasta_import_file <- opt$fasta
 metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
 
-# source("~/Documents/GenomeProt/GenomeProt/R/integration_functions.R")
-# proteomics_import_file <- "~/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/peptide_combined.txt"
-# fasta_import_file <- "~/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/database/proteome_database.fasta"
-# metadata_import_file <- "~/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/database/proteome_database_metadata.txt"
-# gtf_import_file <- "~/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/database/proteome_database_transcripts.gtf"
-# output_directory <- "~/Documents/related_to_genomeprot/kusa_2024/kusa_hk_oct/dec24"
+# source("/home/hiteshk/GenomeProt_git/GenomeProt/GenomeProt/R/integration_functions.R")
+# proteomics_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/peptide_data.txt"
+# metadata_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/revised_database/proteome_database_metadata.txt"
+# gtf_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/revised_database/proteome_database_transcripts.gtf"
+# output_directory <- "/home/hiteshk/GenomeProt/PGData/Brain_data/revised_database/"
 
 # ------------- import files ------------- #
 
@@ -45,7 +41,8 @@ gtf <- makeTxDbFromGFF(gtf_import_file, format="gtf") # make txdb of gtf
 
 orf_df <- import_orf_metadata(metadata_import_file)
 
-md <- import_fasta(fasta_import_file, pd, gtf_import_file)
+md<-integrate_metadata(pd,orf_df)
+
 
 # ---------------------------------------- #
 
@@ -55,10 +52,20 @@ md <- import_fasta(fasta_import_file, pd, gtf_import_file)
 # ------- map ORF transcript coords to spliced genomic coords ------- #
 
 # create unique ID of ORF in transcript
-md$orf_tx_id <- paste0(md$protein_name, "_", md$transcript_id)
+
+md_order<-c("transcript_id","gene_id","PID","accession", "orf_genomic_coordinates", "chromosome","start","end","protein_sequence","protein_length","nt_length","tx_len","gene_name","strand","stranded_start","exon_start","exon_end","exon_rank","exon_length","total_length","txstart","txend")
+
+
+md <- md %>%
+  dplyr::select(any_of(md_order), everything())
+
+
+md$orf_tx_id <- paste0(md$accession, "_", md$transcript_id)
 
 # filter for unique orf and transcript for mapping the coordinates
 orf_transcript_coords_df <- md %>% dplyr::select(orf_tx_id, txstart, txend, transcript_id, gene_id, strand)
+
+
 orf_transcript_coords_df <- orf_transcript_coords_df[!(base::duplicated(orf_transcript_coords_df)),] # remove duplicates
 
 # make GRanges from df of ORF transcript coordinates
@@ -134,17 +141,108 @@ pep_in_genomic_gr <- unlist(pep_in_genomic, use.names=F) # convert to GRanges
 # rename with transcript and peptide
 tx_pep_names <- c(paste0(names(pep_in_genomic_gr), "_", pep_in_genomic_gr$peptide))
 names(pep_in_genomic_gr) <- tx_pep_names # set names
-pep_in_genomic_gr$tx_pid_grouping <- paste0(pep_in_genomic_gr$PID, "_", names(pep_in_genomic_gr))
+pep_in_genomic_gr$tx_PID_grouping <- paste0(pep_in_genomic_gr$PID, "_", names(pep_in_genomic_gr))
 
 # remove 0 ranges 
 pep_in_genomic_gr <- subset(pep_in_genomic_gr, (start(pep_in_genomic_gr) != 0 & end(pep_in_genomic_gr) != 0)  )
 
 # create vector of exon number per peptide and transcript
-exon_number_vec <- ave(seq_along(pep_in_genomic_gr), pep_in_genomic_gr$tx_pid_grouping, FUN = seq_along)
+exon_number_vec <- ave(seq_along(pep_in_genomic_gr), pep_in_genomic_gr$tx_PID_grouping, FUN = seq_along)
 
 # add to GRanges
 mcols(pep_in_genomic_gr)$exon_number <- exon_number_vec
+
 mcols(pep_in_genomic_gr)$tx_pid_grouping <- NULL
+
+
+# convert to df
+mcols(pep_in_genomic_gr)$txname <- names(pep_in_genomic_gr)
+mcols(pep_in_genomic_gr)$transcript_id <- names(pep_in_genomic_gr)
+mcols(pep_in_genomic_gr)$transcript_id <- word(names(pep_in_genomic_gr),1,sep="_")
+mcols(pep_in_genomic_gr)$peptide <- word(names(pep_in_genomic_gr),2,sep="_")
+results_pept_df <- pep_in_genomic_gr %>% as_tibble()
+#results_pept_df <- separate(results_pept_df, txname, into = c("transcript_id", "peptide"), sep = "_", remove = TRUE)
+results_pept_df$gene_id <- results_pept_df$gene
+results_pept_df$gene <- NULL
+
+
+#extract transcript exon overlap with peptide coordinates
+exons_gr<-unlist(exons_filt,use.names = TRUE)
+mcols(exons_gr)$transcript_id<-names(exons_gr)
+
+hits<-findOverlaps(pep_in_genomic_gr,exons_gr)
+
+overlapping_peptides<-pep_in_genomic_gr[queryHits(hits)]
+overlapping_exons<-exons_gr[subjectHits(hits)]
+
+
+# Combine information into a DataFrame
+peptide_exon_overlap<- data.frame(
+  peptide_coordinates_in_exon=paste0(seqnames(overlapping_peptides),":",start(overlapping_peptides),"-",end(overlapping_peptides)),
+  strand = strand(overlapping_peptides),
+  transcript_id = overlapping_peptides$transcript_id,
+  gene_id=overlapping_peptides$gene,
+  exon_number=overlapping_peptides$exon_number,
+  peptide = overlapping_peptides$peptide,
+  PID=overlapping_peptides$PID,
+  peptide_overlapping_exon_coordinates=paste0(seqnames(overlapping_exons),":",start(overlapping_exons),"-",end(overlapping_exons)),
+  exon_transcript = overlapping_exons$transcript_id,
+  exon_number_transcript = overlapping_exons$exon_rank
+  
+  
+) %>%mutate(
+  tx_PID_grouping=paste0(PID,"_",transcript_id,"_",peptide),
+)
+
+
+overlap_df_reduced  <-peptide_exon_overlap%>%filter(transcript_id==exon_transcript)%>%unique()%>%
+  group_by(tx_PID_grouping)%>%
+  summarise(
+    overlapping_peptide_coordinates=paste0(unique(peptide_coordinates_in_exon),collapse =","),
+    overlapping_exon_coordinates=paste0(unique(peptide_overlapping_exon_coordinates),collapse =","),
+    overlapping_exon_number=paste0(unique(exon_number_transcript),collapse =","),
+    number_of_mapped_exons=n_distinct(peptide_overlapping_exon_coordinates),
+    strand_transcript=dplyr::first(strand),
+    peptide=dplyr::first(peptide),
+    PID=dplyr::first(PID),
+    gene_id=dplyr::first(gene_id),
+    transcript_id=dplyr::first(transcript_id),
+    mapped_exons=paste(unique(exon_number),collapse=","),
+    .groups = 'drop'
+  )
+
+
+overlap_df_reduced <- overlap_df_reduced %>%
+  mutate(
+    peptide_genomic_coordinates = map2_chr(overlapping_peptide_coordinates,strand_transcript, function(coord_str,strand_info) {
+      
+      coords <- str_split(coord_str, ",")[[1]]
+      if (strand_info == "+") {
+        first_coord <- coords[1]
+        last_coord <- coords[length(coords)]
+      } else {
+        first_coord <- coords[length(coords)]
+        last_coord <- coords[1]
+      }
+      chr_first <- str_extract(first_coord, "^[^:]+")
+      start_first <- str_extract(first_coord, "(?<=:)[0-9]+")
+      end_last <- str_extract(last_coord, "(?<=-)[0-9]+")
+      paste0(chr_first, ":", start_first, "-", end_last)
+      
+    })
+  ) %>%
+  mutate(
+    peptide_mapping_type= case_when(
+      lengths(strsplit(mapped_exons,",")) >1 ~ "exon-spanning peptide",
+      TRUE~ "exonic peptide"
+    )
+  )
+
+
+
+
+mcols(pep_in_genomic_gr)$tx_PID_grouping <- NULL
+
 # re-list
 pep_in_genomic <- split(pep_in_genomic_gr, ~ names(pep_in_genomic_gr))
 
@@ -161,8 +259,8 @@ ORFik::export.bed12(pep_in_genomic, paste0(output_directory, "/peptides.bed12"),
 ORFik::export.bed12(orf_in_genomic, paste0(output_directory, "/ORFs.bed12"), rgb = 0)
 
 # format GTF of all transcripts that had mapped peptides
-gtf_for_exporting <- import(gtf_import_file, format="gtf")
-gtf_filtered <- gtf_for_exporting[mcols(gtf_for_exporting)$transcript_id %in% md$transcript]
+gtf_for_exporting <- rtracklayer::import(gtf_import_file, format="gtf")
+gtf_filtered <- gtf_for_exporting[mcols(gtf_for_exporting)$transcript_id %in% md$transcript_id]
 gtf_filtered$group_id <- "transcripts"
 
 # reformat exons for bed12
@@ -192,6 +290,11 @@ orf_in_genomic_gr$phase <- 0
 orf_in_genomic_gr$ORF_id <- names(orf_in_genomic_gr)
 orf_in_genomic_gr$transcript_id <- names(orf_in_genomic_gr)
 
+#####Write here###
+
+#########
+
+
 names(orf_in_genomic_gr) <- NULL
 orf_in_genomic_gr$group_id <- "ORFs"
 
@@ -207,11 +310,11 @@ orf_in_genomic_gr_isovis$phase <- 0
 orf_in_genomic_gr_isovis$transcript_id <- names(orf_in_genomic_gr)
 
 # get PID_transcript column as df
-pids <- data.frame(ids = orf_in_genomic_gr_isovis$PID)
+PIDs <- data.frame(ids = orf_in_genomic_gr_isovis$PID)
 # separate into just protein ID based on last occurrence of an '_'
-pids <- pids %>% separate(ids, into = "protein_id", sep = "\\_(?!.*_)", remove=F)
+PIDs <- PIDs %>% separate(ids, into = "protein_id", sep = "\\_(?!.*_)", remove=F)
 # paste as protein_id
-orf_in_genomic_gr_isovis$protein_id <- paste0(pids$protein_id)
+orf_in_genomic_gr_isovis$protein_id <- paste0(PIDs$protein_id)
 # remove other columns
 names(orf_in_genomic_gr_isovis) <- NULL
 orf_in_genomic_gr_isovis$PID <- NULL
@@ -228,47 +331,29 @@ rtracklayer::export(isovis_export, paste0(output_directory, "/transcripts_and_OR
 
 # ------- summary file of peptide mappings -------- #
 
-# convert to df
-mcols(pep_in_genomic_gr)$txname <- names(pep_in_genomic_gr)
-results_pept_df <- pep_in_genomic_gr %>% as_tibble()
-results_pept_df <- separate(results_pept_df, txname, into = c("transcript_id", "peptide"), sep = "_", remove = TRUE)
-results_pept_df$gene_id <- results_pept_df$gene
-results_pept_df$gene <- NULL
 
-# group by peptide and transcript to summarise based on how many exons peptide spans
-results_pept_df_unique <- results_pept_df %>% 
-  dplyr::group_by(peptide, transcript_id) %>% 
-  dplyr::slice_max(exon_number) %>% 
-  dplyr::mutate(number_exons = exon_number) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::select(-start, -end, -width, -exon_number)
 
 # merge results with metadata
-metadata_to_merge <- md %>% 
-  dplyr::select(PID, peptide, transcript_id, gene_id, gene_name, protein_length, tx_len)
+ #metadata_to_merge <- md %>% 
+ #  dplyr::select(PID, peptide, transcript_id, gene_id, gene_name, protein_length, tx_len)
+ 
+ peptide_result <- left_join(overlap_df_reduced, md, by=c("PID", "peptide", "gene_id", "transcript_id"))
+ 
+ peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
+ 
 
-peptide_result <- left_join(results_pept_df_unique, metadata_to_merge, by=c("PID", "peptide", "gene_id", "transcript_id"))
-
-peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
-
-peptide_result <- left_join(peptide_result, orf_df, by=c("PID", "transcript_id"))
-
-peptide_result <- peptide_result[!(base::duplicated(peptide_result)),]
-
-peptide_result$seqnames <- NULL
-
-peptide_result <- peptide_result %>% 
-  dplyr::mutate(longest_orf_in_transcript = case_when(
-    longest_orf_in_transcript == "Y" ~ TRUE,
-    longest_orf_in_transcript == "N" ~ FALSE
-  ))
+ peptide_result <- peptide_result %>% 
+   dplyr::mutate(longest_orf_in_transcript = case_when(
+     longest_orf_in_transcript == "Y" ~ TRUE,
+     longest_orf_in_transcript == "N" ~ FALSE
+   ))
 
 setDT(peptide_result)
 
 peptide_result[, c("peptide_ids_gene", "peptide_ids_orf", "peptide_ids_transcript", "shared_novel_protein_peptide") := 
                  .(length(unique(gene_id)) == 1,
-                   length(unique(gene_id)) == 1 & length(unique(PID)) == 1,
-                   length(unique(gene_id)) == 1 & length(unique(PID)) == 1 & length(unique(transcript_id)) == 1,
+                   length(unique(PID)) == 1,
+                   length(unique(transcript_id)) == 1,
                    length(unique(PID)) > 1 & all(startsWith(PID, "ORF"))),
                by = peptide]
 
@@ -309,16 +394,24 @@ combined_peptide_result <- combined_peptide_result %>%
   ))
 
 # rearrange columns for output
-combined_peptide_result <- combined_peptide_result %>% dplyr::select(peptide,accession,PID,transcript_id,gene_id,gene_name,strand,
-                                                                     number_exons,transcript_length,transcript_biotype,simplified_biotype,
+#combined_peptide_result<-combined_peptide_result%>%rename(orf_genomic_coordinates=location)
+
+combined_peptide_result <- combined_peptide_result %>%
+  group_by(accession) %>%
+  mutate(is_unique_location = n_distinct(orf_genomic_coordinates) == 1) %>%
+  ungroup()
+
+
+combined_peptide_result <- combined_peptide_result %>% dplyr::select(peptide,peptide_genomic_coordinates,accession,PID,protein_description,transcript_id,gene_id,gene_name,strand,
+                                                                     overlapping_peptide_coordinates,overlapping_exon_coordinates,overlapping_exon_number,number_of_mapped_exons,peptide_mapping_type,transcript_length,transcript_biotype,simplified_biotype,
                                                                      protein_length,orf_genomic_coordinates,orf_type,localisation,uniprot_status,
                                                                      openprot_id,`molecular_weight(kDA)`,isoelectric_point,hydrophobicity,
-                                                                     aliphatic_index,longest_orf_in_transcript,peptide_ids_gene,peptide_ids_orf,
+                                                                     aliphatic_index,longest_orf_in_transcript,is_unique_location,peptide_ids_gene,peptide_ids_orf,
                                                                      peptide_ids_transcript,shared_novel_protein_peptide,orf_identified,
                                                                      gene_identified,transcript_identified)
 
 # export summary data
-write.csv(combined_peptide_result, paste0(output_directory, "/peptide_info.csv"), row.names=F, quote=F)
+write_tsv(combined_peptide_result, paste0(output_directory, "/peptide_info.tsv"))
 
 # ---------------------------------------- #
 
@@ -326,10 +419,14 @@ write.csv(combined_peptide_result, paste0(output_directory, "/peptide_info.csv")
 # ------- combined GTF -------- #
 
 # include orf_status and peptide_status in GTF mcols
+
+peptide_result<-peptide_result%>%dplyr::select("PID","transcript_id","peptide","gene_id","number_of_mapped_exons","strand" ,"gene_name","protein_length","tx_len","accession","orf_genomic_coordinates","transcript_biotype","orf_type","localisation","uniprot_status",
+"longest_orf_in_transcript","peptide_ids_gene","peptide_ids_orf" ,"peptide_ids_transcript", "shared_novel_protein_peptide","orf_identified","gene_identified","transcript_identified")
+                        
+
 results_to_merge_with_granges <- left_join(results_pept_df, peptide_result, by=c("transcript_id", "peptide", "strand", "PID", "gene_id"))
 results_to_merge_with_granges <- results_to_merge_with_granges[!(duplicated(results_to_merge_with_granges)),]
-results_to_merge_with_granges <- results_to_merge_with_granges %>% 
-  dplyr::select(-openprot_id, -`molecular_weight(kDA)`, -isoelectric_point, -hydrophobicity, -aliphatic_index)
+
 results_to_merge_with_granges$naming <- paste0(results_to_merge_with_granges$transcript_id, "_", results_to_merge_with_granges$peptide)
 
 # make GRanges from df of ORF transcript coordinates

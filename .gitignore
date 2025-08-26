@@ -1,0 +1,8 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+GenomeProt.Rproj
+GenomeProt/data/
+GenomeProt/bin/__pycache__/
+*.pyc

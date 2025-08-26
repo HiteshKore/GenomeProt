@@ -5,7 +5,9 @@ function usage() {
     cat << EOF
 Program: Generate custom genome
 
-Usage: genomeprot_db_generation.sh [-h] [-g <genome_fasta>] [-o <organism>] [-a <annotations>] [-c <start codon>] [-l <ORF length (AA)>] [-j <job identifier>] [-d <sample directory>]
+Usage: generate_custom_genome.sh [-h] [-g <genome_fasta>] [-r <reference GTF>] [-v <VCF file>] [-o <outdir>] 
+
+[-l <ORF length (AA)>] [-j <job identifier>] [-d <sample directory>]
 
 OPTIONS:
     -h help		help options
@@ -13,6 +15,7 @@ OPTIONS:
     -r reference GTF	Reference GTF file in GENCODE/ENSEMBL format
     -v VCF file  Varinats in VCF file format
     -o outdir		Output directory
+    
 EOF
 }
 
@@ -83,37 +86,20 @@ done
 
 vcf_file_name=$( basename $vcf_file)
 
-# Check if the file ends with .gz
-if [[ "${vcf_file}" == *.gz ]]; then
-    flt_vcf_file=$( basename $vcf_file | sed s'/.vcf.gz/.vcf_norm.gz/g')
-else
-    echo "The file is not compressed. Compressing now..."
-    bgzip -c "$vcf_file" >$outdir$vcf_file_name".gz"
-    vcf_file=$outdir$vcf_file_name".gz"
-    tabix -p vcf $vcf_file
+vcf_file_without_extn=$(echo $vcf_file_name| sed s'/.vcf//g')
 
-    flt_vcf_file=$( echo $vcf_file_name".gz"| sed s'/.vcf.gz/.vcf_norm.gz/g')
-    
-    echo $vcf_file
-    
-    
-fi
-
-#altered genome output file name
-alt_genome_file=$( basename $genome_fa | sed s'/.fa/_alt.fa/g')
-
-#remove consider first altered allele in case of multiple altered alleles
-
- norm_vcf="bcftools view -v snps $vcf_file | awk 'BEGIN {FS=OFS=\"\\t\"} {split(\$5, alleles, \",\"); \$5=alleles[1]; print}' | bcftools norm -f $genome_fa -o $outdir$flt_vcf_file -c x -d all -O z"
- echo $norm_vcf
-
- bash -c "$norm_vcf"
-
-#index filtered VCF file 
-tabix -p vcf $outdir$flt_vcf_file
- 
-bcftools consensus -f $genome_fa -o $outdir$alt_genome_file $outdir$flt_vcf_file
+genome_file=$( basename $genome_fa)
+genome_file_without_extn=$( echo $genome_file | sed s'/.fa//g')
 
 
+/opt/miniconda3/bin/conda run -n GenomeProt_env --no-capture-output python3 bin/database_module/vcfparser.py $vcf_file $outdir
 
 
+/opt/miniconda3/bin/conda run -n GenomeProt_env bgzip -c $outdir$vcf_file_without_extn"_heterozygous.vcf" >$outdir$vcf_file_without_extn"_heterozygous.vcf.gz"
+/opt/miniconda3/bin/conda run -n GenomeProt_env bgzip -c $outdir$vcf_file_without_extn"_homozygous.vcf" >$outdir$vcf_file_without_extn"_homozygous.vcf.gz"
+/opt/miniconda3/bin/conda run -n GenomeProt_env tabix -p vcf $outdir$vcf_file_without_extn"_homozygous.vcf.gz"
+/opt/miniconda3/bin/conda run -n GenomeProt_env tabix -p vcf $outdir$vcf_file_without_extn"_heterozygous.vcf.gz"
+/opt/miniconda3/bin/conda run -n GenomeProt_env bcftools consensus -f $genome_fa -o $outdir$genome_file_without_extn"_hm.fa" $outdir$vcf_file_without_extn"_homozygous.vcf.gz"
+/opt/miniconda3/bin/conda run -n GenomeProt_env bcftools consensus -f $outdir$genome_file_without_extn"_hm.fa" -o $outdir$genome_file_without_extn"_hm_ht.fa" $outdir$vcf_file_without_extn"_heterozygous.vcf.gz"
+
+conda deactivate

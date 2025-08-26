@@ -18,10 +18,18 @@ library(dplyr)
 library(RColorBrewer)
 library(data.table)
 library(scales)
+library(openxlsx)
 
 options(scipen=999)
 
-df <- read.csv(paste0(params$directory, "/", params$file))
+df <- read_tsv(paste0(params$directory, "/", params$file))
+
+#df <- read_tsv("/home/ubuntu/data_transfer/peptide_info.tsv")
+wb<-createWorkbook()
+addWorksheet(wb,"ORF_by_location")
+addWorksheet(wb,"ORF_by_tx_biotype")
+
+
 
 bad_pep <- df %>% dplyr::filter(is.na(transcript_id))
 
@@ -29,17 +37,20 @@ df <- df %>% dplyr::filter(!is.na(transcript_id))
 
 ```
 
-##### Definitions: 
+##### Definitions:
+ORF: Open reading frame.
 
-UMP: uniquely mapped peptide. Peptides that only mapped to one protein/ORF.
+Canonical ORF: ORF annotated in UniProt or RefSeq databases.
 
-Peptide evidence: feature had any kind of peptide mapped.
+Noncanonical ORF (ncORF): ORF not annotated in UniProt or RefSeq databases.
 
-Transcript-specific or gene-specific peptide: peptide was uniquely mapped to transcript or gene.
+UMP (Uniquely Mapped Peptide): Peptide uniquely mapped to a single ORF or protein.
 
-Peptide-confirmed: feature is distinguished by transcript-specific or gene-specific peptides.
+Peptide evidence: Feature supported by any mapped peptide.
 
+Transcript-specific or gene-specific peptide: Peptide uniquely mapped to a specific transcript or gene.
 
+Peptide-confirmed: Feature distinguished by transcript-specific or gene-specific peptides.
 
 ### Summary of peptides, transcripts and ORFs
 
@@ -53,28 +64,26 @@ uniqpeptides <- nrow(df %>% group_by(peptide) %>%
 
 txtotal <- length(unique(df$transcript_id))
 
-txuniqtotal <- nrow(df %>% group_by(transcript_id) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(transcript_identified == TRUE))
+txuniqtotal <-nrow(df%>%dplyr::filter(transcript_identified == TRUE)%>%select("transcript_id")%>%unique())
+  
+  
+  nrow(df%>%dplyr::filter(peptide_ids_transcript == TRUE)%>%select("peptide")%>%unique())
+  
 
 genetotal <- length(unique(df$gene_id))
 
-geneuniqtotal <- nrow(df %>% group_by(peptide) %>%
-            dplyr::filter(length(unique(gene_id)) == 1) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            group_by(gene_id) %>% slice_head(n=1))
+geneuniqtotal <- df %>%dplyr::filter(gene_identified==TRUE)%>%select("gene_id")%>%unique()%>%NROW
 
-orftotal <- length(unique(df$PID))
+orftotal <- unique(df$accession)%>%NROW
 
-orfuniqtotal <- nrow(df %>% group_by(PID) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(orf_identified == TRUE))
+orfuniqtotal <- df %>% dplyr::filter(orf_identified == TRUE)%>%select(accession)%>%unique()%>%NROW
+
 
 ```
 
-Peptides: `r paste0(peptotal)`
+Total Peptides: `r paste0(peptotal)`
 
-Uniquely mapped peptides (UMPs): `r paste0(uniqpeptides)`
+UMPs: `r paste0(uniqpeptides)`
 
 Transcripts with peptide evidence: `r paste0(txtotal)`
 
@@ -93,7 +102,6 @@ Proteins/ORFs with UMPs: `r paste0(orfuniqtotal)`
 ### Summary of peptides mapped to contaminants, decoys or that weren't mapped to genomic loci
 
 ```{r, eval=TRUE, echo=FALSE}
-
 
 bad_rev <- bad_pep %>% dplyr::filter(startsWith(PID, "rev"))
 if (nrow(bad_rev) == 0) {
@@ -130,19 +138,16 @@ Total other peptides that weren't mapped (likely belong to ORFs with multiple ge
 
 ```{r, eval=TRUE, echo=FALSE}
 
-
-a <- nrow(df %>% group_by(peptide) %>%
-            dplyr::filter(length(unique(PID))==1) %>%
-            slice_head(n=1))
-b <- nrow(df %>% group_by(peptide) %>%
-            dplyr::filter(length(unique(PID))==1 & length(unique(transcript_id))==1) %>%
-            slice_head(n=1))
-c <- nrow(df %>% group_by(peptide) %>%
-            dplyr::filter(length(unique(gene_id))==1) %>%
-            slice_head(n=1))
-d <- nrow(df %>% group_by(peptide) %>%
-          dplyr::filter(number_exons > 1) %>%
-          slice_head(n=1))
+#total uniquely mapped peptides
+a <- df%>%dplyr::filter(peptide_ids_orf==TRUE)%>%select(peptide)%>%unique()%>%NROW
+#Transcript-specific peptides   
+b <- df %>% dplyr::filter(peptide_ids_transcript==TRUE)%>%select(peptide)%>%unique()%>%NROW
+#Gene-specific peptides            
+c <- df %>% dplyr::filter(peptide_ids_gene==TRUE)%>%select(peptide)%>%unique()%>%NROW
+#Peptides spanning splice junctions 
+d <- df%>%dplyr::filter(number_of_mapped_exons > 1)%>%select(peptide)%>%unique()%>%NROW
+  
+#Peptides mapped to multiple ORFs from multiple genes 	
 e <- nrow(df %>% group_by(peptide) %>%
             dplyr::filter(length(unique(PID))>1 & length(unique(gene_id))>1) %>%
             slice_head(n=1))
@@ -172,52 +177,40 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 
 ```{r, eval=TRUE, echo=FALSE}
 
+#Known transcripts with peptide evidence 
+f <- df %>% filter(!startsWith(transcript_id, "Bambu"))%>%select(transcript_id)%>%unique()%>%NROW
+#Novel transcripts with peptide evidence 
+g <- df %>% filter(startsWith(transcript_id, "Bambu"))%>%select(transcript_id)%>%unique()%>%NROW
+  
+#Known transcripts encoding ORFs with UMPs 
+h <- df %>% dplyr::filter(orf_identified == TRUE)%>%filter(!startsWith(transcript_id, "Bambu"))%>%select(transcript_id)%>%unique()%>%NROW
 
-f <- nrow(df %>% group_by(transcript_id) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(!startsWith(transcript_id, "Bambu")))
+#Novel transcripts encoding ORFs with UMPs 
+i <- df %>% dplyr::filter(orf_identified == TRUE)%>%filter(startsWith(transcript_id, "Bambu"))%>%select(transcript_id)%>%unique()%>%NROW
 
-g <- nrow(df %>% group_by(transcript_id) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(startsWith(transcript_id, "Bambu")))
+#Peptide-confirmed known transcripts 
+j <- df %>% dplyr::filter(transcript_identified == TRUE & !startsWith(transcript_id, "Bambu"))%>%select(transcript_id)%>%unique()%>%NROW
+  
+#Peptide-confirmed novel transcripts
+k <-df %>% dplyr::filter(transcript_identified == TRUE & startsWith(transcript_id, "Bambu"))%>%select(transcript_id)%>%unique()%>%NROW
+  
+#Peptide-confirmed novel transcripts encoding annotated ORFs with UMPs
+l <- df %>% dplyr::filter(transcript_identified == TRUE & startsWith(transcript_id, "Bambu"))%>%dplyr::filter(!startsWith(accession, "ORF_"))%>%select(accession)%>%unique()%>%NROW
 
-h <- nrow(df %>% dplyr::filter(orf_identified == TRUE) %>% 
-            group_by(transcript_id) %>% slice_head(n=1) %>% 
-            dplyr::filter(!startsWith(transcript_id, "Bambu")))
-
-i <- nrow(df %>% dplyr::filter(orf_identified == TRUE) %>% 
-            group_by(transcript_id) %>% slice_head(n=1) %>% 
-            dplyr::filter(startsWith(transcript_id, "Bambu")))
-
-j <- nrow(df %>% group_by(transcript_id) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(transcript_identified == TRUE & !startsWith(transcript_id, "Bambu")))
-
-k <- nrow(df %>% group_by(transcript_id) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(transcript_identified == TRUE & startsWith(transcript_id, "Bambu")))
-
-l <- nrow(df %>% group_by(transcript_id) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(transcript_identified == TRUE & startsWith(transcript_id, "Bambu")) %>% 
-            group_by(PID) %>% dplyr::filter(!startsWith(PID, "ORF")) %>% slice_head(n=1))
-
-m <- nrow(df %>% group_by(transcript_id) %>%
-            slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(transcript_identified == TRUE & startsWith(transcript_id, "Bambu")) %>% 
-            group_by(PID) %>% dplyr::filter(startsWith(PID, "ORF")) %>% slice_head(n=1))
+#Peptide-confirmed novel transcripts encoding unannotated ORFs with UMPs 	
+m <- df %>% dplyr::filter(transcript_identified == TRUE & startsWith(transcript_id, "Bambu"))%>%dplyr::filter(startsWith(accession, "ORF_"))%>%select(accession)%>%unique()%>%NROW
 
 
 # Make stats
 item <- c(
-  "Known transcripts with peptide evidence ",
-  "Novel transcripts with peptide evidence ",
-  "Known transcripts encoding ORFs with UMPs ",
-  "Novel transcripts encoding ORFs with UMPs ",
-  "Peptide-confirmed known transcripts ",
-  "Peptide-confirmed novel transcripts ",
-  "Peptide-confirmed novel transcripts encoding annotated ORFs with UMPs ",
-  "Peptide-confirmed novel transcripts encoding unannotated ORFs with UMPs ")
+  "Annotated (known) transcripts with peptide evidence ",
+  "Unannotated (novel) transcripts with peptide evidence ",
+  "Annotated transcripts encoding ORFs with UMPs ",
+  "Unannotated transcripts encoding ORFs with UMPs ",
+  "Peptide-confirmed annotated transcripts ",
+  "Peptide-confirmed unannotated transcripts ",
+  "Peptide-confirmed unannotated transcripts encoding canonical ORFs with UMPs ",
+  "Peptide-confirmed unannotated transcripts encoding noncanonical ORFs with UMPs ")
 
 total <- c(f,g,h,i,j,k,l,m)
 stats <- data.frame(item, total)
@@ -234,29 +227,26 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 ### Protein/ORF-level data
 
 ```{r, eval=TRUE, echo=FALSE}
+#Annotated ORFs with peptide evidence
+n <-df %>% dplyr::filter(!startsWith(accession, "ORF_"))%>%select(accession)%>%unique()%>%NROW
 
-n <- nrow(df %>% group_by(PID) %>%
-            slice_head(n=1) %>%
-            ungroup() %>% dplyr::filter(!startsWith(PID, "ORF")))
+#Unannotated ORFs with peptide evidence 	 
+o <-df %>% dplyr::filter(startsWith(accession, "ORF_"))%>%select(accession)%>%unique()%>%NROW
 
-o <- nrow(df %>% group_by(PID) %>%
-            slice_head(n=1) %>%
-            ungroup() %>% dplyr::filter(startsWith(PID, "ORF")))
+#Annotated ORFs with UMPs
+p <-df %>% dplyr::filter(orf_identified == TRUE & !startsWith(accession, "ORF_"))%>%select(accession)%>%unique()%>%NROW
+  
+#Unannotated ORFs with UMPs 
+q <-df %>% dplyr::filter(orf_identified == TRUE & startsWith(accession, "ORF_"))%>%select(accession)%>%unique()%>%NROW
+  
 
-p <- nrow(df %>% group_by(PID) %>%
-            slice_head(n=1) %>%
-            ungroup() %>% dplyr::filter(orf_identified == TRUE & !startsWith(PID, "ORF")))
-
-q <- nrow(df %>% group_by(PID) %>%
-            slice_head(n=1) %>%
-            ungroup() %>% dplyr::filter(orf_identified == TRUE & startsWith(PID, "ORF")))
 
 # Make stats
 item <- c(
-  "Annotated ORFs with peptide evidence ",
-  "Unannotated ORFs with peptide evidence ",
-  "Annotated ORFs with UMPs ",
-  "Unannotated ORFs with UMPs ")
+  "Canonical ORFs with peptide evidence ",
+  "Noncanonical ORFs with peptide evidence ",
+  "Canonical ORFs with UMPs ",
+  "Noncanonical ORF with UMPs ")
 
 total <- c(n,o,p,q)
 stats <- data.frame(item, total)
@@ -266,34 +256,34 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 # Export overall stats file
 #write.table(stats, file = paste0(output,"_stats.csv"), sep=",", quote=F, col.names=F, row.names=F)
 
-
 ```
 
 
 
 ### Figures
 
-#### Peptides by mapping status
+#### Peptides by mapping status (Total peptides: `r peptotal`)
 
 ```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 plot1 <- data.frame(
-  metric = c("total", "gene-specific", "UMP"),
-  total = c(peptotal, c, a)
+  Category = c("Shared peptides", "Uniquely mapped peptides"),
+  count = c(peptotal-a, a)
   )
 
-plot1$metric <- factor(plot1$metric,
-                       levels=c("total", "gene-specific", "UMP"))
 
-pepplot <- ggplot(plot1) +
-  geom_bar(aes(x=metric, y=total, fill=metric), stat="identity") +
-  scale_fill_manual(
-    values = c("total" = "#D3D3D3", "gene-specific" = "#818589", "UMP" = "orangered2")
-    ) +
-  ylab("Total") +
-  xlab("Category") +
-  theme_bw() +
-  theme(legend.position = "none")
+plot1$percent <- round(100 * plot1$count / sum(plot1$count), 1)
+
+plot1$label<-paste0(plot1$count, "(",plot1$percent, "%)")
+
+pepplot<-ggplot(plot1, aes(x = "", y = count, fill = Category)) +
+  geom_col(width = 1,color= "white") +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = label),
+            position = position_stack(vjust = 0.5),size=5) +
+  theme_void()+labs(fill="Category")+
+  scale_fill_manual(values = c("Shared peptides"="#D3D3D3", "Uniquely mapped peptides" ="lightgreen"))
+
 
 suppressWarnings(print(pepplot))
 
@@ -308,21 +298,21 @@ suppressWarnings(print(pepplot))
 
 umps_per_protein <- df %>% 
   dplyr::filter(orf_identified == TRUE) %>% 
-  group_by(PID) %>%
+  group_by(accession) %>%
   summarise(number_ump = length(unique(peptide))) %>% 
   ungroup() %>% 
   mutate(orf_type = case_when(
-    startsWith(PID, "ORF") ~ "unannotated",
+    startsWith(accession, "ORF") ~ "unannotated",
     TRUE ~ "annotated"
   ))
 
 tallied <- umps_per_protein %>% 
   group_by(orf_type, number_ump) %>% 
   summarise(n = n()) %>% 
-  dplyr::filter(n>10)
+  dplyr::filter(n>10)%>%rename("ORF type"=orf_type)
 
 ump_per_protein_plot <- ggplot(tallied) +
-  geom_bar(aes(x=number_ump, y=n, fill=orf_type), position="stack", stat="identity") +
+  geom_bar(aes(x=number_ump, y=n, fill=`ORF type`), position="stack", stat="identity") +
   ylab("Number of ORFs") +
   xlab("Number of UMPs per ORF") +
   scale_x_continuous(breaks = pretty_breaks()) +
@@ -344,12 +334,12 @@ summary_df <- df %>%
   group_by(peptide) %>% 
   slice_head(n=1) %>% 
   ungroup() %>% 
-  group_by(number_exons) %>%
+  group_by(number_of_mapped_exons) %>%
   summarise(total = n())
 
 exons_plot <- ggplot(summary_df) +
-  geom_bar(aes(x=number_exons, y=total, fill=number_exons), stat="identity") +
-  ylab("Total peptides") +
+  geom_bar(aes(x=number_of_mapped_exons, y=total, fill=number_of_mapped_exons), stat="identity") +
+  ylab("Number of peptides") +
   xlab("Number of exons spanned") +
   theme_bw() +
   theme(legend.position = "none")
@@ -360,22 +350,19 @@ suppressWarnings(print(exons_plot))
 
 
 
-#### Unannotated ORFs (with UMPs) by localisation
+#### Noncanonical ORFs with UMPs by localisation
 
 ```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
-summary_df <- df %>% group_by(peptide) %>% 
-            dplyr::filter(length(unique(PID)) == 1) %>%
-            ungroup() %>% 
-            group_by(PID) %>% slice_head(n=1) %>% ungroup() %>% 
-            dplyr::filter(startsWith(PID, "ORF")) %>%
-            group_by(localisation) %>%
-            summarise(total = n())
+summary_df <- df %>%dplyr::filter(peptide_ids_orf==TRUE & startsWith(accession, "ORF"))%>%select(accession,localisation)%>%unique()%>%
+  group_by(localisation) %>%summarise(Count = n())
+
+writeData(wb,sheet = "ORF_by_location",x=summary_df)
 
 plot_orf_local <- ggplot(summary_df) +
-  geom_bar(aes(x=localisation, y=total, fill=localisation), stat="identity") +
-  ylab("Total") +
-  xlab("ORF localisation") +
+  geom_bar(aes(x=localisation, y=Count, fill=localisation), stat="identity") +
+  ylab("Number of ncORFs") +
+  xlab("Localisation") +
   scale_fill_brewer(palette = "Dark2") +
   theme_bw() +
   theme(legend.position = "none")
@@ -386,20 +373,19 @@ suppressWarnings(print(plot_orf_local))
 
 
 
-#### Unannotated ORFs (with UMPs) by simplified transcript biotype
+#### Noncanonical ORFs with UMPs by simplified transcript biotype
 
 ```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
-summary_df <- df %>% group_by(PID, transcript_id) %>% dplyr::filter(orf_identified == TRUE) %>% 
-            slice_head(n=1) %>% 
-            ungroup() %>% 
-            dplyr::filter(startsWith(PID, "ORF")) %>%
-            group_by(simplified_biotype) %>%
-            summarise(total = n())
+summary_df <- df%>%dplyr::filter(orf_identified == TRUE & startsWith(accession, "ORF"))%>%select(accession,simplified_biotype)%>%unique()%>%
+  group_by(simplified_biotype) %>%summarise(Count = n())
+
+writeData(wb,sheet = "ORF_by_tx_biotype",x=summary_df)
+
 
 plot_orf_biotype <- ggplot(summary_df) +
-  geom_bar(aes(x=simplified_biotype, y=total, fill=simplified_biotype), stat="identity") +
-  ylab("Total") +
+  geom_bar(aes(x=simplified_biotype, y=Count, fill=simplified_biotype), stat="identity") +
+  ylab("Number of ncORFs") +
   xlab("Transcript biotype") +
   scale_fill_brewer(palette = "Set3") +
   theme_bw() +
@@ -417,12 +403,13 @@ suppressWarnings(print(plot_orf_biotype))
 ```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 summary_df <- df %>% dplyr::filter(orf_identified == TRUE) %>% 
-            group_by(PID) %>% slice_head(n=1) %>% ungroup()
+            select(accession,protein_length,orf_type) %>%unique()%>%
+  rename("ORF type"=orf_type)
 
 min_orf_length <- min(as.numeric(df$protein_length), na.rm=T)
 
 plot_orf_lengths <- ggplot(summary_df) +
-  geom_density(aes(x=protein_length, y=..scaled.., color=orf_type)) +
+  geom_density(aes(x=protein_length, y=..scaled.., color=`ORF type`)) +
   ylab("Scaled density") +
   xlab(paste0("ORF Length (", min_orf_length, "-1000 AA)")) +
   scale_color_manual(values = c("annotated" = "darkgreen", "unannotated" = "deepskyblue3")) +
@@ -437,8 +424,9 @@ suppressWarnings(print(plot_orf_lengths))
 
 ```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
+#save stats
+saveWorkbook(wb,paste0(params$directory,"/ncORF_stats.xlsx"),overwrite = TRUE)
 # save all PDFs
-
 pdf(paste0(params$directory,"/report_images/peptides-by-mapping-status.pdf"), w=6, h=4)
 suppressWarnings(print(pepplot))
 invisible(dev.off())
