@@ -21,7 +21,7 @@ function short_read_commands(){
   # generate salmon index
   # Check if both reference genome and transcriptome are gzipped
   echo "Generating salmon index"
-  if [[ "$transcriptome_db" == *.gz ]] && [[ "$transcriptome_db" == *.gz ]]; then
+  if [[ "$transcriptome_db" == *.gz ]] && [[ "$genome_fa" == *.gz ]]; then
       echo "Processing gzipped files"
       # Generate decoy file
       grep '^>' <(gunzip -c $genome_fa) | cut -d ' ' -f 1 > $output_dir"decoys.txt"
@@ -33,20 +33,20 @@ function short_read_commands(){
       cat "$transcriptome_db" "$genome_fa" > $output_dir"gentrome.fa.gz"
   
       # Run Salmon index
-      echo conda run -n GenomeProt_env salmon index -t $output_dir"gentrome.fa.gz" -d $output_dir"decoys.txt"  -p "$threads" -i $output_dir"salmon_index" --gencode
+      conda run -n GenomeProt_env salmon index -t $output_dir"gentrome.fa.gz" -d $output_dir"decoys.txt"  -p "$threads" -i $output_dir"salmon_index" --gencode
   
   else
       echo "Processing uncompressed files"
       # Generate decoy file
-      echo grep '^>' "$genome_fa" | cut -d " " -f 1 > $output_dir"decoys.txt"
+      grep '^>' "$genome_fa" | cut -d " " -f 1 > $output_dir"decoys.txt"
   
       # Remove '>' from decoy file
-      echo sed -i -e 's/>//g' $output_dir"decoys.txt"
+      sed -i -e 's/>//g' $output_dir"decoys.txt"
   
       # Concatenate reference and transcriptome to create gentrome
       cat "$transcriptome_db" "$genome_fa" > $output_dir"gentrome.fa"
       # Run Salmon index
-      echo conda run -n GenomeProt_env salmon index -t $output_dir"gentrome.fa" -d $output_dir"decoys.txt" -p "$threads" -i $output_dir"salmon_index" --gencode
+      conda run -n GenomeProt_env salmon index -t $output_dir"gentrome.fa" -d $output_dir"decoys.txt" -p "$threads" -i $output_dir"salmon_index" --gencode
 
 fi
   
@@ -112,6 +112,7 @@ function generate_database() {
   ref_genome=${11}
   tx_count_file=${12}
   min_tx_count=${13}
+  input_type=${14}
   
   
     if [[ "$vcf_fn" == "None" ]]; then 
@@ -131,9 +132,14 @@ function generate_database() {
         
         fi
         
-      
-      echo "Annotating proteome database" | tee -a "$log_file"
-      conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length None $organism
+        if [[ "$input_type" == "GTF" ]];then
+            echo "Annotating proteome database" | tee -a "$log_file"
+            conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $custom_gtf $output_dir $orf_input_type $orf_length None $organism
+        else
+            echo "Annotating proteome database" | tee -a "$log_file"
+            conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length None $organism
+        
+        fi
 
       
     else #vcf file provided
@@ -176,6 +182,7 @@ function fastq_bam_input() {
   three_utr_orf=${15}
   ref_proteome=${16}
   transcript_expr_cutoff=${17}
+  input_type=${18}
 
   echo "Sequencing platform is: " $platform | tee -a "$log_file"
   index_fn=$(basename "$genome_fa")".mmi"
@@ -219,7 +226,7 @@ function fastq_bam_input() {
       echo "****"$transcript_expr_cutoff
    
       #protome database generation
-      generate_database "$custom_gtf" "$output_dir" "$ref_gtf" "$organism" "$orf_length" "$vcf_fn" "$orf_input_type" "$five_utr_orf" "$three_utr_orf" "$ref_proteome" "$genome_fa" "$transcript_count_fn" "$transcript_expr_cutoff"
+      generate_database "$custom_gtf" "$output_dir" "$ref_gtf" "$organism" "$orf_length" "$vcf_fn" "$orf_input_type" "$five_utr_orf" "$three_utr_orf" "$ref_proteome" "$genome_fa" "$transcript_count_fn" "$transcript_expr_cutoff" "$input_type"
 
   
   fi #platform loop closed
@@ -259,7 +266,7 @@ OPTIONS:
     -D, --downstream-orf        Downstream (3'UTR) ORFs: TRUE/FALSE (boolean)
     -m, --min-tx-count          Minimum transcript expression cutoff (numeric,default: 5)
     -C, --tx-count-file         Transcript count file (optional)
-    -d, --sample-dir            Sample directory
+    -d, --sample-dir            Sample directory (required for FASTQ and BAM input)
     -O, --output-dir            Output directory
 
 EOF
@@ -523,7 +530,7 @@ if conda env list | grep -q "^$genomeprot_env\s"; then
         
         #generate database
         tx_count_file=$output_directory"counts_transcript.txt"
-        generate_database "$reference_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count"
+        generate_database "$reference_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
         
       
     fi
@@ -531,9 +538,9 @@ if conda env list | grep -q "^$genomeprot_env\s"; then
     
     #execute commands
     if [[ "$data_type" = "GTF" ]]; then
-      generate_database "$custom_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count"
+      generate_database "$custom_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
     else
-      fastq_bam_input fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$sequencing_platform" "$genome_fa" "$sample_directory" "$output_directory" "$threads" "$reference_gtf" "$organism" "$orf_length" "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$min_tx_count"
+      fastq_bam_input fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$sequencing_platform" "$genome_fa" "$sample_directory" "$output_directory" "$threads" "$reference_gtf" "$organism" "$orf_length" "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$min_tx_count" "$data_type"
     fi
     
     

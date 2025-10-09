@@ -551,10 +551,11 @@ def main():
     #store temparary ids of canonical or all novel ORFs according to options provided
     for protein_seq,annotations in orf_annotation_map.items():
       for protein_annotation in annotations:
-        longest_orf=protein_annotation.split("\t")[12]
+        longest_orf=protein_annotation.split("\t")[14]
         accession=protein_annotation.split("\t")[0].replace("_var","")
         if args[6]=="canonical":
           if longest_orf=="Y":
+            
             if accession not in canonical_novel_orf_ids:
               canonical_novel_orf_ids.append(accession)
         if args[6]=="all":

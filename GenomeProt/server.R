@@ -67,8 +67,15 @@ fastq_server <- function(input, output, session) {
       file_prefix <- user_fastq_files_df$file_prefix[i] # get file prefix
       
       # define command to map fastq file reads to the indexed genome file with minimap2
-      minimap2_command <- paste0(conda_path," run -n GenomeProt_env minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
-      
+      minimap2_command <- paste0(
+        conda_path, " run -n GenomeProt_env bash -c '",
+        "minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ",
+        index_file, " ", fastq_file,
+        " | samtools view -bh",
+        " | samtools sort -@ ", input$user_threads,
+        " -o ", outdir_bam, "/", file_prefix, ".bam",
+        "'"
+      )
       print(minimap2_command)
       
       # run mapping 

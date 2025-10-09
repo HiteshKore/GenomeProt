@@ -6,6 +6,7 @@ channels:
   - r
   - defaults
 dependencies:
+  - cd-hit=4.8.1
   - samtools
   - salmon
   - gffread
@@ -41,6 +42,7 @@ dependencies:
   - r-gplots
   - r-reshape2
   - r-phylotools
+  - r-openxlsx
   - bioconductor-rsamtools
   - bioconductor-bambu
   - bioconductor-genomicfeatures
