@@ -8,6 +8,7 @@ channels:
 dependencies:
   - cd-hit=4.8.1
   - samtools
+  - bcftools
   - salmon
   - gffread
   - gffcompare
