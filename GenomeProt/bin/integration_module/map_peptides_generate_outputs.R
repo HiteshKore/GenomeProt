@@ -27,7 +27,7 @@ metadata_import_file <- opt$metadata
 gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
 
-# source("/home/hiteshk/GenomeProt_git/GenomeProt/GenomeProt/R/integration_functions.R")
+# source("/home/hiteshk/GenomeProt_git/GenomeProt/R/integration_functions.R")
 # proteomics_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/peptide_data.txt"
 # metadata_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/revised_database/proteome_database_metadata.txt"
 # gtf_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/revised_database/proteome_database_transcripts.gtf"

@@ -54,7 +54,6 @@ fastq_server <- function(input, output, session) {
     
     # define minimap2 command to index genome
     minimap2_index_command <- paste0(conda_path," run -n GenomeProt_env minimap2 -ax splice:hq -d ", index_file, " ", input$user_reference_genome$datapath)
-
     
     print(minimap2_index_command)
     
@@ -68,8 +67,15 @@ fastq_server <- function(input, output, session) {
       file_prefix <- user_fastq_files_df$file_prefix[i] # get file prefix
       
       # define command to map fastq file reads to the indexed genome file with minimap2
-      minimap2_command <- paste0(conda_path," run -n GenomeProt_env minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ", index_file, " ", fastq_file, " | samtools view -bh | samtools sort -@ ", input$user_threads, " -o ", outdir_bam, "/", file_prefix, ".bam")
-      
+      minimap2_command <- paste0(
+        conda_path, " run -n GenomeProt_env bash -c '",
+        "minimap2 -t ", input$user_threads, " -ax splice:hq --sam-hit-only --secondary=no ",
+        index_file, " ", fastq_file,
+        " | samtools view -bh",
+        " | samtools sort -@ ", input$user_threads,
+        " -o ", outdir_bam, "/", file_prefix, ".bam",
+        "'"
+      )
       print(minimap2_command)
       
       # run mapping 
@@ -92,9 +98,7 @@ fastq_server <- function(input, output, session) {
       command_generate_decoy <- paste0("grep '^>' ", input$user_reference_genome$datapath, " | cut -d \" \" -f 1 >", outdir_bam, "/decoys.txt")
       command_sed <- paste0("sed -i -e 's/>//g' ", outdir_bam, "/decoys.txt")
       command_ref_file <- paste0("cat ", input$transcriptome_file$datapath, " ", input$user_reference_genome$datapath, " >", outdir_bam, "/gentrome.fa")
-
       command_index <- paste0(conda_path," run -n GenomeProt_env salmon index -t ", outdir_bam, "/gentrome.fa -d ", outdir_bam, "/decoys.txt -p ", input$user_threads, " -i ", outdir_bam, "/salmon_index --gencode")
-
       
     }
     
@@ -451,7 +455,6 @@ database_server <- function(input, output, session) {
       break
     }
   } else { # if no VCF file uploaded
-
     command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None ", input$organism)
     print(command_annotate_proteome)
   }

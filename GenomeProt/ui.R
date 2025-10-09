@@ -171,7 +171,7 @@ ui <- dashboardPage(
                        # Variable options
                        conditionalPanel(
                          condition = "input.input_type == 'fastq_input'",
-                         numericInput("user_threads", label = "CPUs:", value = 4, min = 1, max = 46, step = 1),
+                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 46, step = 1),
                          #h5("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
                          fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                          conditionalPanel(condition = "input.sequencing_type == 'short-read'",
@@ -181,7 +181,7 @@ ui <- dashboardPage(
                        ),
                        conditionalPanel(
                          condition = "input.input_type == 'bam_input'",
-                         numericInput("user_threads", label = "CPUs:", value = 4, min = 1, max = 46, step = 1),
+                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 46, step = 1),
                          conditionalPanel(
                                           condition="(input.sequencing_type == 'short-read') || ( input.vcf_option == true)" 
                                           ,
@@ -284,7 +284,7 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "isovis", 
               h2("Visualise results with IsoVis"),
-              h5("The IsoVis website is displayed below for convenience. It is also accessible directly at: https://isomix.org/isovis/"),
+              h5("The IsoVis website is displayed below for convenience. It is also accessible directly at: https://isomix-test.stemformatics.org/isovis/"),
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
               conditionalPanel(
                 condition = "input.show_isovis_steps % 2 == 1",
@@ -296,9 +296,9 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 column(12,
-                    tags$iframe(src = "https://isomix.org/isovis/", 
+                    tags$iframe(src = "https://isomix-test.stemformatics.org/isovis/", 
                                 width = "100%", 
-                                height = "800px",
+                                height = "950px",
                                 style = "border:none;"))
               )
   
