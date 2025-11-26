@@ -120,4 +120,3 @@ fi
  
 
 
-conda deactivate
