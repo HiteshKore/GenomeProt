@@ -386,6 +386,7 @@ database_server <- function(input, output, session) {
     if (input$sequencing_type == "long-read") {
       db_gtf_file <- paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf")
       db_counts_file <- paste0(session_id, "/bambu_output/transcript_counts.txt")
+      bambu_files <- c(paste0(session_id, "/bambu_output/bambu_transcript_annotations.gtf"), paste0(session_id, "/bambu_output/transcript_counts.txt"), paste0(session_id, "/bambu_output/novel_transcript_classes.csv"), paste0(session_id, "/bambu_output/gffcompare.tmap.txt"))
     } else if (input$sequencing_type == "short-read") {
       db_gtf_file <- input$user_reference_gtf$datapath
       db_counts_file <- paste0(session_id, "/mapping_output/transcript_counts.txt")
@@ -450,6 +451,10 @@ database_server <- function(input, output, session) {
   if (!is.null(input$user_vcf_file)) { # if there is a VCF file uploaded
     command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt "),input$organism )
     print(command_annotate_proteome)
+    if (!file.exists(paste0(outdir_db, "/Mutant_ORFome_aa.txt"))) {
+      message("Generate variant proteome database failed")
+      break
+    }
   } else { # if no VCF file uploaded
     command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", input$user_reference_gtf$datapath, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None ", input$organism)
     print(command_annotate_proteome)
@@ -466,12 +471,27 @@ database_server <- function(input, output, session) {
   # zip all results files depending on input types
   if (file.exists(paste0(outdir_db, "/proteome_database.fasta")) && file.exists(paste0(outdir_db, "/proteome_database_transcripts.gtf")) && !file.exists(paste0(outdir_db, "/orf_temp.txt"))) {
     if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
-      bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE)
-      files_to_zip_db <- c(bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy bam files into db output
+      bam_files <- list.files(path = paste0(session_id, "/mapping_output"), "\\.bam$", full.names = TRUE) # get files
+      file.copy(bam_files, outdir_db) # copy files
+      bam_files_zip <- list.files(path = outdir_db, "\\.bam$", full.names = FALSE) # get new file names
+      # copy bambu output into db output
+      file.copy(bambu_files, outdir_db)
+      files_to_zip_db <- c(bam_files_zip, "bambu_transcript_annotations.gtf", "transcript_counts.txt", "novel_transcript_classes.csv", "gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-      files_to_zip_db <- c("../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy bambu output into db output
+      file.copy(bambu_files, outdir_db)
+      files_to_zip_db <- c("bambu_transcript_annotations.gtf", "transcript_counts.txt", "novel_transcript_classes.csv", "gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$sequencing_type == "short-read") {
-      files_to_zip_db <- c("../mapping_output/transcript_counts.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
+      # copy short-read counts into db output
+      file.copy(paste0(session_id, "/mapping_output/transcript_counts.txt"), outdir_db)
+      files_to_zip_db <- c("transcript_counts.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      
     } else if (input$input_type == "gtf_input") {
       files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     }
@@ -734,6 +754,18 @@ server <- function(input, output, session) {
   # VISUALISATION MODULE
   
   data_storage <- reactiveValues()
+  
+  observeEvent(input$toggle_filters, {
+    # check status
+    filters_visible <- shinyjs::toggle(id = "filters_container")
+    
+    # update the toggle button text
+    if (input$toggle_filters %% 2 == 1) { # odd number clicks
+      updateActionLink(session, "toggle_filters", label = "▲ Hide filtering options")
+    } else { # even number clicks
+      updateActionLink(session, "toggle_filters", label = "▼ Gene list filtering options")
+    }
+  })
   
   # function to import and process combined gtf
   import_and_preprocess_gtf <- function(gtf_path) {

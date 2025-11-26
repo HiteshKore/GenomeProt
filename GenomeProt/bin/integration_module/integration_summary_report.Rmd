@@ -13,7 +13,6 @@ params:
 
 ```{r setup, include=FALSE, warning=FALSE}
 library(ggplot2)
-library(DESeq2)
 library(gplots)
 library(dplyr)
 library(RColorBrewer)
@@ -264,7 +263,7 @@ knitr::kable(stats, format = "html", col.names=c(" ", ""))
 
 #### Peptides by mapping status (Total peptides: `r peptotal`)
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 plot1 <- data.frame(
   Category = c("Shared peptides", "Uniquely mapped peptides"),
@@ -294,7 +293,7 @@ suppressWarnings(print(pepplot))
 
 #### Number of UMPs per ORF (shown for >10 ORFs)
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 umps_per_protein <- df %>% 
   dplyr::filter(orf_identified == TRUE) %>% 
@@ -328,7 +327,7 @@ suppressWarnings(print(ump_per_protein_plot))
 
 #### Peptides by number of exons spanned
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 summary_df <- df %>% 
   group_by(peptide) %>% 
@@ -352,7 +351,7 @@ suppressWarnings(print(exons_plot))
 
 #### Noncanonical ORFs with UMPs by localisation
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 summary_df <- df %>%dplyr::filter(peptide_ids_orf==TRUE & startsWith(accession, "ORF"))%>%dplyr::select(accession,localisation)%>%unique()%>%
   group_by(localisation) %>%summarise(Count = n())
@@ -375,7 +374,12 @@ suppressWarnings(print(plot_orf_local))
 
 #### Noncanonical ORFs with UMPs by simplified transcript biotype
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
+
+summary_df <- df%>%dplyr::filter(orf_identified == TRUE & startsWith(accession, "ORF"))%>%select(accession,simplified_biotype)%>%unique()%>%
+  group_by(simplified_biotype) %>%summarise(Count = n())
+
+writeData(wb,sheet = "ORF_by_tx_biotype",x=summary_df)
 
 summary_df <- df%>%dplyr::filter(orf_identified == TRUE & startsWith(accession, "ORF"))%>%dplyr::select(accession,simplified_biotype)%>%unique()%>%
   group_by(simplified_biotype) %>%summarise(Count = n())
@@ -400,7 +404,7 @@ suppressWarnings(print(plot_orf_biotype))
 
 #### Lengths of annotated and unannotated ORFs (with UMPs)
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, eval=TRUE, echo=FALSE, message = FALSE, warning = FALSE}
 
 summary_df <- df %>% dplyr::filter(orf_identified == TRUE) %>% 
             dplyr::select(accession,protein_length,orf_type) %>%unique()%>%
@@ -409,10 +413,10 @@ summary_df <- df %>% dplyr::filter(orf_identified == TRUE) %>%
 plot_orf_lengths <- ggplot(summary_df) +
   geom_density(aes(x=protein_length, y=..scaled.., color=`ORF type`)) +
   ylab("Scaled density") +
-  xlab("ORF Length (0-1000 AA)") +
+  xlab(paste0("ORF Length (", min_orf_length, "-1000 AA)")) +
   scale_color_manual(values = c("annotated" = "darkgreen", "unannotated" = "deepskyblue3")) +
   theme_bw() +
-  xlim(0,1000)
+  xlim(min_orf_length,1000)
 
 suppressWarnings(print(plot_orf_lengths))
 

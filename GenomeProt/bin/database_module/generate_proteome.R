@@ -47,7 +47,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts=NA, min_count=NA, o
   
   # remove version numbers for search
   bambu_df <- bambu_df %>% separate(gene_id, into="ensg_id", sep="\\.", remove = FALSE)
-  
+ 
   # use mygene to search for gene names
   gene_query <- mygene::queryMany(unique(bambu_df$ensg_id), scopes="ensembl.gene", fields="symbol", species=as.character(organism),  returnall=TRUE)
   
@@ -465,6 +465,7 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len=30, find_UTR_5_or
     
     return(orf_aa_seq_df_genomic_coordinates_merge_frm)
     
+    return(aa_sequences)
   }
   # ORF discovery
   # set ORF max length to large number (to disable)
@@ -614,7 +615,7 @@ wt_orfome <- get_transcript_orfs(filteredgtf=filtered_gtf, organism=organism, or
 
 # generate custom genome
 if (!is.null(ref_genome) && !is.null(vcf_file)) { # if a genome and vcf have been uploaded
-  
+
   # define bash script command to inject variants into genome
   custom_genome_command <- paste0("bash bin/database_module/generate_custom_genome.sh -g  ", ref_genome, " -r ", reference_gtf, " -v ", vcf_file, " -o ", output_directory)
   #print(custom_genome_command)
