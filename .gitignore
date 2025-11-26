@@ -5,4 +5,6 @@
 GenomeProt.Rproj
 GenomeProt/data/
 GenomeProt/bin/__pycache__/
+GenomeProt/execute_commands_with_bash_env.sh
 *.pyc
+
