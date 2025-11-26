@@ -69,3 +69,4 @@ dependencies:
     - py-cdhit
     - peptides
     - pysam
+    - vcfpy

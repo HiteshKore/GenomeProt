@@ -148,14 +148,15 @@ function generate_database() {
         echo $min_tx_count
         if [[ "$tx_count_file" == "None" ]]; then
           echo "Generating proteome database" | tee -a "$log_file"
-          conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
+           conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
         else
-          conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
+           conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
         fi
       
 
       echo "Annotating proteome database" | tee -a "$log_file"
-      conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length $vcf_fn $organism
+      mutant_db=$output_dir"Mutant_ORFome_aa.txt"
+      conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length $mutant_db $organism
 
     fi
   
@@ -219,8 +220,8 @@ function fastq_bam_input() {
       fi
       
       
-      transcript_count_fn=$output_directory"counts_transcript.txt"
-      custom_gtf=$output_directory"extended_annotations.gtf"
+      transcript_count_fn=$output_directory"counts_transcript.txt" #not cosistent UI rename to 'transcript_counts.txt'
+      custom_gtf=$output_directory"extended_annotations.gtf" #rename to 'bambu_transcript_annotations.gtf'
       
       echo "****"$transcript_count_fn
       echo "****"$transcript_expr_cutoff
@@ -531,8 +532,6 @@ if conda env list | grep -q "^$genomeprot_env\s"; then
         #generate database
         tx_count_file=$output_directory"counts_transcript.txt"
         generate_database "$reference_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
-        
-      
     fi
        
     
@@ -547,13 +546,8 @@ if conda env list | grep -q "^$genomeprot_env\s"; then
 else
     echo "Conda environment '$genomeprot_env' does not exist. Creating it from $yaml_file..."
     if [ -f "$yaml_file" ]; then
-        
         #create conda environment and install packages
-        
-        echo Rscript $install_file $yaml_file
-        
-        
-    
+        Rscript $install_file $yaml_file
     else
         echo "YAML file '$yaml_file' not found. Cannot create Conda environment." >&2
         exit 1

@@ -36,12 +36,10 @@ def record_to_vcf_line(record): #returns atributes for first sample in case of m
     for call in record.calls:
       call_data = [call.data.get(field, '.') for field in record.FORMAT] #fetch the values for GT:AD:DP:GQ:PL and store in list. If value does not exist it will return '.'
       call_fields.append(":".join(map(str, call_data)))
-    
+    consensus_gt=call_fields[0].split(":")[0]
     # Join all parts to form the VCF line
-    vcf_line = f"{chrom}\t{pos}\t.\t{ref}\t{alts}\t{qual}\t{filters}\t{info}\t{format_field}\t{call_fields[0]}" #Just to simplify vcf, it will only consider the attributes from first sample.
-    #It doesn't affect the downstream calculations.
-    
-    vcf_line=vcf_line.replace("[","").replace("]", "").replace(" ", "")
+    vcf_line = f"{chrom}\t{pos}\t.\t{ref}\t{alts}\t{qual}\t{filters}\t{info}\tGT\t0/1" #Simplified vcf compatible with vcftools consensus.
+    #vcf_line=vcf_line.replace("[","").replace("]", "").replace(" ", "")
    
     return vcf_line
     
@@ -63,6 +61,7 @@ def getMostFrequentVariant(record,likely_genotype,total_dp,total_ref_ale_dp):
     ad = call.data.get("AD",0)
     
     if not isinstance(ad, int) and len(ad)>0 and ad is not None: #handles format change in joint vcf produced by GATk and bcftool merge
+      #print(ad)
       ad.pop(0)
       #loop through alternate allele depths
       for ind in range(0,len(ad)):
@@ -77,7 +76,7 @@ def getMostFrequentVariant(record,likely_genotype,total_dp,total_ref_ale_dp):
     #only store SNVs
     if len(k)==1 and k!="*":
       snv_vars[k]=varmap[k]
-  
+  #print(snv_vars.items())
   if len(snv_vars.keys())>0: #if there is at least one SNV
     alt_alele = max(snv_vars, key=snv_vars.get) #variant with maximum depth
     ale_alele_dp=max(list(snv_vars.values())) #alt allele depth
@@ -91,7 +90,6 @@ def getMostFrequentVariant(record,likely_genotype,total_dp,total_ref_ale_dp):
       call.data['AD'] = alt_ale_dp_nw #update alternate depth
       call.data['DP'] = total_dp #update total depth
       call.data['GT'] = likely_genotype #update overall genotype
-      
     vcf_record=record_to_vcf_line(record)
     
 
@@ -133,8 +131,6 @@ for record in vcf_reader:
     gts=[]
     samples=[] #samples in the analysis
     reference_allele_dp=[]
-   
-    
     for call in record.calls:
       dp=call.data.get('DP', 0)
       samples.append(call.sample)
@@ -144,18 +140,16 @@ for record in vcf_reader:
       #genotype
       if '.' not in call.data.get('GT', 0):
         gts.append(call.data.get('GT', 0)) #append genotype to gts 
-        
     
       if not isinstance(call.data.get('AD', 0), int) and len(call.data.get('AD',0))>0 and call.data.get('AD',0)[0] is not None: #handles format change in joint vcf produced by GATk and bcftool merge
         #reference allele depth
         reference_allele_dp.append(int(call.data.get('AD',0)[0]))
-    
+    #print(gts)
+    #print(samples)
     #for loop closed
     
     #calculate fraction of samples genotype detected in 
     per_samples_with_genotype=len(gts)/len(samples)*100
-    
-    
     if per_samples_with_genotype>=60: #if genotype is detected in at least 60% samples
       DP=sum(depths)
       unique_gts_map = dict(Counter(gts))
@@ -164,16 +158,17 @@ for record in vcf_reader:
       
       most_likely_genotype= max(unique_gts_map, key=unique_gts_map.get) #most likely genotype based on majority rule
       
-      if DP >=8 and int(record.QUAL)>10:
-        if int(re.split(r"[\/|]", most_likely_genotype)[0])>0: # homozygous records '|' phased genotype: when maternal and paternal allele known
+      if DP >=10:
+        if int(re.split(r"[\/|]", most_likely_genotype)[0])>0 and int(re.split(r"[\/|]", most_likely_genotype)[1])>0: # homozygous records '|' phased genotype: when maternal and paternal allele known
           if total_ref_allele_dp <10: #there might be some misalignments if reference alele is less than 10, mutation still will be considered homozygous
             
             vcf_rec=getMostFrequentVariant(record,most_likely_genotype,DP,total_ref_allele_dp)
             if vcf_rec.strip(): #remove empty lines
               fw.write(vcf_rec+"\n")
         else:
-          if total_ref_allele_dp > 0: #check if reference allele depth is not zero
-            
+          if total_ref_allele_dp > 10: #check if reference allele depth is not zero
             vcf_rec=getMostFrequentVariant(record,most_likely_genotype,DP,total_ref_allele_dp)
             if vcf_rec.strip(): #remove empty lines
               fw1.write(vcf_rec+"\n")
+
+

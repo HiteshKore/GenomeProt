@@ -1,5 +1,5 @@
 #!/bin/bash
-
+conda_path=$(which conda)
 # usage() function to show the help message
 function usage() {
     cat << EOF
@@ -92,14 +92,31 @@ genome_file=$( basename $genome_fa)
 genome_file_without_extn=$( echo $genome_file | sed s'/.fa//g')
 
 
-/opt/miniconda3/bin/conda run -n GenomeProt_env --no-capture-output python3 bin/database_module/vcfparser.py $vcf_file $outdir
+$conda_path run -n GenomeProt_env --no-capture-output python3 bin/database_module/vcfparser.py "$vcf_file" "$outdir"
 
 
-/opt/miniconda3/bin/conda run -n GenomeProt_env bgzip -c $outdir$vcf_file_without_extn"_heterozygous.vcf" >$outdir$vcf_file_without_extn"_heterozygous.vcf.gz"
-/opt/miniconda3/bin/conda run -n GenomeProt_env bgzip -c $outdir$vcf_file_without_extn"_homozygous.vcf" >$outdir$vcf_file_without_extn"_homozygous.vcf.gz"
-/opt/miniconda3/bin/conda run -n GenomeProt_env tabix -p vcf $outdir$vcf_file_without_extn"_homozygous.vcf.gz"
-/opt/miniconda3/bin/conda run -n GenomeProt_env tabix -p vcf $outdir$vcf_file_without_extn"_heterozygous.vcf.gz"
-/opt/miniconda3/bin/conda run -n GenomeProt_env bcftools consensus -f $genome_fa -o $outdir$genome_file_without_extn"_hm.fa" $outdir$vcf_file_without_extn"_homozygous.vcf.gz"
-/opt/miniconda3/bin/conda run -n GenomeProt_env bcftools consensus -f $outdir$genome_file_without_extn"_hm.fa" -o $outdir$genome_file_without_extn"_hm_ht.fa" $outdir$vcf_file_without_extn"_heterozygous.vcf.gz"
+$conda_path run -n GenomeProt_env bgzip  "${outdir}${vcf_file_without_extn}_heterozygous.vcf" -o "${outdir}${vcf_file_without_extn}_heterozygous.vcf.gz"
 
-conda deactivate
+$conda_path run -n GenomeProt_env bgzip "${outdir}${vcf_file_without_extn}_homozygous.vcf" -o "${outdir}${vcf_file_without_extn}_homozygous.vcf.gz"
+
+$conda_path run -n GenomeProt_env tabix -p vcf "${outdir}${vcf_file_without_extn}_homozygous.vcf.gz"
+
+$conda_path run -n GenomeProt_env tabix -p vcf "${outdir}${vcf_file_without_extn}_heterozygous.vcf.gz"
+
+
+$conda_path run -n GenomeProt_env bcftools consensus -f "$genome_fa" -o "${outdir}${genome_file_without_extn}_hm.fa"  "${outdir}${vcf_file_without_extn}_homozygous.vcf.gz" -H 2
+
+ 
+ if [ ! -s "${outdir}${genome_file_without_extn}_hm_ht.fa" ]; then 
+    echo "File is empty"
+    $conda_path run -n GenomeProt_env bcftools consensus -f "$genome_fa" -o "${outdir}${genome_file_without_extn}_hm_ht.fa" "${outdir}${vcf_file_without_extn}_heterozygous.vcf.gz" -H 2
+else 
+    echo "File is not empty"
+    $conda_path run -n GenomeProt_env bcftools consensus -f "${outdir}${genome_file_without_extn}_hm.fa" -o "${outdir}${genome_file_without_extn}_hm_ht.fa" "${outdir}${vcf_file_without_extn}_heterozygous.vcf.gz" -H 2
+fi
+
+ 
+ 
+ 
+
+
