@@ -347,6 +347,7 @@ bambu_server <- function(input, output, session) {
   }
   
   #execute bambu command
+  
   print(command_bambu)
   system(command_bambu)
   
