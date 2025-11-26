@@ -6,6 +6,7 @@ channels:
   - r
   - defaults
 dependencies:
+  - cd-hit=4.8.1
   - samtools
   - bcftools
   - salmon
@@ -42,6 +43,7 @@ dependencies:
   - r-gplots
   - r-reshape2
   - r-phylotools
+  - r-openxlsx
   - bioconductor-rsamtools
   - bioconductor-bambu
   - bioconductor-genomicfeatures
@@ -67,3 +69,4 @@ dependencies:
     - py-cdhit
     - peptides
     - pysam
+    - vcfpy

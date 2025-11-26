@@ -48,7 +48,7 @@ git clone https://github.com/josiegleeson/GenomeProt.git
 Build the conda environment:
 ```
 cd GenomeProt
-conda env create -f conda_env.yaml
+Rscript install.R conda_env.yaml
 ```
 
 Unzip the uniprot+openprot reference file in the GenomeProt/data directory.
