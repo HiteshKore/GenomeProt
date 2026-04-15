@@ -319,7 +319,7 @@ ui <- dashboardPage(
       # ),
       tabItem(tabName = "visualisation", 
               h2("Visualise results with IsoVis"),
-              h5("The IsoVis website is displayed below for convenience. It is also accessible directly at: https://isomix-test.stemformatics.org/isovis/"),
+              h5("The IsoVis website is displayed below for convenience. It is also accessible directly at: https://isomix.org/isovis/"),
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
               conditionalPanel(
                 condition = "input.show_isovis_steps % 2 == 1",
@@ -331,7 +331,7 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 column(12,
-                    tags$iframe(src = "https://isomix-test.stemformatics.org/isovis/", 
+                    tags$iframe(src = "https://isomix.org/isovis/", 
                                 width = "100%", 
                                 height = "950px",
                                 style = "border:none;"))
