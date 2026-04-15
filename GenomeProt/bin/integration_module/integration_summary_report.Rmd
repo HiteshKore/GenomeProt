@@ -25,6 +25,11 @@ options(scipen=999)
 
 df <- read_tsv(paste0(params$directory, "/", params$file))
 
+df_var_peptides=df%>%filter(grepl("_var",accession))
+
+
+
+
 #df <- read_tsv("/home/ubuntu/data_transfer/peptide_info.tsv")
 wb<-createWorkbook()
 addWorksheet(wb,"ORF_by_location")
@@ -59,7 +64,7 @@ Peptide-confirmed: Feature distinguished by transcript-specific or gene-specific
 peptotal <- length(unique(df$peptide))
 
 uniqpeptides <- nrow(df %>% group_by(peptide) %>%
-            dplyr::filter(length(unique(PID))==1) %>%
+            dplyr::filter(length(unique(accession))==1) %>%
             slice_head(n=1))
 
 txtotal <- length(unique(df$transcript_id))
@@ -67,7 +72,7 @@ txtotal <- length(unique(df$transcript_id))
 txuniqtotal <-nrow(df%>%dplyr::filter(transcript_identified == TRUE)%>%dplyr::select("transcript_id")%>%unique())
   
   
-  nrow(df%>%dplyr::filter(peptide_ids_transcript == TRUE)%>%dplyr::select("peptide")%>%unique())
+#nrow(df%>%dplyr::filter(peptide_ids_transcript == TRUE)%>%dplyr::select("peptide")%>%unique())
   
 
 genetotal <- length(unique(df$gene_id))
@@ -200,7 +205,6 @@ l <- df %>% dplyr::filter(transcript_identified == TRUE & startsWith(transcript_
 #Peptide-confirmed novel transcripts encoding unannotated ORFs with UMPs 	
 m <- df %>% dplyr::filter(transcript_identified == TRUE & startsWith(transcript_id, "Bambu"))%>%dplyr::filter(startsWith(accession, "ORF_"))%>%dplyr::select(accession)%>%unique()%>%NROW
 
-
 # Make stats
 item <- c(
   "Annotated (known) transcripts with peptide evidence ",
@@ -217,11 +221,56 @@ stats <- data.frame(item, total)
 
 knitr::kable(stats, format = "html", col.names=c(" ", ""))
 
+
+
+
 # Export overall stats file
 #write.table(stats, file = paste0(output,"_stats.csv"), sep=",", quote=F, col.names=F, row.names=F)
 
 ```
 
+
+```{r variant_protein_isoform, echo=FALSE}
+if (nrow(df_var_peptides) > 0) {
+  
+  cat("### Variant protein isoform data \n\n")
+  
+  #variant data
+#Number of variant ORFs with UMPs
+  var_p<-df_var_peptides%>%filter(peptide_ids_orf==TRUE)%>%dplyr::select(accession)%>%unique()%>%NROW
+#Number of canonical variant ORFs with UMPs
+var_p_canonical<-df_var_peptides%>%filter(peptide_ids_orf==TRUE)%>%dplyr::select(accession)%>%dplyr::filter(!startsWith(accession, "ORF_"))%>%unique()%>%NROW
+
+#Number of canonical variant ORFs with UMPs
+var_p_novel<-df_var_peptides%>%filter(peptide_ids_orf==TRUE)%>%dplyr::select(accession)%>%dplyr::filter(startsWith(accession, "ORF_"))%>%unique()%>%NROW
+
+#Number of variant protein specific UMPs
+var_pep<-df_var_peptides%>%filter(peptide_ids_orf==TRUE)%>%dplyr::select(peptide)%>%unique()%>%NROW
+
+#Number of canonical variant protein specific UMPs
+var_pep_novel<-df_var_peptides%>%filter(peptide_ids_orf==TRUE)%>%dplyr::select(accession,peptide)%>%dplyr::filter(startsWith(accession, "ORF_"))%>%dplyr::select(peptide)%>%unique()%>%NROW
+
+#Number of canonical variant protein specific UMPs
+var_pep_known<-df_var_peptides%>%filter(peptide_ids_orf==TRUE)%>%dplyr::select(accession,peptide)%>%dplyr::filter(!startsWith(accession, "ORF_"))%>%dplyr::select(peptide)%>%unique()%>%NROW
+
+item_var <- c(
+  "Variant proteins with UMPs ",
+  "Canonical variant proteins with UMPs ",
+  "Noncanonical variant proteins with UMPs ",
+  "Variant UMPs ",
+  "Canonical variant protein derived UMPs",
+   "Noncanonical variant protein derived UMPs")
+  
+
+total_var<-c(var_p,var_p_canonical,var_p_novel,var_pep,var_pep_known,var_pep_novel)
+
+stats_variant_proteins <- data.frame(item_var, total_var)
+
+knitr::kable(stats_variant_proteins, format = "html", col.names=c(" ", ""))
+  
+}
+
+```
 
 
 ### Protein/ORF-level data

@@ -28,10 +28,15 @@ gtf_import_file <- opt$gtf
 output_directory <- opt$savepath
 
 # source("/home/hiteshk/GenomeProt_git/GenomeProt/R/integration_functions.R")
-# proteomics_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/peptide_data.txt"
-# metadata_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/revised_database/proteome_database_metadata.txt"
-# gtf_import_file <- "/home/hiteshk/GenomeProt/PGData/Brain_data/revised_database/proteome_database_transcripts.gtf"
-# output_directory <- "/home/hiteshk/GenomeProt/PGData/Brain_data/revised_database/"
+# proteomics_import_file <- "/home/ubuntu/data_transfer/H9_peptide_data_kn_nv.tsv"
+# metadata_import_file <- "/home/ubuntu/data_transfer/H9_proteome_database_metadata.txt"
+# gtf_import_file <- "/home/ubuntu/data_transfer/H9_proteome_database_transcripts_revised.gtf"
+# output_directory <- "/home/hiteshk/GenomeProt/PGData/test/"
+
+
+# proteomics_import_file <- "/home/ubuntu/data_transfer/brain_data/peptide_combined_corrected.txt"
+# metadata_import_file <- "/home/ubuntu/data_transfer/brain_data/proteome_database_metadata.txt"
+# gtf_import_file <- "/home/ubuntu/data_transfer/brain_data/proteome_database_transcripts.gtf"
 
 # ------------- import files ------------- #
 
@@ -352,12 +357,12 @@ setDT(peptide_result)
 
 peptide_result[, c("peptide_ids_gene", "peptide_ids_orf", "peptide_ids_transcript", "shared_novel_protein_peptide") := 
                  .(length(unique(gene_id)) == 1,
-                   length(unique(PID)) == 1,
+                   length(unique(accession)) == 1,
                    length(unique(transcript_id)) == 1,
-                   length(unique(PID)) > 1 & all(startsWith(PID, "ORF"))),
+                   length(unique(accession)) > 1 & all(startsWith(accession, "ORF"))),
                by = peptide]
 
-peptide_result[, orf_identified := any(peptide_ids_orf == TRUE), by = PID]
+peptide_result[, orf_identified := any(peptide_ids_orf == TRUE), by = accession]
 peptide_result[, gene_identified := any(peptide_ids_gene == TRUE), by = gene_id]
 peptide_result[, transcript_identified := any(peptide_ids_transcript == TRUE), by = transcript_id]
 

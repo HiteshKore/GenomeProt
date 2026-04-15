@@ -22,8 +22,8 @@ ui <- dashboardPage(
                 # commenting out proteomics for now
                 #menuItem("Analyse MS proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
                 menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
-                menuItem("Visualise results", tabName = "visualisation", icon = icon("chart-bar")),
-                menuItem("IsoVis", tabName = "isovis", icon = icon("eye"))
+                menuItem("visualise results", tabName = "visualisation", icon = icon("eye")),
+                menuItem("Quick help", tabName = "help", icon = icon("circle-question"))
     )
   ),
   # body
@@ -125,7 +125,7 @@ ui <- dashboardPage(
                                     choices = c("Long-read (ONT, PacBio)" = "long-read", 
                                                 "Short-read" = "short-read")),
                        radioButtons("input_type", h5(tags$b("Select input type:")),
-                                    choices = c("FASTQs" = "fastq_input",
+                                    choices = c( #"FASTQs" = "fastq_input",
                                                 "BAMs" = "bam_input",
                                                 "GTF (and/or transcript counts)" = "gtf_input")),
                        checkboxInput("vcf_option", "Incoporate SNVs into protein sequences", value = FALSE),
@@ -153,7 +153,29 @@ ui <- dashboardPage(
                        numericInput("minimum_tx_count", 
                                     label = "Minimum expression threshold (sum per transcript):", 
                                     value = 5),
-                       fileInput("user_reference_gtf", "Upload reference annotation GTF:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                       
+                       # Optional GTF file upload to override default
+                       radioButtons("data_source","Reference annotation GTF:",
+                         choices = c(
+                           "Use preloaded GTF file" = "default",
+                           "Upload Reference GTF file" = "user"
+                         ),
+                         selected = "default"
+                       ),
+                       
+                       # File upload appears ONLY if user selects "Upload my own file"
+                       conditionalPanel(
+                         condition = "input.data_source == 'user'",
+                         fileInput(
+                           "reference_gtf_file",
+                           "Upload GENCODE GTF File",
+                           buttonLabel = "Browse...",
+                           multiple = FALSE
+                         )
+                       ),
+                       
+                       
+  
                        # VCF file input conditionally shown
                        conditionalPanel(
                          condition = "input.vcf_option == true",
@@ -162,7 +184,7 @@ ui <- dashboardPage(
                        # Variable options
                        conditionalPanel(
                          condition = "input.input_type == 'fastq_input'",
-                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 46, step = 1),
+                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 10, step = 1),
                          #h5("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
                          fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
                          conditionalPanel(condition = "input.sequencing_type == 'short-read'",
@@ -178,8 +200,35 @@ ui <- dashboardPage(
                                           ,
                                           fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)),
                          
-                         fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
-                       ),
+                        # fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
+                       
+                         ###
+                         radioButtons("bam_data","BAM Files:",
+                                      choices = c(
+                                        "Use preloaded BAM file" = "default",
+                                        "Upload BAM files" = "user"
+                                      ),
+                                      selected = "default"
+                         ),
+                         
+                         # File upload appears ONLY if user selects "Upload my own file"
+                         conditionalPanel(
+                           condition = "input.bam_data == 'user'",
+                           fileInput(
+                             "user_bam_files",
+                             "Upload BAM Files",
+                             buttonLabel = "Browse...",
+                             multiple = TRUE
+                           )
+                         ),
+                         
+                         
+                         
+                         ####
+                         
+                         
+                         
+                         ),
                        conditionalPanel(
                          condition = "input.input_type == 'gtf_input' & input.sequencing_type == 'long-read'",
                          fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
@@ -241,34 +290,34 @@ ui <- dashboardPage(
                 )
               )
       ),
+      # tabItem(tabName = "visualisation", 
+      #         fluidRow(
+      #           h2("Visualise results"),
+      #           h5("Plots your results using the GTFs created in the integration module."),
+      #           column(4,
+      #                  fileInput("user_vis_gtf_file", "Upload 'combined_annotations.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+      #                  fileInput("user_vis_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
+      #                  fileInput("user_pep_count_file", "Upload peptide intensities file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
+      #                  actionButton("vis_submit_button", "Submit", class = "btn btn-primary")
+      #           ),
+      #           column(8,
+      #                  selectInput("gene_selector", "Select a gene:", choices = NULL),
+      #                  strong(p("Filter gene list for:")),
+      #                  p("UMP = uniquely mapped peptide. Peptides that only mapped to a single protein entry in the protein database."),
+      #                  checkboxInput("uniq_map_peptides", "ORFs with UMPs", value = FALSE),
+      #                  checkboxInput("lncRNA_peptides", "long non-coding RNAs with UMPs", value = FALSE),
+      #                  checkboxInput("novel_txs", "novel transcript isoforms with UMPs", value = FALSE),
+      #                  checkboxInput("novel_txs_distinguished", "novel transcript isoforms distinguished by UMPs", value = FALSE),
+      #                  checkboxInput("unann_orfs", "unannotated ORFs with UMPs", value = FALSE),
+      #                  checkboxInput("uorf_5", "5' uORFs with UMPs", value = FALSE),
+      #                  checkboxInput("dorf_3", "3' dORFs with UMPs", value = FALSE),
+      #                  div(id = "vis-loading-container", class = "loading-container", div(class = "spinner")),
+      #                  plotOutput("plot"),
+      #                  downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing") # initially disabled
+      #           )
+      #         )
+      # ),
       tabItem(tabName = "visualisation", 
-              fluidRow(
-                h2("Visualise results"),
-                h5("Plots your results using the GTFs created in the integration module."),
-                column(4,
-                       fileInput("user_vis_gtf_file", "Upload 'combined_annotations.gtf' file:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_vis_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_pep_count_file", "Upload peptide intensities file (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       actionButton("vis_submit_button", "Submit", class = "btn btn-primary")
-                ),
-                column(8,
-                       selectInput("gene_selector", "Select a gene:", choices = NULL),
-                       strong(p("Filter gene list for:")),
-                       p("UMP = uniquely mapped peptide. Peptides that only mapped to a single protein entry in the protein database."),
-                       checkboxInput("uniq_map_peptides", "ORFs with UMPs", value = FALSE),
-                       checkboxInput("lncRNA_peptides", "long non-coding RNAs with UMPs", value = FALSE),
-                       checkboxInput("novel_txs", "novel transcript isoforms with UMPs", value = FALSE),
-                       checkboxInput("novel_txs_distinguished", "novel transcript isoforms distinguished by UMPs", value = FALSE),
-                       checkboxInput("unann_orfs", "unannotated ORFs with UMPs", value = FALSE),
-                       checkboxInput("uorf_5", "5' uORFs with UMPs", value = FALSE),
-                       checkboxInput("dorf_3", "3' dORFs with UMPs", value = FALSE),
-                       div(id = "vis-loading-container", class = "loading-container", div(class = "spinner")),
-                       plotOutput("plot"),
-                       downloadButton("vis_download_button", "Download plot", disabled = TRUE, class = "spacing") # initially disabled
-                )
-              )
-      ),
-      tabItem(tabName = "isovis", 
               h2("Visualise results with IsoVis"),
               h5("The IsoVis website is displayed below for convenience. It is also accessible directly at: https://isomix-test.stemformatics.org/isovis/"),
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
@@ -288,7 +337,29 @@ ui <- dashboardPage(
                                 style = "border:none;"))
               )
   
+      ),
+      tabItem(
+        tabName = "help",
+        fluidRow(
+          column(
+            width = 12,
+            
+            box(
+              width = 20,
+              status = "primary",
+              solidHeader = TRUE,
+              includeHTML("GenomeProt_help.html")
+              #tags$iframe(src="GenomeProt_help.html",
+              #width= "100%",
+              #height="750px",
+              #style="border:none;"
+                          #)
+              
+            )
+          )
+        )
       )
+      
     )
   ),  
   skin = "purple"

@@ -341,9 +341,12 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len=30, find_UTR_5_or
   }
   
   # required for UTR regions
+  #referencegtf="/home/hiteshk/GenomeProt_git/GenomeProt/testdata/gencode_v47_sorted.gtf"
   ref_txdb <- makeTxDbFromGFF(referencegtf)
   
   # import filtered gtf as a txdb
+  #filteredgtf="/home/hiteshk/GenomeProt/PGData/Lorey_melanoma_data/test_dataset/proteome_database_transcripts.gtf"
+  #orf_len=30
   txdb <- makeTxDbFromGFF(filteredgtf)
   txs <- exonsBy(txdb, by=c("tx", "gene"), use.names=TRUE)
   
@@ -431,7 +434,7 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len=30, find_UTR_5_or
       # convert these ORF coordinates into nucleotide sequences
       orf_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, ORFs)
       #convert the nucleotide sequences to amino acid sequences
-      orf_aa_seq <- Biostrings::translate(orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE)
+      orf_aa_seq <- Biostrings::translate(orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE) #Varify this if it is repeatative
       # create data frame of all possible ORFs
       orf_aa_seq_df <- data.frame(ORF_id = orf_aa_seq@ranges@NAMES,ORF_sequence = orf_aa_seq, row.names=NULL) 
       # merge with coordinates
@@ -454,7 +457,7 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len=30, find_UTR_5_or
       #   mutate(reading_frame = sub(".*_rf", "", tx_rf_id)) %>%
       #   dplyr::select(-c(sequence, tx_id, tx_rf_id))
       #print(orf_aa_seq_df_genomic_coordinates_merge_frm)
-      print(dim(orf_aa_seq_df_genomic_coordinates_merge_frm))
+      #print(dim(orf_aa_seq_df_genomic_coordinates_merge_frm))
       orf_aa_seq_df_genomic_coordinates_merge_frm<-orf_aa_seq_df_genomic_coordinates_merge_frm%>%mutate(reading_frame=sub(".*_rf","",tx_rf_id))%>%dplyr::select(-c(sequence,tx_id,tx_rf_id))
       
       
@@ -579,6 +582,19 @@ find_5_orfs <- opt$uorfs
 find_3_orfs <- opt$dorfs
 vcf_file <- opt$vcf
 output_directory <- opt$savepath
+
+#for testing
+#gtf_path <- "/home/hiteshk/GenomeProt/PGData/Lorey_melanoma_data/test_dataset/proteome_database_transcripts.gtf"
+#reference_gtf <- "/home/hiteshk/GenomeProt_git/GenomeProt/testdata/gencode_v47_sorted.gtf"
+#tx_count_path <- opt$counts
+#minimum_tx_count <- 
+#ref_genome <-
+#organism <- "HUMAN"
+#min_orf_length <- 30
+#find_5_orfs <- TRUE
+#find_3_orfs <- FALSE
+#vcf_file <- opt$vcf
+#output_directory <- "/home/hiteshk/GenomeProt/PGData/Lorey_melanoma_data/test_dataset/"
 
 
 

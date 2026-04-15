@@ -51,7 +51,7 @@ def main():
     #cds coordinates
     cds_coordinates={} #genome coordinates of transcript cds k:transcript_id i.e ENST,k: genomic coordinates
     
-    for i in refence_gtf:
+    for i in refence_gtf: #
       if i.startswith("#"):
         continue
       else:
@@ -167,13 +167,11 @@ def main():
             orf_end=var_seq_coordinates.strip().split(':')[1].split("-")[1]
             rf=(int(orf_end) - 1) % 3
             var_seq_coordinates=chr+":"+str(orf_start)+"-"+orf_end
-            print(protein_accession+"_var",var_seq_coordinates,strand,orf_end)
           elif strand=="+":
             orf_start=var_seq_coordinates.strip().split(':')[1].split("-")[0]
             orf_end=int(var_seq_coordinates.strip().split(':')[1].split("-")[1])-3 # 3 nucleiotides substracted as ORFik counts stop codon position
             rf=(int(orf_start) - 1) % 3
             var_seq_coordinates=chr+":"+orf_start+"-"+str(orf_end)
-            print("*****",protein_accession+"_var",var_seq_coordinates,strand)
 
           var_type=var_prot_attr.split("\t")[3] #variants
           var_seq_prop=var_prot_attr.split("\t")[4] #sequence properties
@@ -547,6 +545,7 @@ def main():
     #write output of novel ORFs
     canonical_novel_orf_ids=[]
     all_novel_orf_ids=[]
+    all_novel_orf_ids_var=[]
     
     #store temparary ids of canonical or all novel ORFs according to options provided
     for protein_seq,annotations in orf_annotation_map.items():
@@ -559,8 +558,8 @@ def main():
             if accession not in canonical_novel_orf_ids:
               canonical_novel_orf_ids.append(accession)
         if args[6]=="all":
-          if accession not in all_novel_orf_ids:
-            all_novel_orf_ids.append(accession)
+            if accession not in all_novel_orf_ids:
+              all_novel_orf_ids.append(accession)
     #loop closed
 
     #replace the temporary ORFs ids based on their index
@@ -569,17 +568,23 @@ def main():
     
     for protein_seq,annotations in orf_annotation_map.items():
       for protein_annotation in annotations:
-        accession=protein_annotation.split("\t")[0].replace("_var","")
+        accession=protein_annotation.split("\t")[0]
         gene_id=protein_annotation.split("\t")[1]
         gene_name=protein_annotation.split("\t")[2]
         protein_description=protein_annotation.split("\t")[3]
         transcript=protein_annotation.split("\t")[4]
         orf_coordinate=protein_annotation.split("\t")[8]
         longest_orf=protein_annotation.split("\t")[14]
-        
+        print()
         if args[6]=="canonical":
           if longest_orf=="Y":
-            new_accesion="ORF_"+str(canonical_novel_orf_ids.index(accession)+1) # +1 as list index starts with zero
+            if "_var" in accession:
+              temp_acc=accession.replace("_var","")
+              new_accesion="ORF_"+str(canonical_novel_orf_ids.index(temp_acc)+1)+"_var" # +1 as list index starts with zero
+            else:
+              new_accesion="ORF_"+str(canonical_novel_orf_ids.index(accession)+1) # +1 as list index starts with zero
+            
+            
             fa_header=new_accesion+"|"+orf_coordinate+"|"+gene_id+"|"+gene_name+"|"+transcript
             
             canonical_novel_orf_map.setdefault(protein_seq,[]).append(fa_header)
@@ -587,7 +592,12 @@ def main():
             metadata_records.append(revised_annotations)
             
         if args[6]=="all":
-          new_accesion="ORF_"+str(all_novel_orf_ids.index(accession)+1) # +1 as list index starts with zero
+          if "_var" in accession:
+            temp_acc=accession.replace("_var","")
+            new_accesion="ORF_"+str(all_novel_orf_ids.index(temp_acc)+1)+"_var" # +1 as list index starts with zero
+          else:
+            new_accesion="ORF_"+str(all_novel_orf_ids.index(accession)+1)
+
           fa_header=new_accesion+"|"+orf_coordinate+"|"+gene_id+"|"+gene_name+"|"+transcript
           all_novel_orf_map.setdefault(protein_seq,[]).append(fa_header)
           revised_annotations=protein_annotation.replace(accession,new_accesion)

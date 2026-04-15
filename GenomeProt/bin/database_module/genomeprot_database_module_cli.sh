@@ -124,17 +124,17 @@ function generate_database() {
         echo $min_tx_count
         if [[ "$tx_count_file" == "None" ]]; then
         
-        conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
+         conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
         
         else 
         
-        conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
+         conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
         
         fi
         
         if [[ "$input_type" == "GTF" ]];then
             echo "Annotating proteome database" | tee -a "$log_file"
-            conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $custom_gtf $output_dir $orf_input_type $orf_length None $organism
+   conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $custom_gtf $output_dir $orf_input_type $orf_length None $organism
         else
             echo "Annotating proteome database" | tee -a "$log_file"
             conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length None $organism
@@ -148,9 +148,9 @@ function generate_database() {
         echo $min_tx_count
         if [[ "$tx_count_file" == "None" ]]; then
           echo "Generating proteome database" | tee -a "$log_file"
-           conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
+          conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
         else
-           conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
+          conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
         fi
       
 

@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width initial-scale=1'>
+
+<style>
+ .genomeprot-help ul {
+  list-style-type: disc;
+}
+
+/* Scope all styles to .genomeprot-help */
+.genomeprot-help {
+    background: white;
+    color: #333;
+}
+
+.genomeprot-help * {
+    box-sizing: border-box;
+}
+
+/* Typora default styling, scoped */
+.genomeprot-help {
+    font-size: 18px;
+}
+
+.genomeprot-help body,
+.genomeprot-help button,
+.genomeprot-help input,
+.genomeprot-help select,
+.genomeprot-help textarea {
+    font-family: Helvetica, Arial, sans-serif;
+    color: #333;
+    line-height: 1.625rem;
+}
+
+/* Scoped headings */
+.genomeprot-help h1,
+.genomeprot-help h2,
+.genomeprot-help h3,
+.genomeprot-help h4,
+.genomeprot-help h5,
+.genomeprot-help h6 {
+    color: #000;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    font-weight: normal;
+}
+
+/* Lists */
+.genomeprot-help ul,
+.genomeprot-help ol {
+    padding-left: 1.875rem;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+}
+
+/* Links */
+.genomeprot-help a {
+    color: #0000EE;
+    text-decoration: underline;
+}
+
+.genomeprot-help a:hover {
+    color: #000;
+}
+
+/* Tables */
+.genomeprot-help table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.genomeprot-help th,
+.genomeprot-help td {
+    border: 1px solid #474d54;
+    padding: 5px 10px;
+}
+
+/* Code and pre blocks */
+.genomeprot-help code,
+.genomeprot-help pre,
+.genomeprot-help kbd,
+.genomeprot-help tt,
+.genomeprot-help var {
+    font-family: Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace;
+    font-size: 0.875em;
+}
+
+.genomeprot-help pre.md-fences {
+    padding: 10px 10px 10px 30px;
+    margin-bottom: 20px;
+    background: #333;
+}
+
+/* Footnotes */
+.genomeprot-help sup.md-footnote {
+    background-color: #555;
+    color: #ddd;
+}
+
+/* Blockquotes */
+.genomeprot-help blockquote {
+    padding-left: 30px;
+    margin-top: 35px;
+    margin-bottom: 1.875rem;
+    border-left: 2px solid #474d54;
+    color: #9DA2A6;
+}
+
+/* Scrollbars inside this container only */
+.genomeprot-help ::-webkit-scrollbar-thumb {
+    background: rgba(230, 230, 230, 0.30);
+}
+.genomeprot-help ::-webkit-scrollbar-thumb:active {
+    background: rgba(230, 230, 230, 0.50);
+}
+
+/* Math/Diagrams inside container */
+.genomeprot-help .md-diagram-panel {
+    max-width: 100%;
+}
+
+/* Highlighted code selections */
+.genomeprot-help .CodeMirror-selectedtext,
+.genomeprot-help .CodeMirror-selected {
+    background: #4a89dc;
+    color: #fff !important;
+}
+
+/* Add more specific scoped rules as needed from your CSS */
+</style>
+
+<title>GenomeProt Help</title>
+</head>
+<body>
+<div class="genomeprot-help">
+  <div class='typora-export-content'>
+    <div id='write'>
+      <h1 id='genomeprot-help-guide'><span>GenomeProt Help Guide</span></h1><h2 id='overview'><span>Overview</span></h2><p><strong><span>GenomeProt</span></strong><span> is a comprehensive proteogenomic analysis tool used to identify:</span></p>
+      
+      <ul><li><p><span>Canonical proteins  </span></p></li><li><p><span>Noncanonical proteins (uORFs, dORFs, noncoding RNA–derived proteins)  </span></p></li><li><p><span>Variant peptides and proteoforms  </span></p></li></ul>
+      
+      <p><span><b>The workflow consists of four steps:</b></span></p><ol start='' ><p><span>Database Generation  </span></p><p><span>Analyse MS Proteomics (External Step)  </span></p><p><span>Integrate Data  </span></p><p><span>Visualise Results  </span></p></ol><h1 id='1-database-generation'><span>1. Database Generation</span></h1><p><span>Users can choose between </span><strong><span>short-read</span></strong><span> and </span><strong><span>long-read</span></strong><span> options depending on their data type.</span></p><p><span>The Shiny web server supports:</span></p><ul><p><span>Pre-aligned BAM files. The test dataset file can be downloaded <a href="Melanoma_data_subset.bam" download>here.</a></span></p><p><span>Transcript annotations provided as a GTF file  </span></p></ul><p><span>By default, the app loads a demo dataset (BAM file input) to demonstrate processing and output files.</span></p> 
+      
+      
+      <h2 id='generate-database-using-demo-dataset' style="font-size:20px"><span>Generate Database Using Demo Dataset</span></h2><h3 id='steps'style="font-size:18px"><span>Steps:</span></h3><ol start='' ><p><span>Navigate to the </span><strong><span>Generate Database</span></strong><span> tab.</span></p><p><span>Click </span><strong><span>Submit</span></strong><span> using default options.</span></p><p><span>The app processes the BAM file.</span></p></ol>
+      <img src="images/quick_help_images/help_Database_generation.jpg" style="width:900px">
+     
+     <h3 id='output-files'style="font-size:18px" ><span>Output Files:</span></h3><ul><p><code>proteome_database.fasta</code><span> : Multi-FASTA protein database  </span></p><p><code>proteome_database_metadata.txt</code><span> : TSV file containing annotations for candidate protein sequences  </span></p><p><code>proteome_database_transcripts.gtf</code><span> : GTF file with transcript coordinates used to generate the proteome database  </span></p></ul></p><p>The test results file can be downloaded <a href= "2026-03-10_1023_database_results.zip" download>here.</a></p><h3 id='important-notes'><span>Important Notes</span></h3><ul><p><span>Results from this step can be downloaded within the app.</span></p><p><span>To generate a database directly from FASTQ files, or BAM files larger than </span><strong><span>30 GB</span></strong><span>, use the command-line version.</span></p><p><span>Command-line instructions are available </span><a href="https://github.com/HiteshKore/GenomeProt?tab=readme-ov-file#general-usage"><span>here</span></a><span>.</span></p></ul><h1 id='2-analyse-ms-proteomics-external-step'><span>2. Analyse MS Proteomics (External Step)</span></h1><p><span>Using the database (.fasta) generated in Step 1:</span></p><ul><p><span>Analyse proteomics data using your preferred search algorithm.</span></p><p><span>Identify proteins and peptides from your dataset.</span></p></ul><p><span>This step is performed outside the Shiny application.</span></p>
+     
+     
+     
+     <h1 id='3-integrate-data'><span>3. Integrate Data</span></h1><p><span>This step maps peptides identified in Step 2 to spliced transcript coordinates.</span></p><h2 id='required-files'><span>Required Files</span></h2><p><span>From Step 2:</span></p><ul><p><code>peptide_data.tsv</code><span> (must follow required format)</span></p></ul><p><span>From Step 1:</span></p><ul><p><code>proteome_database_metadata.txt</code></p><p><code>proteome_database_transcripts.gtf</code><span> </span></p></ul><h2 id='steps-to-map-peptides'><span>Steps to Map Peptides</span></h2><ol start='' ><p><span>Download ZIP file containing:</span></p><ul><p><code>proteome_database_metadata.txt</code></p><p><code>proteome_database_transcripts.gtf</code></p></ul><p><span>Extract ZIP file</span></p><p><span>Download demo </span><code>peptide_data.tsv</code><span> from </span><strong><span>here</span></strong><span> </span></p><p><span>Navigate to </span><strong><span>Integrate Data</span></strong><span> tab</span></p><p><span>Upload required files</span></p><p><span>Click </span><strong><span>Submit</span></strong></p></ol>
+      
+ <p><span>After successful mapping:</span></p><ul><p><span>The </span><strong><span>Download results (zip)</span></strong><span> button turns green.</span></p><p><span>Click to download output zip file.</span></p></ul>
+ 
+ <p><img src="images/quick_help_images/Integrate_data.jpg" style="width:900px"></p>
+
+        <h2 id='output-directory-contents'><span>Output Directory Contents</span></h2><ul><p><code>summary_report.html</code><span>  : Summary report of mapped peptides, transcripts, and ORFs  </span></p><p><code>report_images/</code><span>  : Folder containing PDF versions of graphs from the summary report  </span></p><p><code>peptide_info.tsv</code><span>  : Detailed peptide mapping annotations  </span></p><p><code>combined_annotations.gtf</code><span>  : GTF file with mapped peptides and transcript coordinates  </span></p><p><code>peptides.bed12</code><span>  : BED12 file with mapped peptide coordinates for UCSC Genome Browser visualisation  </span></p><p><code>transcripts.bed12</code><span>  : BED12 file with transcripts supported by peptide evidence for UCSC Genome Browser visualisation </span></p><p><code>ORFs.bed12</code><span>  : BED12 file with ORFs supported by peptide evidence for UCSC Genome Browser visualisation</span></p></ul><h1 id='4-visualise-results'><span>4. Visualise Results</span></h1><p><span>This step visualises peptides on transcript and gene coordinates using </span><strong><span>IsoVis</span></strong><span>.</span></p><h3 id='step-1-upload-data'><span>Step 1: Upload Data</span></h3><p><span>Click </span><strong><span>Upload Data</span></strong><span> and upload:</span></p><ul><p><code>combined_annotations.gtf</code><span>  : (Stack Data File: .gff/.gtf/.bed; max 3GB)</span></p></ul><p><span>Optional:</span></p><ul><p><span>Heatmap data file (raw transcript counts)</span></p></ul><ul><p><span>Peptide Counts Data File (for peptide intensities)</span></p></ul><h3 id='step-2-apply-filters'><span>Step 2: Apply Filters</span></h3><ul><p><span>Click </span><strong><span>Apply</span></strong></p><p><span>Select gene of interest</span></p><p><span>Use filters </span></p></ul><p><span>When selecting  </span><em><strong><span>ORFs with UMPs</span></strong></em><span> Genes with shared peptides (no unique peptides) can be excluded.</span></p><h3 id='step-3-gene-selection'><span>Step 3: Gene Selection</span></h3><ul><p><span>Enter Gene Name or ENSEMBL ID</span></p>
+        
+<p><span>Press Enter</span></p><p><img src="images/quick_help_images/Isovis_1.jpg" style="width:900px;"></p><p><img src="images/quick_help_images/Isovis_2.jpg" style="width:900px;"></p>
+        
+        </ul><h2 id='visualisation-output'><span>Visualisation Output</span></h2><p><span>The visualisation includes:</span></p><ul><p><span>Separate tracks for peptides and transcripts</span></p><p><span>Coding regions shown as thick dark gray boxes</span></p><p><span>Uniquely mapped peptides (orange)</span></p><p><span>Peptides shared across ORFs (dark blue)</span></p><p><span>Peptides shared across genes (dark gray)</span></p></ul><p><span>For additional IsoVis details, refer to documentation </span><a href="https://isomix-test.stemformatics.org/isovis/help_upload/"><span>here</span></a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

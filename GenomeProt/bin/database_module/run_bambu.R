@@ -5,7 +5,7 @@ library(dplyr)
 library(Rsamtools)
 
 
-run_bambu_function <- function(bam_file_list, gtf, organism, output_directory) { 
+run_bambu_function <- function(bam_file_list, gtf, organism, output_directory,threads) { 
   
   # set organism
   if (organism == "HUMAN") {
@@ -29,7 +29,7 @@ run_bambu_function <- function(bam_file_list, gtf, organism, output_directory) {
   }
   
   bambuAnnotations <- prepareAnnotations(gtf)
-  se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb, verbose = TRUE)
+  se <- bambu(reads = bam_file_list, annotations = bambuAnnotations, genome = genomedb, verbose = TRUE,ncore=threads)
   writeBambuOutput(se, path = output_directory)
   
   tx_data <- as.data.frame(mcols(se))
@@ -50,7 +50,9 @@ option_list = list(
   make_option(c("-s", "--species: mouse,celegans,drosophila,rat,zebrafish"), type="character", default=NULL,
               help="Organism: ", metavar="character"),
   make_option(c("-o", "--outdir"), type="character", default=NULL,
-              help="Output directory", metavar="character")
+              help="Output directory", metavar="character"),
+  make_option(c("-t", "--thread"), type="character", default=NULL,
+              help="Number of threads", metavar="integer")
 
 ); 
  
@@ -79,5 +81,5 @@ opt = parse_args(opt_parser);
 
 
 # run bambu function from R/ dir
-run_bambu_function(bam_file_list, opt$gtf, opt$species, opt$outdir)
+run_bambu_function(bam_file_list,opt$gtf, opt$species, opt$outdir,opt$thread)
 

@@ -96,69 +96,66 @@ integrate_metadata<-function(pd,orf_df){
   tx_lengths$transcript_id <- tx_lengths$tx_name
   tx_lengths <- tx_lengths %>% dplyr::select(transcript_id, tx_len)
   
-  # get gene names
-  gtf_import <- rtracklayer::import(gtf_import_file, format="gtf") %>% 
-    as_tibble() %>% 
-    dplyr::filter(type == "transcript") %>% 
-    dplyr::select(transcript_id, gene_name, strand)
-  
-  # merge tx info
-  tx_data <- merge(tx_lengths, gtf_import, by="transcript_id", all.x=T, all.y=F) #transcript_id tx_len gene_name strand
-  
-  # get transcripts for mapping
+   # get gene names
+   gtf_import <- rtracklayer::import(gtf_import_file, format="gtf") %>% 
+     as_tibble() %>% 
+     dplyr::filter(type == "transcript") %>% 
+     dplyr::select(transcript_id, gene_name, strand)
+   
+   # merge tx info
+   tx_data <- merge(tx_lengths, gtf_import, by="transcript_id", all.x=T, all.y=F) #transcript_id tx_len gene_name strand
+   # get transcripts for mapping
   txs <- exonsBy(gtf_txdb, by=c("tx"), use.names=T)
-  
-  orf_df_protein_detected <- left_join(orf_df_protein_detected, tx_lengths, by="transcript_id")
-  
-  orf_df_protein_detected$start <- as.numeric(orf_df_protein_detected$start)
-  orf_df_protein_detected$end <- as.numeric(orf_df_protein_detected$end)
-  
+   
+   orf_df_protein_detected <- left_join(orf_df_protein_detected, tx_lengths, by="transcript_id")
+   
+   orf_df_protein_detected$start <- as.numeric(orf_df_protein_detected$start)
+   orf_df_protein_detected$end <- as.numeric(orf_df_protein_detected$end)
+   
   # re orient start and end to match strand for mapping
-  orf_df_protein_detected <- orf_df_protein_detected %>% 
+   orf_df_protein_detected <- orf_df_protein_detected %>% 
     rowwise() %>% 
-    mutate(stranded_start = case_when(
-      strand == "+" ~ min(start,end),
-      strand == "-" ~ max(start,end),
-    ))
-  
-  
-  txs_filtered <- txs[names(txs) %in% orf_df_protein_detected$transcript_id]
-  txs_unlisted <- unlist(txs_filtered)
-  
-  # function to convert genomic start position to transcript position
-  convert_gene_pos_to_transcript_pos <- function(txdb, input_df) {
-    
-    # get all relevant exons
-    all_exons <- txdb[names(txdb) %in% input_df$transcript_id]
-    
-    # all exons info df
-    exon_data <- data.frame(
-      transcript_id = names(all_exons),
-      exon_start = start(all_exons),
-      exon_end = end(all_exons),
-      exon_rank = mcols(all_exons)$exon_rank
-    ) %>%
-      group_by(transcript_id) %>%
-      arrange(exon_rank) %>%
-      mutate(
-        exon_length = exon_end - exon_start + 1,
-        total_length = cumsum(exon_length)
-      )
-    # join input data with exon data
-    result <- input_df %>%
-      left_join(exon_data, by = "transcript_id", relationship = "many-to-many") %>%
-      dplyr::filter(stranded_start >= exon_start & stranded_start <= exon_end) %>%
-      group_by(transcript_id, stranded_start) %>%
-      slice(1) %>% 
-      ungroup() %>%
-      mutate(
-        txstart = case_when(
-          strand == "+" & exon_rank == 1 ~ stranded_start - exon_start,
-          strand == "+" ~ (stranded_start - exon_start) + (total_length - exon_length),
-          strand == "-" & exon_rank == 1 ~ exon_end - stranded_start,
-          strand == "-" ~ (exon_end - stranded_start) + (total_length - exon_length)
-        )
-      )
+     mutate(stranded_start = case_when(
+       strand == "+" ~ min(start,end),
+       strand == "-" ~ max(start,end),
+     ))
+   
+   txs_filtered <- txs[names(txs) %in% orf_df_protein_detected$transcript_id]
+   txs_unlisted <- unlist(txs_filtered)
+   # function to convert genomic start position to transcript position
+   convert_gene_pos_to_transcript_pos <- function(txdb, input_df) {
+     
+     # get all relevant exons
+     all_exons <- txdb[names(txdb) %in% input_df$transcript_id]
+     
+     exon_data <- data.frame(
+       transcript_id = names(all_exons),
+       exon_start = start(all_exons),
+       exon_end = end(all_exons),
+       exon_rank = mcols(all_exons)$exon_rank
+     ) %>%
+       group_by(transcript_id) %>%
+       arrange(exon_rank) %>%
+       mutate(
+         exon_length = exon_end - exon_start + 1,
+         total_length = cumsum(exon_length)
+       )
+ # join input data with exon data
+     
+     result <- input_df %>%
+       left_join(exon_data, by = "transcript_id", relationship = "many-to-many") %>%
+       dplyr::filter(stranded_start >= exon_start & stranded_start <= exon_end) %>%
+       group_by(accession,transcript_id, stranded_start) %>%
+       slice(1) %>% 
+       ungroup() %>%
+       mutate(
+         txstart = case_when(
+           strand == "+" & exon_rank == 1 ~ stranded_start - exon_start,
+           strand == "+" ~ (stranded_start - exon_start) + (total_length - exon_length),
+           strand == "-" & exon_rank == 1 ~ exon_end - stranded_start,
+           strand == "-" ~ (exon_end - stranded_start) + (total_length - exon_length)
+         )
+       )
     
     return(result)
   }
