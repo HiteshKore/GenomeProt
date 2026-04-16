@@ -481,9 +481,7 @@ def main():
                                             get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", utr_orf, openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript], var_ORF_anno)
 
                                 elif transcript_biotype != "protein_coding":
-
                                     if transcript in utr_coordinates.keys():  # exceptions: some transcripts have UTR but they are not protein coding
-
                                         utr_orf = AN.UTRAnnotations(transcript, utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
                                         if "UTR" in utr_orf and "CDS:3UTR" not in utr_orf:  # ORF overlap with UTR region
                                             if len(protein_seq) < arg_orf_length:
@@ -493,27 +491,23 @@ def main():
                                             else:
                                                 # annotate ORF
                                                 get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", utr_orf, openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript], var_ORF_anno)
-
                                         else:  # if ORF is not in UTR regions
-                                            gene_overlap = AN.isIntergenic(orf_coordinate, protein_coding_gene_coordinates)
-
-                                            if gene_overlap == "gene_overlap":
+                                            gene_overlap = isIntergenic(orf_coordinate, protein_coding_gene_coordinates)
+                                            if gene_overlap:
                                                 # annotate ORF
                                                 get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", "gene_overlap", openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript], var_ORF_anno)
                                             else:
                                                 # annotate ORF
                                                 get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", "intergenic", openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript], var_ORF_anno)
-
                                     # noncoding RNA transcripts. transcript doesn't have UTRs
                                     else:
-                                        gene_overlap = AN.isIntergenic(orf_coordinate, protein_coding_gene_coordinates)
-                                        if gene_overlap == "gene_overlap":
+                                        gene_overlap = isIntergenic(orf_coordinate, protein_coding_gene_coordinates)
+                                        if gene_overlap:
                                             # annotate ORF
                                             get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", "gene_overlap", openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript], var_ORF_anno)
                                         else:
                                             # annotate ORF
                                             get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", "intergenic", openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript], var_ORF_anno)
-
                         # for loop closed
                         counter = counter + 1
 

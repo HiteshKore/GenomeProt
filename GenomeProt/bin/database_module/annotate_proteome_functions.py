@@ -118,23 +118,17 @@ class Annotations():
               orfBT="5UTR:3UTR"
           return orfBT
 
-    def isIntergenic(self,orf_cord,gene_cord_map):
-      #ORF
-      if ":" in orf_cord and "-" in orf_cord:
-        ochr=orf_cord.split(":")[0]
-        ostart=int(orf_cord.split(":")[1].split("-")[0])
-        oend=int(orf_cord.split(":")[1].split("-")[1])
-        orf_overlap=""
-        for gnpost in gene_cord_map.values():
-          #gene
-          genchr=gnpost.split(":")[0]
-          gnstart=int(gnpost.split(":")[1].split('-')[0])
-          gnend=int(gnpost.split(":")[1].split('-')[1])
-          if ochr==genchr:
-            if ostart >= gnstart and oend <= gnend:
-              orf_overlap="gene_overlap"
-              break
-        return orf_overlap
+def isIntergenic(orf_coord, gene_coord_map):
+    if not (':' in orf_coord and '-' in orf_coord):
+        return False
+    [orf_chrom, orf_range] = orf_coord.split(':')[:2]
+    [orf_start, orf_end] = [int(num) for num in orf_range.split('-')]
+    for gene_coord in gene_coord_map.values():
+        [gene_chrom, gene_range] = gene_coord.split(':')[:2]
+        [gene_start, gene_end] = [int(num) for num in gene_range.split('-')]
+        if orf_chrom == gene_chrom and orf_start >= gene_start and orf_end <= gene_end:
+            return True
+    return False
 
 # function to calculate protein sequence physico-chemical properties
 def calculate_sequence_properties(protein_seq):
