@@ -40,17 +40,13 @@ def main():
     [arg_reference_gtf_filename, arg_combined_protein_db_filename, arg_orfome_filename, arg_orfome_transcript_gtf_filename, arg_outdir, arg_canonical_or_all, arg_orf_length, arg_mutant_protein_db_filename, arg_organism] = args[1:]
 
     # annotations
-    fw_proteomedb = open(os.path.join(arg_outdir, "proteome_database.fasta"), "w")
+    fw_proteomedb = open(os.path.join(arg_outdir, "proteome_database.fasta"), 'w')
 
     # custom openprot + uniprot annotation database
     openprot = {}   # comprise OpenProt annotations: k:seq v:protein_id
     refprot = {}    # comprise reference proteins annotated in uniprot/refseq/ensembl. k:seq v:protein id
     uniprot = {}    # comprise UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
     getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)  # OpenProt annotations
-
-    # GTF annotations
-    # Reference GTF ENSEMBL/GENCODE
-    refence_gtf = open(arg_reference_gtf_filename)
 
     # Gene
     gene_biotype = {}  # k:gene_id i.e ENSG,k:gene biotype
@@ -72,11 +68,11 @@ def main():
     # cds coordinates
     cds_coordinates = {}  # genome coordinates of transcript cds k:transcript_id i.e ENST,k: genomic coordinates
 
-    for i in refence_gtf:
-        if i.startswith("#"):
-            continue
-        else:
-            GP = GTFParser(i.strip())
+    with open(arg_reference_gtf_filename, 'r') as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            GP = GTFParser(line.strip())
             if GP.feature == "gene":
                 gene_biotype[GP.ensgene] = GP.genetype
                 gene_coordinates[GP.ensgene] = GP.getCoordinates()
@@ -96,16 +92,14 @@ def main():
                 utr_coordinates.setdefault(GP.transcriptid, []).append(GP.getCoordinates())
             if GP.featureExists("CDS"):
                 cds_coordinates.setdefault(GP.transcriptid, []).append(GP.getCoordinates())
-    refence_gtf.close()
 
     # ORFome_transcripts gtf
-    orfome_transcript_gtf = open(arg_orfome_transcript_gtf_filename)
-    for i in orfome_transcript_gtf:
-        if i.startswith("#"):
-            continue
-        else:
-            if "BambuGene" in i.strip() or "BambuTx" in i.strip():  # denovoGene denovoTx
-                GP = GTFParser(i.strip())
+    with open(arg_orfome_transcript_gtf_filename, 'r') as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            if "BambuGene" in line.strip() or "BambuTx" in line.strip():  # denovoGene denovoTx
+                GP = GTFParser(line.strip())
                 if GP.featureExists("exon"):
                     exon_lengths.setdefault(GP.transcriptid, []).append(GP.end - GP.start + 1)  # stores exon length
                     exon_coordinates.setdefault(GP.transcriptid, []).append(str(GP.start) + "-" + str(GP.end))  # stores exon gen
@@ -118,25 +112,19 @@ def main():
                         transcript_biotypes[GP.transcriptid] = "novel"
                     if "BambuGene" in GP.genename:
                         gene_biotype[GP.genename] = "novel"
-    orfome_transcript_gtf.close()
 
     var_transcript_ORF_map = {}
     var_ORF_anno = {}
     if arg_mutant_protein_db_filename != "None" and os.path.isfile(arg_mutant_protein_db_filename):  # variant file is optional
-        mutant_protein_fh = open(arg_mutant_protein_db_filename)
-        for i in mutant_protein_fh:
-            if i.strip().startswith("transcript"):
-                continue
-            else:
-                transcript = i.strip().split("\t")[0]
-                if transcript in transcript_gene_id_map.keys():  # the gencode version of reference GTF must be same
-                    gene_id = transcript_gene_id_map[transcript]
-                    var_sq = i.strip().split("\t")[1]
-                    orf_coordinate = i.strip().split("\t")[2]
-                    mutation_type = i.strip().split("\t")[3]
+        with open(arg_mutant_protein_db_filename, 'r') as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if line.startswith("transcript"):
+                    continue
+                [transcript, var_sq, orf_coordinate, mutation_type] = line.split('\t')[:4]
+                if transcript in transcript_gene_id_map:    # the gencode version of reference GTF must be same
                     var_transcript_ORF_map.setdefault(transcript, []).append(var_sq)
-                    var_ORF_anno[var_sq] = orf_coordinate + "|" + mutation_type
-        mutant_protein_fh.close()
+                    var_ORF_anno[var_sq] = f"{orf_coordinate}|{mutation_type}"
 
     # function to annotate protein sequence based on genomic coordinates, biotypes, physioco-chemical properties
     def get_protein_annotation(transcript, gene_id, gene_name, protein_des, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, orf_type, localisation, openprot_annotations, longest_orf, protein_status, orf_metadata_map, reading_frame_info, var_ORF_anno):
@@ -220,15 +208,15 @@ def main():
     # ORFomedb
     unannotated_proteins = {}  # stores unannotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
     unannotated_protein_coordinates = {}  # stores unannotated protein coordinates as key: k: transcript|orf_number|genomic_coordinates,v:protein sequence
-    orfome = open(arg_orfome_filename)
     transcript_orf_map = {}  # stores all orfs for each transcript: k;transcript_id,v:protein_seq|orf_id
 
     annotated_proteins = {}  # store annotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
     reading_frame_map = {}
-    for i in orfome:
-        if i.startswith("ORF_id"):
-            continue
-        else:
+
+    with open(arg_orfome_filename, 'r') as f:
+        for i in f:
+            if i.startswith("ORF_id"):
+                continue
             orf_id = i.strip().split("\t")[0].strip()
             protein_seq = i.strip().split("\t")[1].strip()
             transcript = orf_id.split("_")[0]
@@ -277,12 +265,9 @@ def main():
                     continue
                 else:
                     annotated_proteins.setdefault(protein_seq, []).append(refprot_id + "|" + orf_id + "|" + orf_coordinate)
-
             else:
                 unannotated_proteins.setdefault(protein_seq, []).append(orf_id + "|" + orf_coordinate)
                 unannotated_protein_coordinates[orf_id + "|" + orf_coordinate] = protein_seq
-
-    orfome.close()
 
     # find longest orf in transcript
     transcript_longest_orf_map = {}  # stores longest ORF in transcript: k: orf_id v:protein_seq
