@@ -7,20 +7,9 @@
 import sys
 import os
 import re
-import peptide as pep
 from parse_reference_gtf import *
 from annotate_proteome_functions import *
 import subprocess
-
-# function to calculate protein sequence physico-chemical properties
-def calculate_sequence_properties(protein_seq):
-    peptide_obj = pep.Peptide(protein_seq)
-    Mol_wt = calculateMolWt(peptide_obj)
-    IsoPt = calculateIsoElectricPoint(peptide_obj)
-    HydroP_ind = calculateHydrophobicity(peptide_obj)
-    Aliphatic_ind = calculateAliphatic_index(peptide_obj)
-    seq_properties = '\t'.join(map(str, [Mol_wt, IsoPt, HydroP_ind, Aliphatic_ind]))
-    return seq_properties
 
 def main():
     args = sys.argv

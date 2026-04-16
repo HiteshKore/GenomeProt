@@ -1,12 +1,8 @@
 from pycdhit import cd_hit, read_clstr
 import peptides as pep
 from Bio import pairwise2
-#from Bio.pairwise2 import format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 from Bio.pairwise2 import format_alignment
-
-
-
 
 class clusterSequences():
     def SeqClust(self,fasta,out):
@@ -154,6 +150,16 @@ class Annotations():
               orf_overlap="gene_overlap"
               break
         return orf_overlap
+
+# function to calculate protein sequence physico-chemical properties
+def calculate_sequence_properties(protein_seq):
+    peptide_obj = pep.Peptide(protein_seq)
+    Mol_wt = calculateMolWt(peptide_obj)
+    IsoPt = calculateIsoElectricPoint(peptide_obj)
+    HydroP_ind = calculateHydrophobicity(peptide_obj)
+    Aliphatic_ind = calculateAliphatic_index(peptide_obj)
+    seq_properties = '\t'.join(map(str, [Mol_wt, IsoPt, HydroP_ind, Aliphatic_ind]))
+    return seq_properties
 
 def calculateMolWt(peptide_obj):
     return round(float(peptide_obj.molecular_weight()) / 1000, 2)   # in KDa
