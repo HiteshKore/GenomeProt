@@ -131,14 +131,12 @@ def main():
     def variant_protein_annotations(transcript, var_orfs, wt_protein):
         res = ""
         for var_protein in var_orfs:
-            SS = SequenceSimilarity()
-            similarity, aa_change = SS.calculate_similarity(var_protein, wt_protein)  # parise wise alignment to calculate sequence similarity
+            similarity, aa_change = calculate_similarity(var_protein, wt_protein)   # pairwise alignment to calculate sequence similarity
             similarity = round(similarity, 2)
-            if similarity > 96 and similarity < 100:
+            if 96 < similarity < 100:
                 sq_properties = calculate_sequence_properties(var_protein)
-                coordinates = var_ORF_anno[var_protein].split("|")[0]
-                var_type = var_ORF_anno[var_protein].split("|")[1]
-                res = var_protein + "\t" + aa_change + "\t" + coordinates + "\t" + var_type + "\t" + sq_properties
+                coordinates, var_type = var_ORF_anno[var_protein].split('|')[:2]
+                res = '\t'.join(map(str, [var_protein, aa_change, coordinates, var_type, sq_properties]))
         return res
 
     # function to annotate protein sequence based on genomic coordinates, biotypes, physioco-chemical properties

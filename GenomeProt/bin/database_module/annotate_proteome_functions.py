@@ -31,7 +31,7 @@ class Annotations():
         if ":" in orf and "-" in orf:
           orfBT=""
           ochr=orf.split(':')[0]
-          utr_anno={} #annotates 5' and 3' UTR coordinates: k: UTR coordinates v:3UTR/5UTR 
+          utr_anno={} #annotates 5' and 3' UTR coordinates: k: UTR coordinates v:3UTR/5UTR
           utr_orf_pos=[]
           #segreagate 3UTR and 5UTR coordinates and determine postion of ORFs in UTR exons
           if st=="+":
@@ -44,12 +44,12 @@ class Annotations():
               if uchr==ochr:
                 u_start=int(utr.split(':')[1].split('-')[0])
                 u_end=int(utr.split(':')[1].split('-')[1])
-                #marking 5UTR and 3UTR 
+                #marking 5UTR and 3UTR
                 if u_start < first_cds and u_end < first_cds:#if UTR start and end is lesser than first cds start then it is 5UTR
                   utr_anno[utr]='5UTR'
                 elif u_start > last_cds and u_end>last_cds: #if UTR start and end is greater than first cds then it is 5UTR
                   utr_anno[utr]='3UTR'
-            
+
             for utrs in utrmap:
               uchr=utrs.split(':')[0].strip()
               u_start=int(utrs.split(':')[1].split('-')[0])
@@ -57,15 +57,14 @@ class Annotations():
               if uchr==ochr:
                 if ostart >=u_start and ostart < u_end: #if ORF start is greater than UTR start and less than than UTR end
                   utr_orf_pos.append("*"+utr_anno[utrs]) # * indicates if ORF starts in 5' or 3' UTR
-                elif ostart >u_start and ostart <= u_end: 
-                  utr_orf_pos.append("*"+utr_anno[utrs]) 
-                  
-                  
+                elif ostart >u_start and ostart <= u_end:
+                  utr_orf_pos.append("*"+utr_anno[utrs])
+
                 if oend >= u_start and oend< u_end: #if ORF start is greater than UTR start and less than than UTR end
                   utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
                 elif oend > u_start and oend<= u_end: #if ORF start is greater than UTR start and less than than UTR end
                   utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
-          
+
           if st=="-":
             ostart=int(orf.split(":")[1].split('-')[1])
             oend=int(orf.split(":")[1].split('-')[0])
@@ -80,31 +79,24 @@ class Annotations():
                   utr_anno[utr]='5UTR'
                 elif u_start < last_cds and u_end<last_cds:
                   utr_anno[utr]='3UTR'
-                
 
             for utrs in utrmap:
               uchr=utrs.split(':')[0].strip()
               if uchr==ochr:
                 u_start=int(utrs.split(':')[1].split('-')[1])
                 u_end=int(utrs.split(':')[1].split('-')[0])
-                #print(ostart,oend,"***",u_start,u_end)
                 #start
                 if ostart <= u_start and ostart > u_end: #if ORF start is lesser than UTR start and greater than than UTR end
                   utr_orf_pos.append("*"+utr_anno[utrs]) # * indicates if ORF starts in 5' or 3' UTR
-                elif ostart < u_start and ostart >= u_end: 
+                elif ostart < u_start and ostart >= u_end:
                   utr_orf_pos.append("*"+utr_anno[utrs])
-                  #print(ostart,oend,"<==>",u_start,u_end)
                 #end
                 if oend<= u_start and oend > u_end: #if ORF end is lesser than UTR start and greater than than UTR end
                     utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
-                    #print(ostart,oend,"<==>",u_start,u_end)
                 elif oend< u_start and oend >= u_end:
                   utr_orf_pos.append("**"+utr_anno[utrs])
-                
-          ######Determining ORF type based on utr_orf_pos
-          #print(tr,utr_orf_pos,orf)
-          #print(tr, utr_anno.items(),"cds",trcds)
 
+          # Determine ORF type
           if len(utr_orf_pos)==1:
             if utr_orf_pos[0]=='*5UTR':
               orfBT="5UTR:CDS"
@@ -114,9 +106,7 @@ class Annotations():
               orfBT="CDS:3UTR" #Alt-CDS:3UTR
             elif utr_orf_pos[0]=='**5UTR': #handeling ambiguity due to ORFs locations predicted by ORFik are off by certain nucleiotide differences
               orfBT="5UTR"
-            
-              
-              
+
           elif len(utr_orf_pos)==2:
             if utr_orf_pos[0]=='*3UTR' and utr_orf_pos[1]=='**3UTR':
               orfBT="3UTR"
@@ -127,7 +117,7 @@ class Annotations():
             elif utr_orf_pos[0]=='**3UTR' and utr_orf_pos[1]=='*5UTR':
               orfBT="5UTR:3UTR"
           return orfBT
-        
+
     def isIntergenic(self,orf_cord,gene_cord_map):
       #ORF
       if ":" in orf_cord and "-" in orf_cord:
@@ -168,38 +158,31 @@ def calculateHydrophobicity(peptide_obj):
 def calculateAliphatic_index(peptide_obj):
     return round(peptide_obj.aliphatic_index(), 2)
 
-class SequenceSimilarity():
-  def calculate_similarity(self,seq1, seq2):
+def calculate_similarity(seq1, seq2):
     # Use a substitution matrix like BLOSUM62
     matrix = matlist.blosum62
+
     # Set gap open and gap extend penalties
     gap_open = -10  # Penalty for opening a gap
     gap_extend = -0.5  # Penalty for extending a gap
-     # Perform global alignment with the matrix and gap penalties
+
+    # Perform global alignment with the matrix and gap penalties
     alignments = pairwise2.align.globalds(seq1, seq2, matrix, gap_open, gap_extend)
-    
+
     # Take the best alignment (the first one)
     best_alignment = alignments[0]
-    
-    
-    #print(format_alignment(*best_alignment))
 
     # Extract aligned sequences
     aligned_seq1, aligned_seq2, score, start, end = best_alignment
-    
+
     # Calculate the percentage similarity
     matches = sum(1 for a, b in zip(aligned_seq1, aligned_seq2) if a == b)
     similarity_percentage = matches / len(aligned_seq1) * 100
-    
+
     # Find changed amino acids
-    changed_positions = [
-        (i + 1, a, b) for i, (a, b) in enumerate(zip(aligned_seq1, aligned_seq2)) #first mutant and second wild type
-        if a != b and a != '-' and b != '-'
-    ]
+    changed_positions = [(i + 1, a, b) for i, (a, b) in enumerate(zip(aligned_seq1, aligned_seq2)) if a != b and a != "-" and b != "-"]  # first mutant and second wild type
+
     # convert into standard format to denote mutation
     aa_changes = ",".join([f"{b}{pos}{a}" for pos, a, b in changed_positions])
-    
 
-    return similarity_percentage,aa_changes
-
-  
+    return similarity_percentage, aa_changes
