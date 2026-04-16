@@ -4,10 +4,9 @@ from Bio import pairwise2
 from Bio.SubsMat import MatrixInfo as matlist
 from Bio.pairwise2 import format_alignment
 
-class clusterSequences():
-    def SeqClust(self,fasta,out):
-      res = cd_hit(i=fasta,o=out,c=1.0,d=0,sc=1,n=3,G=0,aS=1,aL=0,A=0)
-      return res
+def SeqClust(fasta, out):
+    cd_hit(i = fasta, o = out, c = 1.0, d = 0, sc = 1, n = 3, G = 0, aS = 1, aL = 0, A = 0)
+
 class refDb():
     def getDbAnnotations(self,db,openprot_map,ref_prot_map,uniprot_map): #Reference protein sequence database
       fh=open(db)

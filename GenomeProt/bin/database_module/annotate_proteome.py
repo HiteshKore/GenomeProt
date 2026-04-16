@@ -312,12 +312,10 @@ def main():
             entries += f">{protein_info[0]}\n" + f"{protein_seq}\n"
         _ = f.write(entries)
 
-    # Perform cdhit clusering on unannotated proteins to consider longest representative protein sequence
+    # Perform cdhit clustering on unannotated proteins to consider longest representative protein sequence
     orf_clus_file = os.path.join(arg_outdir, "cdhit_out")
-    CS = clusterSequences()
-    CS.SeqClust(orf_temp_file, orf_clus_file)
+    SeqClust(orf_temp_file, orf_clus_file)
 
-    longest_orf_anno = {}  # k:accession v:Y, N
     orfbiotype_transcript_map = {}  # k:orf, v:transcript|biotype
     # annotations of known proteins
     orf_metadata_annotated_proteins = {}  # key:protein_seq, val:metadata
@@ -359,7 +357,6 @@ def main():
                         protein_status = "unreviewed(TrEMBL)"
 
                     protein_accession = uniprot[protein_seq].split("|")[1]
-                    longest_orf_anno[protein_accession] = longest_orf
                     protein_description = uniprot[protein_seq].split("|")[2]
 
                     orfbiotype_transcript_map.setdefault(protein_accession, []).append(transcript + "|CDS")
@@ -371,7 +368,6 @@ def main():
                 elif protein_seq in refprot.keys():
                     protein_status = "-"
                     protein_accession = refprot[protein_seq]
-                    longest_orf_anno[protein_accession] = longest_orf
                     protein_description = "-"
                     orfbiotype_transcript_map.setdefault(protein_accession, []).append(transcript + "|CDS")
 
