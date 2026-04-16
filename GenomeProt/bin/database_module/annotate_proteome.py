@@ -14,19 +14,22 @@ import subprocess
 def main():
     args = sys.argv
     if len(args) != 10:
-        print("Usage: python3 annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism>")
+        print(f"Usage: {args[0]} annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism>")
         sys.exit(1)
+
+    # Store the arguments
+    [arg_reference_gtf_filename, arg_combined_protein_db_filename, arg_orfome_filename, arg_orfome_transcript_gtf_filename, arg_outdir, arg_canonical_or_all, arg_orf_length, arg_mutant_protein_db_filename, arg_organism] = args[1:]
 
     # custom openprot+ uniprot annotation database
     RF = refDb()
-    uniprot = {}  # comprise UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
-    openprot = {}  # comprise OpenProt annotations: k:seq v:protein_id
-    refprot = {}  # comprise reference proteins annotated in uniprot/refseq/ensembl. k:seq v:protein id
-    RF.getDbAnnotations(args[2], openprot, refprot, uniprot)  # OpenProt annotations
+    uniprot = {}    # comprise UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
+    openprot = {}   # comprise OpenProt annotations: k:seq v:protein_id
+    refprot = {}    # comprise reference proteins annotated in uniprot/refseq/ensembl. k:seq v:protein id
+    RF.getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)  # OpenProt annotations
 
     # GTF annotations
     # Reference GTF ENSEMBL/GENCODE
-    refence_gtf = open(args[1])
+    refence_gtf = open(arg_reference_gtf_filename)
 
     # Gene
     gene_biotype = {}  # k:gene_id i.e ENSG,k:gene biotype
@@ -75,7 +78,7 @@ def main():
     refence_gtf.close()
 
     # ORFome_transcripts gtf
-    orfome_transcript_gtf = open(args[4])
+    orfome_transcript_gtf = open(arg_orfome_transcript_gtf_filename)
     for i in orfome_transcript_gtf:
         if i.startswith("#"):
             continue
@@ -99,8 +102,8 @@ def main():
 
     var_transcript_ORF_map = {}
     var_ORF_anno = {}
-    if args[8] != "None" and os.path.isfile(args[8]):  # variant file is optional
-        mutant_protein_fh = open(args[8])
+    if arg_mutant_protein_db_filename != "None" and os.path.isfile(arg_mutant_protein_db_filename):  # variant file is optional
+        mutant_protein_fh = open(arg_mutant_protein_db_filename)
         for i in mutant_protein_fh:
             if i.strip().startswith("transcript"):
                 continue
@@ -184,7 +187,7 @@ def main():
     def formatFastaheader(orf_info_map, outfile):  # takes annotated ORFs map and output fasta file handler
         for prot_sq, annotations in orf_info_map.items():
             accession = ""
-            org = args[9]
+            org = arg_organism
             orgmap = {"HUMAN": "Homo sapiens", "CAEEL": "Caenorhabditis elegans", "MOUSE": "Mus musculus", "RAT": "Rattus norvegicus", "DROME": "Drosophila melanogaster", "DANRE": "Danio rerio"}
 
             orf_coord = []  # ORF coordinates
@@ -222,7 +225,7 @@ def main():
     # ORFomedb
     unannotated_proteins = {}  # stores unannotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
     unannotated_protein_coordinates = {}  # stores unannotated protein coordinates as key: k: transcript|orf_number|genomic_coordinates,v:protein sequence
-    orfome = open(args[3])
+    orfome = open(arg_orfome_filename)
     transcript_orf_map = {}  # stores all orfs for each transcript: k;transcript_id,v:protein_seq|orf_id
 
     annotated_proteins = {}  # store annotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
@@ -303,7 +306,7 @@ def main():
     # store sequences in the temparory file which is required to perform clustering using cdhit
     # Ouputdir
 
-    outdir = args[5] + "/"
+    outdir = arg_outdir + "/"
     orf_temp_file = outdir + "orf_temp.txt"
     fw_orf_temp = open(orf_temp_file, "w")  # Temparary file to store ORF before clustering
 
@@ -403,20 +406,20 @@ def main():
             orf_coordinate = protein_anno.split("\t")[8]
             longest_orf = protein_anno.split("\t")[14]
 
-            if args[6] == "canonical":
+            if arg_canonical_or_all == "canonical":
                 if longest_orf == "Y":
                     metadata_records.append(protein_anno)
                     fa_header = protein_accession + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript + "|" + protein_description
                     canonical_annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
-            elif args[6] == "all":
+            elif arg_canonical_or_all == "all":
                 metadata_records.append(protein_anno)
                 fa_header = protein_accession + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript + "|" + protein_description
                 all_annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
 
-    if args[6] == "canonical":
+    if arg_canonical_or_all == "canonical":
         # generate fasta database
         formatFastaheader(canonical_annotated_orf_map, fw_proteomedb)
-    elif args[6] == "all":
+    elif arg_canonical_or_all == "all":
         # generate fasta database
         formatFastaheader(all_annotated_orf_map, fw_proteomedb)
 
@@ -466,7 +469,7 @@ def main():
 
                                 utr_orf = AN.UTRAnnotations(transcript, utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
                                 if "UTR" in utr_orf and "CDS:3UTR" not in utr_orf:  # ORF overlap with UTR region
-                                    if len(protein_seq) < int(args[7]):  # for short uORFs, remove CDS annotation
+                                    if len(protein_seq) < int(arg_orf_length):  # for short uORFs, remove CDS annotation
                                         utr_orf = utr_orf.split(":")[0]
                                         # annotate ORF
                                         get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", utr_orf, openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript])
@@ -480,7 +483,7 @@ def main():
 
                                     utr_orf = AN.UTRAnnotations(transcript, utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
                                     if "UTR" in utr_orf and "CDS:3UTR" not in utr_orf:  # ORF overlap with UTR region
-                                        if len(protein_seq) < int(args[7]):
+                                        if len(protein_seq) < int(arg_orf_length):
                                             utr_orf = utr_orf.split(":")[0]
                                             # annotate ORF
                                             get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", utr_orf, openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript])
@@ -522,12 +525,12 @@ def main():
         for protein_annotation in annotations:
             longest_orf = protein_annotation.split("\t")[14]
             accession = protein_annotation.split("\t")[0].replace("_var", "")
-            if args[6] == "canonical":
+            if arg_canonical_or_all == "canonical":
                 if longest_orf == "Y":
 
                     if accession not in canonical_novel_orf_ids:
                         canonical_novel_orf_ids.append(accession)
-            if args[6] == "all":
+            if arg_canonical_or_all == "all":
                 if accession not in all_novel_orf_ids:
                     all_novel_orf_ids.append(accession)
     # loop closed
@@ -545,7 +548,7 @@ def main():
             transcript = protein_annotation.split("\t")[4]
             orf_coordinate = protein_annotation.split("\t")[8]
             longest_orf = protein_annotation.split("\t")[14]
-            if args[6] == "canonical":
+            if arg_canonical_or_all == "canonical":
                 if longest_orf == "Y":
                     if "_var" in accession:
                         temp_acc = accession.replace("_var", "")
@@ -559,7 +562,7 @@ def main():
                     revised_annotations = protein_annotation.replace(accession, new_accesion)
                     metadata_records.append(revised_annotations)
 
-            if args[6] == "all":
+            if arg_canonical_or_all == "all":
                 if "_var" in accession:
                     temp_acc = accession.replace("_var", "")
                     new_accesion = "ORF_" + str(all_novel_orf_ids.index(temp_acc) + 1) + "_var"  # +1 as list index starts with zero
@@ -580,10 +583,10 @@ def main():
         f.writelines(metadata_records_uniq)
 
     # write fasta output
-    if args[6] == "canonical":
+    if arg_canonical_or_all == "canonical":
         # generate fasta database
         formatFastaheader(canonical_novel_orf_map, fw_proteomedb)
-    elif args[6] == "all":
+    elif arg_canonical_or_all == "all":
         # generate fasta database
         formatFastaheader(all_novel_orf_map, fw_proteomedb)
 
