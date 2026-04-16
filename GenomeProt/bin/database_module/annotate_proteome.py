@@ -129,25 +129,25 @@ def main():
             if GP.featureExists("CDS"):
                 cds_coordinates.setdefault(GP.transcriptid, []).append(GP.getCoordinates())
 
-    # ORFome_transcripts gtf
     with open(arg_orfome_transcript_gtf_filename, 'r') as f:
-        for line in f:
-            if line.startswith('#'):
+        for raw_line in f:
+            # denovoGene denovoTx
+            if raw_line.startswith('#') or not ("BambuGene" in raw_line or "BambuTx" in raw_line):
                 continue
-            if "BambuGene" in line.strip() or "BambuTx" in line.strip():  # denovoGene denovoTx
-                GP = GTFParser(line.strip())
-                if GP.featureExists("exon"):
-                    exon_lengths.setdefault(GP.transcriptid, []).append(GP.end - GP.start + 1)  # stores exon length
-                    exon_coordinates.setdefault(GP.transcriptid, []).append(str(GP.start) + "-" + str(GP.end))  # stores exon gen
-                if GP.featureExists("transcript"):
-                    transcript_genome_coordinates[GP.transcriptid] = GP.getCoordinates()
-                    transcript_strand[GP.transcriptid] = GP.strand
-                    transcript_gene_id_map[GP.transcriptid] = GP.ensgene
-                    transcript_gene_name_map[GP.transcriptid] = GP.genename
-                    if "BambuTx" in GP.transcriptid:
-                        transcript_biotypes[GP.transcriptid] = "novel"
-                    if "BambuGene" in GP.genename:
-                        gene_biotype[GP.genename] = "novel"
+            line = raw_line.strip()
+            GP = GTFParser(line)
+            if GP.featureExists("exon"):
+                exon_lengths.setdefault(GP.transcriptid, []).append(GP.end - GP.start + 1)  # stores exon length
+                exon_coordinates.setdefault(GP.transcriptid, []).append(str(GP.start) + "-" + str(GP.end))  # stores exon gen
+            if GP.featureExists("transcript"):
+                transcript_genome_coordinates[GP.transcriptid] = GP.getCoordinates()
+                transcript_strand[GP.transcriptid] = GP.strand
+                transcript_gene_id_map[GP.transcriptid] = GP.ensgene
+                transcript_gene_name_map[GP.transcriptid] = GP.genename
+                if "BambuTx" in GP.transcriptid:
+                    transcript_biotypes[GP.transcriptid] = "novel"
+                if "BambuGene" in GP.genename:
+                    gene_biotype[GP.genename] = "novel"
 
     var_transcript_ORF_map = {}
     var_ORF_anno = {}
@@ -307,19 +307,16 @@ def main():
                 unannotated_proteins.setdefault(protein_seq, []).append(orf_id + "|" + orf_coordinate)
                 unannotated_protein_coordinates[orf_id + "|" + orf_coordinate] = protein_seq
 
-    # find longest orf in transcript
+    # Find the longest ORF in the transcripts
     transcript_longest_orf_map = {}  # stores longest ORF in transcript: k: orf_id v:protein_seq
-    for k in transcript_orf_map.keys():
-        orfs = []
-        id = []
-        for orf_rec in transcript_orf_map[k]:
-            orfs.append(orf_rec.split("|")[0].strip())
-            id.append(orf_rec.split("|")[1].strip())
-        orf_lengths = [len(orf) for orf in orfs]
-        longest_orf_index = orf_lengths.index(max(orf_lengths))
-        longest_orf = orfs[longest_orf_index]
-        longest_orf_id = id[longest_orf_index]
-        transcript_longest_orf_map[longest_orf_id] = longest_orf
+    for transcript_orf_recs in transcript_orf_map.values():
+        longest_orf_seq, longest_orf_id, longest_orf_len = '', '', -1
+        for orf_rec in transcript_orf_recs:
+            orf_seq, orf_id = [col.strip() for col in orf_rec.split('|')[:2]]
+            orf_len = len(orf_seq)
+            if orf_len > longest_orf_len:
+                longest_orf_seq, longest_orf_id, longest_orf_len = orf_seq, orf_id, orf_len
+        transcript_longest_orf_map[longest_orf_id] = longest_orf_seq
 
     # store sequences in the temparory file which is required to perform clustering using cdhit
     orf_temp_file = os.path.join(arg_outdir, "orf_temp.txt")
