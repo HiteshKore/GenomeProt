@@ -39,7 +39,43 @@ def main():
     # Store the arguments
     [arg_reference_gtf_filename, arg_combined_protein_db_filename, arg_orfome_filename, arg_orfome_transcript_gtf_filename, arg_outdir, arg_canonical_or_all, arg_orf_length, arg_mutant_protein_db_filename, arg_organism] = args[1:]
 
-    # annotations
+    # Check the arguments
+    error_message = ""
+    if not os.path.isfile(arg_reference_gtf_filename):
+        error_message = f"The reference GTF file '{arg_reference_gtf_filename}' either does not exist or is not a file."
+    elif not os.path.isfile(arg_combined_protein_db_filename):
+        error_message = f"The combined protein database file '{arg_combined_protein_db_filename}' either does not exist or is not a file."
+    elif not os.path.isfile(arg_orfome_filename):
+        error_message = f"The ORFome annotation file '{arg_orfome_filename}' either does not exist or is not a file."
+    elif not os.path.isfile(arg_orfome_transcript_gtf_filename):
+        error_message = f"The ORFome transcripts GTF file '{arg_orfome_transcript_gtf_filename}' either does not exist or is not a file."
+    elif os.path.exists(arg_outdir) and not os.path.isdir(arg_outdir):
+        error_message = f"'{arg_outdir}' exists but it is not a directory."
+    elif arg_mutant_protein_db_filename != "None" and not os.path.isfile(arg_mutant_protein_db_filename):
+        error_message = f"The ORFome annotation file '{arg_mutant_protein_db_filename}' either does not exist or is not a file."
+
+    if error_message:
+        print(error_message)
+        sys.exit(1)
+
+    # If the output directory does not exist, try to create it
+    if not os.path.exists(arg_outdir):
+        try:
+            os.mkdir(arg_outdir)
+        except Exception as e:
+            print(f"Failed to create the output directory '{arg_outdir}'. Error message: '{e}'.")
+            sys.exit(1)
+
+    # Parse the ORF length as a non-negative integer
+    try:
+        arg_orf_length = int(arg_orf_length)
+        if arg_orf_length < 0:
+            print(f"The ORF length must be provided as a non-negative integer.")
+            sys.exit(1)
+    except:
+        print(f"The ORF length '{arg_orf_length}' cannot be parsed as an integer.")
+        sys.exit(1)
+
     fw_proteomedb = open(os.path.join(arg_outdir, "proteome_database.fasta"), 'w')
 
     # custom openprot + uniprot annotation database
@@ -121,8 +157,10 @@ def main():
                 line = raw_line.strip()
                 if line.startswith("transcript"):
                     continue
-                [transcript, var_sq, orf_coordinate, mutation_type] = line.split('\t')[:4]
-                if transcript in transcript_gene_id_map:    # the gencode version of reference GTF must be same
+                columns = line.split('\t')[:4]
+                transcript = columns[0]
+                if transcript in transcript_gene_id_map and len(columns) == 4:  # the gencode version of reference GTF must be same
+                    [var_sq, orf_coordinate, mutation_type] = columns[1:]
                     var_transcript_ORF_map.setdefault(transcript, []).append(var_sq)
                     var_ORF_anno[var_sq] = f"{orf_coordinate}|{mutation_type}"
 
@@ -437,7 +475,7 @@ def main():
 
                                     utr_orf = AN.UTRAnnotations(transcript, utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
                                     if "UTR" in utr_orf and "CDS:3UTR" not in utr_orf:  # ORF overlap with UTR region
-                                        if len(protein_seq) < int(arg_orf_length):  # for short uORFs, remove CDS annotation
+                                        if len(protein_seq) < arg_orf_length:   # for short uORFs, remove CDS annotation
                                             utr_orf = utr_orf.split(":")[0]
                                             # annotate ORF
                                             get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", utr_orf, openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript], var_ORF_anno)
@@ -451,7 +489,7 @@ def main():
 
                                         utr_orf = AN.UTRAnnotations(transcript, utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
                                         if "UTR" in utr_orf and "CDS:3UTR" not in utr_orf:  # ORF overlap with UTR region
-                                            if len(protein_seq) < int(arg_orf_length):
+                                            if len(protein_seq) < arg_orf_length:
                                                 utr_orf = utr_orf.split(":")[0]
                                                 # annotate ORF
                                                 get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "unannotated", utr_orf, openprot_id, longest_orf, protein_status, orf_annotation_map, reading_frame_map[transcript], var_ORF_anno)
@@ -493,7 +531,6 @@ def main():
             accession = protein_annotation.split("\t")[0].replace("_var", "")
             if arg_canonical_or_all == "canonical":
                 if longest_orf == "Y":
-
                     if accession not in canonical_novel_orf_ids:
                         canonical_novel_orf_ids.append(accession)
             if arg_canonical_or_all == "all":
@@ -544,7 +581,8 @@ def main():
     metadata_records_uniq = list(dict.fromkeys(metadata_records))
 
     # write metadata
-    with open(os.path.join(arg_outdir, "proteome_database_metadata.txt"), 'w') as f:
+    proteome_database_metadata_filename = os.path.join(arg_outdir, "proteome_database_metadata.txt")
+    with open(proteome_database_metadata_filename, 'w') as f:
         f.write('\t'.join(["accession", "gene", "gene_symbol", "protein_description", "transcript", "strand", "transcript_biotype", "transcript_coordinates", "orf_genomic_coordinates", "reading_frame", "orf_type", "localisation", "openprot_id", "protein_sequence", "longest_orf_in_transcript", "uniprot_status", "amino_acid_change", "molecular_weight(kDA)", "isoelectric_point", "hydrophobicity", "aliphatic_index"]) + '\n')
         f.writelines(metadata_records_uniq)
 
