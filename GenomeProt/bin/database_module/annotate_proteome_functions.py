@@ -7,28 +7,24 @@ from Bio.pairwise2 import format_alignment
 def SeqClust(fasta, out):
     cd_hit(i = fasta, o = out, c = 1.0, d = 0, sc = 1, n = 3, G = 0, aS = 1, aL = 0, A = 0)
 
-class refDb():
-    def getDbAnnotations(self,db,openprot_map,ref_prot_map,uniprot_map): #Reference protein sequence database
-      fh=open(db)
-      for i in fh:
-        if "#" not in i.strip():
-          id=i.strip().split("\t")[0].split("|")[0].replace(">",'')
-          seq=i.strip().split("\t")[1].strip()
-          uniprot_header=i.strip().split("\t")[2].strip()
-          
-          openprot_map[seq]=id
-          if '>IP_' not in i.strip()  and '>II_' not in i.strip():
-            ref_prot_map[seq]=id
-          if uniprot_header !="-":
-            uniprot_accession=i.strip().split("\t")[2].split("|")[0].replace(">","")+"|"+i.strip().split("\t")[2].split("|")[1] #trEMBL or Reviewed| Accession
-            uniprot_gene_description=i.strip().split("\t")[3].strip()
-            uniprot_map[seq]=uniprot_accession+"|"+uniprot_gene_description
-      fh.close()
+def getDbAnnotations(db_filename, openprot_map, ref_prot_map, uniprot_map):  # Reference protein sequence database
+    with open(db_filename, 'r') as f:
+        for raw_line in f:
+            line = raw_line.strip()
+            if '#' in line:
+                continue
 
-            
-    def seqRefAnnotations(self,orfmap,seq):
-        if seq in orfmap.keys():
-            return orfmap[seq]
+            columns = [col.strip() for col in line.split('\t')]
+            [protein_id, seq, uniprot_header] = columns[:3]
+            protein_id = protein_id.split('|')[0].replace('>', '')
+
+            openprot_map[seq] = protein_id
+            if ">IP_" not in line and ">II_" not in line:
+                ref_prot_map[seq] = protein_id
+            if uniprot_header != '-':
+                uniprot_accession = uniprot_header.split('|')[0].replace('>', '') + '|' + uniprot_header.split('|')[1]  # trEMBL or Reviewed| Accession
+                uniprot_gene_description = columns[3]
+                uniprot_map[seq] = f"{uniprot_accession}|{uniprot_gene_description}"
 
 class Annotations():
     def UTRAnnotations(self,tr,utrmap,orf,st,trcds): #transcript,utrcord, orfcoord,strand,transcript coordinates

@@ -29,12 +29,11 @@ def main():
     # annotations
     fw_proteomedb = open(os.path.join(arg_outdir, "proteome_database.fasta"), "w")
 
-    # custom openprot+ uniprot annotation database
-    RF = refDb()
-    uniprot = {}    # comprise UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
+    # custom openprot + uniprot annotation database
     openprot = {}   # comprise OpenProt annotations: k:seq v:protein_id
     refprot = {}    # comprise reference proteins annotated in uniprot/refseq/ensembl. k:seq v:protein id
-    RF.getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)  # OpenProt annotations
+    uniprot = {}    # comprise UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
+    getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)  # OpenProt annotations
 
     # GTF annotations
     # Reference GTF ENSEMBL/GENCODE
