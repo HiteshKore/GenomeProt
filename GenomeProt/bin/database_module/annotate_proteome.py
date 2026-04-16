@@ -7,9 +7,20 @@
 import sys
 import os
 import re
+import peptide as pep
 from parse_reference_gtf import *
 from annotate_proteome_functions import *
 import subprocess
+
+# function to calculate protein sequence physico-chemical properties
+def calculate_sequence_properties(protein_seq):
+    peptide_obj = pep.Peptide(protein_seq)
+    Mol_wt = calculateMolWt(peptide_obj)
+    IsoPt = calculateIsoElectricPoint(peptide_obj)
+    HydroP_ind = calculateHydrophobicity(peptide_obj)
+    Aliphatic_ind = calculateAliphatic_index(peptide_obj)
+    seq_properties = '\t'.join(map(str, [Mol_wt, IsoPt, HydroP_ind, Aliphatic_ind]))
+    return seq_properties
 
 def main():
     args = sys.argv
@@ -118,16 +129,6 @@ def main():
                     var_ORF_anno[var_sq] = orf_coordinate + "|" + mutation_type
 
         mutant_protein_fh.close()
-
-    # function to calculate protein sequence physico-chemical properties
-    def calculate_sequence_properties(protein_seq):
-        SP = SequenceProperties()
-        Mol_wt = SP.calculateMolWt(protein_seq)
-        IsoPt = SP.calculateIsoElectricPoint(protein_seq)
-        HydroP_ind = SP.calculateHydrophobicity(protein_seq)
-        Aliphatic_ind = SP.calculateAliphatic_index(protein_seq)
-        seq_properties = str(Mol_wt) + "\t" + str(IsoPt) + "\t" + str(HydroP_ind) + "\t" + str(Aliphatic_ind)
-        return seq_properties
 
     # function to identify amino acid residue changes in wildtype and variant protein sequence
     def variant_protein_annotations(transcript, var_orfs, wt_protein):

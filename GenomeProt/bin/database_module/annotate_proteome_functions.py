@@ -154,24 +154,18 @@ class Annotations():
               orf_overlap="gene_overlap"
               break
         return orf_overlap
-      
-class SequenceProperties():
-  def calculateMolWt(self,seq):
-    peptide = pep.Peptide(seq)
-    mol_weight=round(float(peptide.molecular_weight())/1000,2) #Molecular weight in KDa
-    return mol_weight
-  def calculateIsoElectricPoint(self,seq):
-    peptide = pep.Peptide(seq)
-    Iso_ele_point=round(peptide.isoelectric_point(),2) #Isoelectric point
-    return Iso_ele_point
-  def calculateHydrophobicity(self,seq):
-    peptide = pep.Peptide(seq)
-    hydrophobicity=round(peptide.hydrophobicity(),2) #hydrophobicity
-    return hydrophobicity
-  def calculateAliphatic_index(self,seq):
-    peptide = pep.Peptide(seq)
-    aliphatic_index=round(peptide.aliphatic_index(),2) #hydrophobicity
-    return aliphatic_index
+
+def calculateMolWt(peptide_obj):
+    return round(float(peptide_obj.molecular_weight()) / 1000, 2)   # in KDa
+
+def calculateIsoElectricPoint(peptide_obj):
+    return round(peptide_obj.isoelectric_point(), 2)
+
+def calculateHydrophobicity(peptide_obj):
+    return round(peptide_obj.hydrophobicity(), 2)
+
+def calculateAliphatic_index(peptide_obj):
+    return round(peptide_obj.aliphatic_index(), 2)
 
 class SequenceSimilarity():
   def calculate_similarity(self,seq1, seq2):
