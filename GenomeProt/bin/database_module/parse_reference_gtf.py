@@ -3,7 +3,7 @@
 #######################################################################
 
 class GTFParser():
-    def __init__(self,line):
+    def __init__(self, raw_line):
         line = raw_line.strip()
         cols = [col.strip() for col in line.split('\t')]
         if len(cols) <= 2:
