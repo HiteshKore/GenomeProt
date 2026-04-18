@@ -406,35 +406,23 @@ def main():
     # annotated_proteins close
 
     # write output to metadata and fasta file
-    canonical_annotated_orf_map = {}  # k:protein_seq, v:fasta header annotations
-    all_annotated_orf_map = {}  # k:protein_seq, v:fasta header annotations
+    annotated_orf_map = {}  # k:protein_seq, v:fasta header annotations
 
     for protein_seq, annotations in orf_metadata_annotated_proteins.items():
         for protein_anno in annotations:
-            # from metadata
+            cols = protein_anno.split('\t')
+            [protein_accession, gene_id, gene_name, protein_description, transcript] = cols[:5]
+            orf_coordinate, longest_orf = cols[8], cols[14]
 
-            protein_accession = protein_anno.split("\t")[0]
-            gene_id = protein_anno.split("\t")[1]
-            gene_name = protein_anno.split("\t")[2]
-            protein_description = protein_anno.split("\t")[3]
-            transcript = protein_anno.split("\t")[4]
-            orf_coordinate = protein_anno.split("\t")[8]
-            longest_orf = protein_anno.split("\t")[14]
+            if annotate_canonical_orfs_only and longest_orf != 'Y':
+                continue
 
-            if annotate_canonical_orfs_only and longest_orf == "Y":
-                metadata_records.append(protein_anno)
-                fa_header = protein_accession + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript + "|" + protein_description
-                canonical_annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
-            else:
-                metadata_records.append(protein_anno)
-                fa_header = protein_accession + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript + "|" + protein_description
-                all_annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
+            metadata_records.append(protein_anno)
+            fa_header = '|'.join([protein_accession, orf_coordinate, gene_id, gene_name, transcript, protein_description])
+            annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
 
-    # generate fasta database
-    if annotate_canonical_orfs_only:
-        formatFastaheader(canonical_annotated_orf_map, fw_proteomedb)
-    else:
-        formatFastaheader(all_annotated_orf_map, fw_proteomedb)
+    # Write annotated ORFs into the proteome database FASTA file
+    formatFastaheader(annotated_orf_map, fw_proteomedb)
 
     # Novel proteins
     AN = Annotations()
@@ -524,75 +512,52 @@ def main():
                         counter = counter + 1
 
     # write output of novel ORFs
-    canonical_novel_orf_ids = []
-    all_novel_orf_ids = []
+    novel_orf_ids = []
+    variant_suffix = "_var"
 
-    # store temparary ids of canonical or all novel ORFs according to options provided
+    # Store the IDs of novel ORFs
     for protein_seq, annotations in orf_annotation_map.items():
         for protein_annotation in annotations:
-            longest_orf = protein_annotation.split("\t")[14]
-            accession = protein_annotation.split("\t")[0].replace("_var", "")
-            if annotate_canonical_orfs_only and longest_orf == "Y":
-                if accession not in canonical_novel_orf_ids:
-                    canonical_novel_orf_ids.append(accession)
-            else:
-                if accession not in all_novel_orf_ids:
-                    all_novel_orf_ids.append(accession)
-    # loop closed
+            cols = protein_annotation.split('\t')
+            accession, longest_orf = cols[0].replace(variant_suffix, ''), cols[14]
 
-    # replace the temporary ORFs ids based on their index
-    canonical_novel_orf_map = {}  # k:protein_seq, v:fasta header annotations
-    all_novel_orf_map = {}  # k:protein_seq, v:fasta header annotations
+            if annotate_canonical_orfs_only and longest_orf != 'Y':
+                continue
 
+            if accession not in novel_orf_ids:
+                novel_orf_ids.append(accession)
+
+    # Replace the temporary ORF IDs based on their index
+    novel_orf_map = {}  # k:protein_seq, v:fasta header annotations
     for protein_seq, annotations in orf_annotation_map.items():
         for protein_annotation in annotations:
-            accession = protein_annotation.split("\t")[0]
-            gene_id = protein_annotation.split("\t")[1]
-            gene_name = protein_annotation.split("\t")[2]
-            protein_description = protein_annotation.split("\t")[3]
-            transcript = protein_annotation.split("\t")[4]
-            orf_coordinate = protein_annotation.split("\t")[8]
-            longest_orf = protein_annotation.split("\t")[14]
-            if annotate_canonical_orfs_only and longest_orf == "Y":
-                if "_var" in accession:
-                    temp_acc = accession.replace("_var", "")
-                    new_accesion = "ORF_" + str(canonical_novel_orf_ids.index(temp_acc) + 1) + "_var"  # +1 as list index starts with zero
-                else:
-                    new_accesion = "ORF_" + str(canonical_novel_orf_ids.index(accession) + 1)  # +1 as list index starts with zero
+            cols = protein_annotation.split('\t')
+            [accession, gene_id, gene_name], transcript, orf_coordinate, longest_orf = cols[:3], cols[4], cols[8], cols[14]
 
-                fa_header = new_accesion + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript
+            if annotate_canonical_orfs_only and longest_orf != 'Y':
+                continue
 
-                canonical_novel_orf_map.setdefault(protein_seq, []).append(fa_header)
-                revised_annotations = protein_annotation.replace(accession, new_accesion)
-                metadata_records.append(revised_annotations)
-            else:
-                if "_var" in accession:
-                    temp_acc = accession.replace("_var", "")
-                    new_accesion = "ORF_" + str(all_novel_orf_ids.index(temp_acc) + 1) + "_var"  # +1 as list index starts with zero
-                else:
-                    new_accesion = "ORF_" + str(all_novel_orf_ids.index(accession) + 1)
+            temp_accession = accession.replace(variant_suffix, '')
+            novel_orf_num = novel_orf_ids.index(temp_accession) + 1 # +1 as list index starts with zero
+            new_accession = f"ORF_{novel_orf_num}" + (variant_suffix if variant_suffix in accession else '')
 
-                fa_header = new_accesion + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript
-                all_novel_orf_map.setdefault(protein_seq, []).append(fa_header)
-                revised_annotations = protein_annotation.replace(accession, new_accesion)
-                metadata_records.append(revised_annotations)
-    # loop closed
+            fa_header = '|'.join([new_accession, orf_coordinate, gene_id, gene_name, transcript])
+            novel_orf_map.setdefault(protein_seq, []).append(fa_header)
+            revised_annotations = protein_annotation.replace(accession, new_accession)
+            metadata_records.append(revised_annotations)
 
     metadata_records_uniq = list(dict.fromkeys(metadata_records))
 
-    # write metadata
+    # Write the proteome database metadata file
     proteome_database_metadata_filename = os.path.join(arg_outdir, "proteome_database_metadata.txt")
     with open(proteome_database_metadata_filename, 'w') as f:
         f.write('\t'.join(["accession", "gene", "gene_symbol", "protein_description", "transcript", "strand", "transcript_biotype", "transcript_coordinates", "orf_genomic_coordinates", "reading_frame", "orf_type", "localisation", "openprot_id", "protein_sequence", "longest_orf_in_transcript", "uniprot_status", "amino_acid_change", "molecular_weight(kDA)", "isoelectric_point", "hydrophobicity", "aliphatic_index"]) + '\n')
         f.writelines(metadata_records_uniq)
 
-    # write fasta output
-    if annotate_canonical_orfs_only:
-        formatFastaheader(canonical_novel_orf_map, fw_proteomedb)
-    else:
-        formatFastaheader(all_novel_orf_map, fw_proteomedb)
+    # Write novel ORFs into the proteome database FASTA file
+    formatFastaheader(novel_orf_map, fw_proteomedb)
 
-    # remove intermediate files
+    # Remove intermediate files
     remove_file_if_exists(orf_temp_file)
     remove_file_if_exists(orf_clus_file)
     remove_file_if_exists(cdhit_clustering_output_file)
