@@ -105,48 +105,60 @@ def main():
     cds_coordinates = {}  # genome coordinates of transcript cds k:transcript_id i.e ENST,k: genomic coordinates
 
     with open(arg_reference_gtf_filename, 'r') as f:
-        for line in f:
-            if line.startswith('#'):
+        for raw_line in f:
+            GP = GTFParser(raw_line)
+            if not GP.valid:
                 continue
-            GP = GTFParser(line.strip())
-            if GP.feature == "gene":
-                gene_biotype[GP.ensgene] = GP.genetype
-                gene_coordinates[GP.ensgene] = GP.coordinates
-                if GP.genetype == "protein_coding":  # Feching coordinates for protein coding genes
-                    protein_coding_gene_coordinates[GP.ensgene] = GP.coordinates
-            elif GP.feature == "transcript":
-                transcript_biotypes[GP.transcriptid] = GP.transcript_type
-                transcript_genome_coordinates[GP.transcriptid] = GP.coordinates
-                transcript_strand[GP.transcriptid] = GP.strand
-                transcript_gene_id_map[GP.transcriptid] = GP.ensgene
-                transcript_gene_name_map[GP.transcriptid] = GP.genename
+
+            feature, strand, length, coord_range, coordinates = GP.feature, GP.strand, GP.length, GP.coord_range, GP.coordinates
+            gene_id, gene_name, gene_type = GP.gene_id, GP.gene_name, GP.gene_type
+            transcript_id, transcript_type = GP.transcript_id, GP.transcript_type
+
+            if feature == "gene":
+                gene_biotype[gene_id] = gene_type
+                gene_coordinates[gene_id] = coordinates
+                if gene_type == "protein_coding":   # Feching coordinates for protein coding genes
+                    protein_coding_gene_coordinates[gene_id] = coordinates
+            elif feature == "transcript":
+                transcript_biotypes[transcript_id] = transcript_type
+                transcript_genome_coordinates[transcript_id] = coordinates
+                transcript_strand[transcript_id] = strand
+                transcript_gene_id_map[transcript_id] = gene_id
+                transcript_gene_name_map[transcript_id] = gene_name
 
             if GP.featureExists("exon"):
-                exon_lengths.setdefault(GP.transcriptid, []).append(GP.length)  # stores exon length
-                exon_coordinates.setdefault(GP.transcriptid, []).append(GP.coord_range)  # stores exon gen
+                exon_lengths.setdefault(transcript_id, []).append(length)           # stores exon length
+                exon_coordinates.setdefault(transcript_id, []).append(coord_range)  # stores exon gen
             if GP.featureExists("UTR"):
-                utr_coordinates.setdefault(GP.transcriptid, []).append(GP.coordinates)
+                utr_coordinates.setdefault(transcript_id, []).append(coordinates)
             if GP.featureExists("CDS"):
-                cds_coordinates.setdefault(GP.transcriptid, []).append(GP.coordinates)
+                cds_coordinates.setdefault(transcript_id, []).append(coordinates)
 
     with open(arg_orfome_transcript_gtf_filename, 'r') as f:
-        for line in f:
-            # denovoGene denovoTx
-            if line.startswith('#') or not ("BambuGene" in line or "BambuTx" in line):
+        for raw_line in f:
+            if not ("BambuGene" in raw_line or "BambuTx" in raw_line):  # denovoGene denovoTx
                 continue
-            GP = GTFParser(line.strip())
+
+            GP = GTFParser(raw_line)
+            if not GP.valid:
+                continue
+
+            strand, length, coord_range, coordinates = GP.strand, GP.length, GP.coord_range, GP.coordinates
+            gene_id, gene_name = GP.gene_id, GP.gene_name
+            transcript_id = GP.transcript_id
+
             if GP.featureExists("exon"):
-                exon_lengths.setdefault(GP.transcriptid, []).append(GP.length)  # stores exon length
-                exon_coordinates.setdefault(GP.transcriptid, []).append(GP.coord_range)  # stores exon gen
+                exon_lengths.setdefault(transcript_id, []).append(length)           # stores exon length
+                exon_coordinates.setdefault(transcript_id, []).append(coord_range)  # stores exon gen
             if GP.featureExists("transcript"):
-                transcript_genome_coordinates[GP.transcriptid] = GP.coordinates
-                transcript_strand[GP.transcriptid] = GP.strand
-                transcript_gene_id_map[GP.transcriptid] = GP.ensgene
-                transcript_gene_name_map[GP.transcriptid] = GP.genename
-                if "BambuTx" in GP.transcriptid:
-                    transcript_biotypes[GP.transcriptid] = "novel"
-                if "BambuGene" in GP.genename:
-                    gene_biotype[GP.genename] = "novel"
+                if "BambuTx" in transcript_id:
+                    transcript_biotypes[transcript_id] = "novel"
+                if "BambuGene" in gene_name:
+                    gene_biotype[gene_name] = "novel"
+                transcript_genome_coordinates[transcript_id] = coordinates
+                transcript_strand[transcript_id] = strand
+                transcript_gene_id_map[transcript_id] = gene_id
+                transcript_gene_name_map[transcript_id] = gene_name
 
     var_transcript_ORF_map = {}
     var_ORF_anno = {}

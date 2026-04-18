@@ -6,7 +6,9 @@ class GTFParser():
     def __init__(self, raw_line):
         line = raw_line.strip()
         cols = [col.strip() for col in line.split('\t')]
-        if len(cols) <= 2:
+
+        self.valid = not line.startswith('#') and (len(cols) >= 9)
+        if not self.valid:
             return
 
         self.chr = cols[0]
@@ -18,12 +20,15 @@ class GTFParser():
         self.coordinates = f"{self.chr}:{self.coord_range}"
         self.length = self.end - self.start + 1
 
-        meta = cols[8].split(';')
-        self.ensgene = ','.join([i.replace("gene_id", '').replace('"', '') for i in meta if "gene_id" in i]).strip()
-        self.transcriptid = ','.join([i.replace("transcript_id", '').replace('"', '') for i in meta if "transcript_id" in i]).strip()
-        self.genename = ','.join([i.replace("gene_name", '').replace('"', '').strip() for i in meta if "gene_name" in i]).strip()
-        self.genetype = ','.join([i.replace("gene_type", '').replace('"', '').strip() for i in meta if "gene_type" in i]).strip()
-        self.transcript_type = ','.join([i.replace("transcript_type", '').replace('"', '').strip() for i in meta if "transcript_type" in i]).strip()
+        meta_info_vals = cols[8].split(';')
+        def concat_meta_attributes(attribute_name):
+            return ','.join([meta_info_val.replace(attribute_name, '').replace('"', '').strip() for meta_info_val in meta_info_vals if attribute_name in meta_info_val])
+
+        self.gene_id = concat_meta_attributes("gene_id")
+        self.gene_name = concat_meta_attributes("gene_name")
+        self.gene_type = concat_meta_attributes("gene_type")
+        self.transcript_id = concat_meta_attributes("transcript_id")
+        self.transcript_type = concat_meta_attributes("transcript_type")
 
     def featureExists(self, feature):
         return feature in self.feature
