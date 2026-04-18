@@ -407,7 +407,6 @@ def main():
 
     # write output to metadata and fasta file
     annotated_orf_map = {}  # k:protein_seq, v:fasta header annotations
-
     for protein_seq, annotations in orf_metadata_annotated_proteins.items():
         for protein_anno in annotations:
             cols = protein_anno.split('\t')
@@ -511,40 +510,30 @@ def main():
                         # for loop closed
                         counter = counter + 1
 
-    # write output of novel ORFs
-    novel_orf_ids = []
+    # Compute the output of novel ORFs
+    novel_orf_map = {}          # Replace the temporary ORF IDs based on their index
+    novel_orf_id_dict = {}      # Store the IDs of novel ORFs
+    novel_orf_id_counter = 1
     variant_suffix = "_var"
 
-    # Store the IDs of novel ORFs
-    for protein_seq, annotations in orf_annotation_map.items():
-        for protein_annotation in annotations:
-            cols = protein_annotation.split('\t')
-            accession, longest_orf = cols[0].replace(variant_suffix, ''), cols[14]
-
-            if annotate_canonical_orfs_only and longest_orf != 'Y':
-                continue
-
-            if accession not in novel_orf_ids:
-                novel_orf_ids.append(accession)
-
-    # Replace the temporary ORF IDs based on their index
-    novel_orf_map = {}  # k:protein_seq, v:fasta header annotations
     for protein_seq, annotations in orf_annotation_map.items():
         for protein_annotation in annotations:
             cols = protein_annotation.split('\t')
             [accession, gene_id, gene_name], transcript, orf_coordinate, longest_orf = cols[:3], cols[4], cols[8], cols[14]
-
             if annotate_canonical_orfs_only and longest_orf != 'Y':
                 continue
 
             temp_accession = accession.replace(variant_suffix, '')
-            novel_orf_num = novel_orf_ids.index(temp_accession) + 1 # +1 as list index starts with zero
-            new_accession = f"ORF_{novel_orf_num}" + (variant_suffix if variant_suffix in accession else '')
+            novel_orf_num = novel_orf_id_dict.get(temp_accession, novel_orf_id_counter)
+            if novel_orf_num == novel_orf_id_counter:
+                novel_orf_id_dict[temp_accession] = novel_orf_id_counter
+                novel_orf_id_counter += 1
 
+            new_accession = f"ORF_{novel_orf_num}" + (variant_suffix if variant_suffix in accession else '')
             fa_header = '|'.join([new_accession, orf_coordinate, gene_id, gene_name, transcript])
             novel_orf_map.setdefault(protein_seq, []).append(fa_header)
-            revised_annotations = protein_annotation.replace(accession, new_accession)
-            metadata_records.append(revised_annotations)
+            revised_annotation = protein_annotation.replace(accession, new_accession)
+            metadata_records.append(revised_annotation)
 
     metadata_records_uniq = list(dict.fromkeys(metadata_records))
 
