@@ -51,8 +51,10 @@ def main():
         error_message = f"The ORFome transcripts GTF file '{arg_orfome_transcript_gtf_filename}' either does not exist or is not a file."
     elif os.path.exists(arg_outdir) and not os.path.isdir(arg_outdir):
         error_message = f"'{arg_outdir}' exists but it is not a directory."
-    elif arg_mutant_protein_db_filename != "None" and not os.path.isfile(arg_mutant_protein_db_filename):
-        error_message = f"The ORFome annotation file '{arg_mutant_protein_db_filename}' either does not exist or is not a file."
+    elif arg_mutant_protein_db_filename.lower() != "none" and not os.path.isfile(arg_mutant_protein_db_filename):
+        error_message = f"The variant ORFome annotation file '{arg_mutant_protein_db_filename}' either does not exist or is not a file."
+    elif arg_canonical_or_all.lower().strip() not in ["canonical", "all"]:
+        error_message = f"The type of ORFs to be annotated can only be 'canonical' or 'all', not '{arg_canonical_or_all}' (case-insensitive)."
 
     if error_message:
         print(error_message)
@@ -77,6 +79,7 @@ def main():
         sys.exit(1)
 
     fw_proteomedb = open(os.path.join(arg_outdir, "proteome_database.fasta"), 'w')
+    annotate_canonical_orfs_only = (arg_canonical_or_all.lower().strip() == "canonical")
 
     # custom openprot + uniprot annotation database
     openprot = {}   # comprise OpenProt annotations: k:seq v:protein_id
@@ -162,7 +165,7 @@ def main():
 
     var_transcript_ORF_map = {}
     var_ORF_anno = {}
-    if arg_mutant_protein_db_filename != "None" and os.path.isfile(arg_mutant_protein_db_filename):  # variant file is optional
+    if arg_mutant_protein_db_filename.lower() != "none":    # variant file is optional
         with open(arg_mutant_protein_db_filename, 'r') as f:
             for raw_line in f:
                 line = raw_line.strip()
@@ -418,21 +421,19 @@ def main():
             orf_coordinate = protein_anno.split("\t")[8]
             longest_orf = protein_anno.split("\t")[14]
 
-            if arg_canonical_or_all == "canonical":
-                if longest_orf == "Y":
-                    metadata_records.append(protein_anno)
-                    fa_header = protein_accession + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript + "|" + protein_description
-                    canonical_annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
-            elif arg_canonical_or_all == "all":
+            if annotate_canonical_orfs_only and longest_orf == "Y":
+                metadata_records.append(protein_anno)
+                fa_header = protein_accession + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript + "|" + protein_description
+                canonical_annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
+            else:
                 metadata_records.append(protein_anno)
                 fa_header = protein_accession + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript + "|" + protein_description
                 all_annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
 
-    if arg_canonical_or_all == "canonical":
-        # generate fasta database
+    # generate fasta database
+    if annotate_canonical_orfs_only:
         formatFastaheader(canonical_annotated_orf_map, fw_proteomedb)
-    elif arg_canonical_or_all == "all":
-        # generate fasta database
+    else:
         formatFastaheader(all_annotated_orf_map, fw_proteomedb)
 
     # Novel proteins
@@ -531,11 +532,10 @@ def main():
         for protein_annotation in annotations:
             longest_orf = protein_annotation.split("\t")[14]
             accession = protein_annotation.split("\t")[0].replace("_var", "")
-            if arg_canonical_or_all == "canonical":
-                if longest_orf == "Y":
-                    if accession not in canonical_novel_orf_ids:
-                        canonical_novel_orf_ids.append(accession)
-            if arg_canonical_or_all == "all":
+            if annotate_canonical_orfs_only and longest_orf == "Y":
+                if accession not in canonical_novel_orf_ids:
+                    canonical_novel_orf_ids.append(accession)
+            else:
                 if accession not in all_novel_orf_ids:
                     all_novel_orf_ids.append(accession)
     # loop closed
@@ -553,21 +553,19 @@ def main():
             transcript = protein_annotation.split("\t")[4]
             orf_coordinate = protein_annotation.split("\t")[8]
             longest_orf = protein_annotation.split("\t")[14]
-            if arg_canonical_or_all == "canonical":
-                if longest_orf == "Y":
-                    if "_var" in accession:
-                        temp_acc = accession.replace("_var", "")
-                        new_accesion = "ORF_" + str(canonical_novel_orf_ids.index(temp_acc) + 1) + "_var"  # +1 as list index starts with zero
-                    else:
-                        new_accesion = "ORF_" + str(canonical_novel_orf_ids.index(accession) + 1)  # +1 as list index starts with zero
+            if annotate_canonical_orfs_only and longest_orf == "Y":
+                if "_var" in accession:
+                    temp_acc = accession.replace("_var", "")
+                    new_accesion = "ORF_" + str(canonical_novel_orf_ids.index(temp_acc) + 1) + "_var"  # +1 as list index starts with zero
+                else:
+                    new_accesion = "ORF_" + str(canonical_novel_orf_ids.index(accession) + 1)  # +1 as list index starts with zero
 
-                    fa_header = new_accesion + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript
+                fa_header = new_accesion + "|" + orf_coordinate + "|" + gene_id + "|" + gene_name + "|" + transcript
 
-                    canonical_novel_orf_map.setdefault(protein_seq, []).append(fa_header)
-                    revised_annotations = protein_annotation.replace(accession, new_accesion)
-                    metadata_records.append(revised_annotations)
-
-            if arg_canonical_or_all == "all":
+                canonical_novel_orf_map.setdefault(protein_seq, []).append(fa_header)
+                revised_annotations = protein_annotation.replace(accession, new_accesion)
+                metadata_records.append(revised_annotations)
+            else:
                 if "_var" in accession:
                     temp_acc = accession.replace("_var", "")
                     new_accesion = "ORF_" + str(all_novel_orf_ids.index(temp_acc) + 1) + "_var"  # +1 as list index starts with zero
@@ -589,11 +587,9 @@ def main():
         f.writelines(metadata_records_uniq)
 
     # write fasta output
-    if arg_canonical_or_all == "canonical":
-        # generate fasta database
+    if annotate_canonical_orfs_only:
         formatFastaheader(canonical_novel_orf_map, fw_proteomedb)
-    elif arg_canonical_or_all == "all":
-        # generate fasta database
+    else:
         formatFastaheader(all_novel_orf_map, fw_proteomedb)
 
     # remove intermediate files
