@@ -257,69 +257,55 @@ def main():
 
             outfile.write(fa_seq)
 
-    # ORFomedb
-    unannotated_proteins = {}  # stores unannotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
-    unannotated_protein_coordinates = {}  # stores unannotated protein coordinates as key: k: transcript|orf_number|genomic_coordinates,v:protein sequence
-    transcript_orf_map = {}  # stores all orfs for each transcript: k;transcript_id,v:protein_seq|orf_id
-
-    annotated_proteins = {}  # store annotated proteins: k:protein sequence, v:transcript|orf_number|genomic_coordinates
+    annotated_proteins = {}                 # store annotated proteins: k:protein sequence, v:transcript|orf_id|genomic_coordinates
+    unannotated_proteins = {}               # stores unannotated proteins: k:protein sequence, v:orf_id|genomic_coordinates
+    unannotated_protein_coordinates = {}    # stores unannotated protein coordinates as key: k: orf_id|genomic_coordinates,v:protein sequence
+    transcript_orf_map = {}                 # stores all orfs for each transcript: k;transcript_id,v:protein_seq|orf_id
     reading_frame_map = {}
 
+    # Load the ORFome annotation file
     with open(arg_orfome_filename, 'r') as f:
-        for i in f:
-            if i.startswith("ORF_id"):
+        for raw_line in f:
+            line = raw_line.strip()
+            if line.startswith("ORF_id"):
                 continue
-            orf_id = i.strip().split("\t")[0].strip()
-            protein_seq = i.strip().split("\t")[1].strip()
-            transcript = orf_id.split("_")[0]
-            reading_frame = i.strip().split("\t")[6]
-            reading_frame_map.setdefault(transcript, []).append(protein_seq + "|" + reading_frame)
-            strand = i.strip().split("\t")[5].strip()
-            chr = i.strip().split("\t")[2].strip()
-            if strand == "-":
-                orf_start = int(i.strip().split("\t")[3].strip()) + 3
-                orf_end = int(i.strip().split("\t")[4].strip())
-                orf_coordinate = chr + ":" + str(orf_start) + "-" + str(orf_end)
 
+            cols = [col.strip() for col in line.split('\t')]
+            [orf_id, protein_seq, chrom, orf_start, orf_end, strand, reading_frame] = cols[:7]
+            if (strand != '+') and (strand != '-'):
+                continue
+
+            transcript = orf_id.split('_')[0]
+            reading_frame_map.setdefault(transcript, []).append(f"{protein_seq}|{reading_frame}")
+            orf_start, orf_end = int(orf_start), int(orf_end)
+
+            is_forward_strand = (strand == '+')
+            orf_start += (3 if not is_forward_strand else 0)
+            orf_end -= (3 if is_forward_strand else 0)          # 3 nucleotides subtracted as ORFik counts stop codon position
+            orf_coordinate = f"{chrom}:{orf_start}-{orf_end}"
+
+            if transcript in cds_coordinates:
                 # check if transcript contains annotated CDS
-                if transcript in cds_coordinates.keys():
-                    cds_end = int(cds_coordinates[transcript][0].split("-")[1])  # reversing coordinates for easy comparison
-                    cds_start = int(cds_coordinates[transcript][-1].split("-")[0].split(":")[1])
-                    if orf_start >= cds_start and orf_end <= cds_end:
-                        transcript_orf_map.setdefault(transcript, []).append(protein_seq + "|" + orf_id)  # store all orfs of transcript
-                else:
-                    transcript_orf_map.setdefault(transcript, []).append(protein_seq + "|" + orf_id)  # store all orfs of transcript
-
-            elif strand == "+":
-                orf_start = int(i.strip().split("\t")[3].strip())
-                orf_end = int(i.strip().split("\t")[4].strip()) - 3  # 3 nucleiotides substracted as ORFik counts stop codon position
-                orf_coordinate = chr + ":" + str(orf_start) + "-" + str(orf_end)
-
-                # check if transcript contains annotated CDS
-                if transcript in cds_coordinates.keys():
-                    cds_start = int(cds_coordinates[transcript][0].split("-")[0].split(":")[1])
-                    cds_end = int(cds_coordinates[transcript][-1].split("-")[1])
-                    if orf_start >= cds_start and orf_end <= cds_end:
-                        transcript_orf_map.setdefault(transcript, []).append(protein_seq + "|" + orf_id)  # store all orfs of transcript
-                else:
-                    transcript_orf_map.setdefault(transcript, []).append(protein_seq + "|" + orf_id)  # store all orfs of transcript
+                cds_start = int(cds_coordinates[transcript][0 if is_forward_strand else -1].split('-')[0].split(':')[1])
+                cds_end = int(cds_coordinates[transcript][-1 if is_forward_strand else 0].split('-')[1])
+                if orf_start >= cds_start and orf_end <= cds_end:
+                    transcript_orf_map.setdefault(transcript, []).append(f"{protein_seq}|{orf_id}") # store all orfs of transcript
+            else:
+                transcript_orf_map.setdefault(transcript, []).append(f"{protein_seq}|{orf_id}")     # store all orfs of transcript
 
             # separate annnotated and unannotated proteins
-            if protein_seq in uniprot.keys():
-                uniprot_accession = uniprot[protein_seq].split("|")[1]
-                annotated_proteins.setdefault(protein_seq, []).append(uniprot_accession + "|" + orf_id + "|" + orf_coordinate)
-
-            elif protein_seq in refprot.keys():
-                uniprot_ids = list(uniprot.values())
+            if protein_seq in uniprot:
+                uniprot_accession = uniprot[protein_seq].split('|')[1]
+                annotated_proteins.setdefault(protein_seq, []).append(f"{uniprot_accession}|{orf_id}|{orf_coordinate}")
+            elif protein_seq in refprot:
+                uniprot_ids = uniprot.values()
                 refprot_id = refprot[protein_seq]
-                is_id_found = any(refprot_id in id for id in uniprot_ids)
-                if is_id_found:  # avoid incorrect protein ids assinged in openprot
-                    continue
-                else:
-                    annotated_proteins.setdefault(protein_seq, []).append(refprot_id + "|" + orf_id + "|" + orf_coordinate)
+                is_id_found = any(refprot_id in uniprot_id for uniprot_id in uniprot_ids)
+                if not is_id_found:  # avoid incorrect protein ids assigned in openprot
+                    annotated_proteins.setdefault(protein_seq, []).append(f"{refprot_id}|{orf_id}|{orf_coordinate}")
             else:
-                unannotated_proteins.setdefault(protein_seq, []).append(orf_id + "|" + orf_coordinate)
-                unannotated_protein_coordinates[orf_id + "|" + orf_coordinate] = protein_seq
+                unannotated_proteins.setdefault(protein_seq, []).append(f"{orf_id}|{orf_coordinate}")
+                unannotated_protein_coordinates[f"{orf_id}|{orf_coordinate}"] = protein_seq
 
     # Find the longest ORF in the transcripts
     transcript_longest_orf_map = {}  # stores longest ORF in transcript: k: orf_id v:protein_seq
@@ -332,9 +318,9 @@ def main():
                 longest_orf_seq, longest_orf_id, longest_orf_len = orf_seq, orf_id, orf_len
         transcript_longest_orf_map[longest_orf_id] = longest_orf_seq
 
-    # store sequences in the temparory file which is required to perform clustering using cdhit
+    # Store protein sequences in a file for cd-hit clustering
     orf_temp_file = os.path.join(arg_outdir, "orf_temp.txt")
-    with open(orf_temp_file, 'w') as f: # Temparary file to store ORF before clustering
+    with open(orf_temp_file, 'w') as f:
         entries = ''
         for protein_seq, protein_info in unannotated_proteins.items():
             entries += f">{protein_info[0]}\n" + f"{protein_seq}\n"
@@ -342,7 +328,7 @@ def main():
             entries += f">{protein_info[0]}\n" + f"{protein_seq}\n"
         _ = f.write(entries)
 
-    # Perform cdhit clustering on unannotated proteins to consider longest representative protein sequence
+    # Perform cd-hit clustering on unannotated proteins to consider longest representative protein sequence
     orf_clus_file = os.path.join(arg_outdir, "cdhit_out")
     SeqClust(orf_temp_file, orf_clus_file)
 
@@ -425,8 +411,8 @@ def main():
 
     # Novel proteins
     AN = Annotations()
-    orf_annotation_map = {}  # stores ORF annotations k:temparory ORF_id, annotations
-    counter = 1  # counter for temparary ORF ids
+    orf_annotation_map = {}  # stores ORF annotations k:temporory ORF_id, annotations
+    counter = 1  # counter for temporary ORF ids
     protein_description = "-"
 
     cdhit_clustering_output_file = os.path.join(arg_outdir, "cdhit_out.clstr")  # cluster file
