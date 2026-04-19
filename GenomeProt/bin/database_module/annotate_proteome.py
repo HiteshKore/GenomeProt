@@ -156,7 +156,7 @@ def main():
             if not GP.valid:
                 continue
 
-            feature, strand, length, coord_range, coordinates = GP.feature, GP.strand, GP.length, GP.coord_range, GP.coordinates
+            feature, strand, coordinates = GP.feature, GP.strand, GP.coordinates
             gene_id, gene_name, gene_type = GP.gene_id, GP.gene_name, GP.gene_type
             transcript_id, transcript_type = GP.transcript_id, GP.transcript_type
 
@@ -183,7 +183,7 @@ def main():
             if not GP.valid:
                 continue
 
-            strand, length, coord_range, coordinates = GP.strand, GP.length, GP.coord_range, GP.coordinates
+            strand, coordinates = GP.strand, GP.coordinates
             gene_id, gene_name = GP.gene_id, GP.gene_name
             transcript_id = GP.transcript_id
 
