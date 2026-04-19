@@ -130,30 +130,24 @@ def main():
     proteomedb_filename = os.path.join(arg_outdir, "proteome_database.fasta")
     annotate_canonical_orfs_only = (arg_canonical_or_all.lower().strip() == "canonical")
 
-    # custom openprot + uniprot annotation database
-    openprot = {}   # comprise OpenProt annotations: k:seq v:protein_id
-    refprot = {}    # comprise reference proteins annotated in uniprot/refseq/ensembl. k:seq v:protein id
-    uniprot = {}    # comprise UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
-    getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)  # OpenProt annotations
+    # Load the combined OpenProt + UniProt annotation database
+    openprot = {}   # OpenProt annotations: k:seq v:protein_id
+    refprot = {}    # reference proteins annotated in uniprot/refseq/ensembl. k:seq v:protein id
+    uniprot = {}    # UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
+    getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)
 
-    # Gene
-    gene_biotype = {}  # k:gene_id i.e ENSG,k:gene biotype
-    gene_coordinates = {}  # k:gene_id,k:gene coordinates
-    protein_coding_gene_coordinates = {}  # k:gene_id,k:gene coordinates
+    # Protein-coding genes
+    protein_coding_gene_coordinates = {}    # k:gene_id,k:gene coordinates
 
-    # transcripts
-    transcript_biotypes = {}  # k:transcript_id i.e ENST,k: transcript biotype
-    transcript_genome_coordinates = {}  # k:transcript_id i.e ENST,k: genome coordinates
-    transcript_gene_id_map = {}  # k:transcript_id i.e ENST,k: gene id i.e. ENSG
-    transcript_gene_name_map = {}  # k:transcript_id i.e ENST,k: gene name
-    transcript_strand = {}  # k:transcript_id i.e ENST,k: strand
-    # exon
-    exon_lengths = {}  # transcript exon lengths k:transcript_id i.e ENST,k: lenghts of exons
-    exon_coordinates = {}  # genome coordinates of transcript exons k:transcript_id i.e ENST,k: genomic coordinates
+    # Transcripts
+    transcript_biotypes = {}                # k:transcript_id i.e ENST,k: transcript biotype
+    transcript_genome_coordinates = {}      # k:transcript_id i.e ENST,k: genome coordinates
+    transcript_gene_id_map = {}             # k:transcript_id i.e ENST,k: gene id i.e. ENSG
+    transcript_gene_name_map = {}           # k:transcript_id i.e ENST,k: gene name
+    transcript_strand = {}                  # k:transcript_id i.e ENST,k: strand
 
-    # utr
+    # UTRs and CDSs
     utr_coordinates = {}  # genome coordinates of transcript utrs k:transcript_id i.e ENST,k: genomic coordinates
-    # cds coordinates
     cds_coordinates = {}  # genome coordinates of transcript cds k:transcript_id i.e ENST,k: genomic coordinates
 
     with open(arg_reference_gtf_filename, 'r') as f:
@@ -166,11 +160,8 @@ def main():
             gene_id, gene_name, gene_type = GP.gene_id, GP.gene_name, GP.gene_type
             transcript_id, transcript_type = GP.transcript_id, GP.transcript_type
 
-            if feature == "gene":
-                gene_biotype[gene_id] = gene_type
-                gene_coordinates[gene_id] = coordinates
-                if gene_type == "protein_coding":   # Feching coordinates for protein coding genes
-                    protein_coding_gene_coordinates[gene_id] = coordinates
+            if feature == "gene" and gene_type == "protein_coding":     # Fetch coordinates for protein-coding genes
+                protein_coding_gene_coordinates[gene_id] = coordinates
             elif feature == "transcript":
                 transcript_biotypes[transcript_id] = transcript_type
                 transcript_genome_coordinates[transcript_id] = coordinates
@@ -178,9 +169,6 @@ def main():
                 transcript_gene_id_map[transcript_id] = gene_id
                 transcript_gene_name_map[transcript_id] = gene_name
 
-            if GP.featureExists("exon"):
-                exon_lengths.setdefault(transcript_id, []).append(length)           # stores exon length
-                exon_coordinates.setdefault(transcript_id, []).append(coord_range)  # stores exon gen
             if GP.featureExists("UTR"):
                 utr_coordinates.setdefault(transcript_id, []).append(coordinates)
             if GP.featureExists("CDS"):
@@ -199,14 +187,9 @@ def main():
             gene_id, gene_name = GP.gene_id, GP.gene_name
             transcript_id = GP.transcript_id
 
-            if GP.featureExists("exon"):
-                exon_lengths.setdefault(transcript_id, []).append(length)           # stores exon length
-                exon_coordinates.setdefault(transcript_id, []).append(coord_range)  # stores exon gen
             if GP.featureExists("transcript"):
                 if "BambuTx" in transcript_id:
                     transcript_biotypes[transcript_id] = "novel"
-                if "BambuGene" in gene_name:
-                    gene_biotype[gene_name] = "novel"
                 transcript_genome_coordinates[transcript_id] = coordinates
                 transcript_strand[transcript_id] = strand
                 transcript_gene_id_map[transcript_id] = gene_id
