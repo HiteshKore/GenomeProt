@@ -346,45 +346,34 @@ def main():
     orf_metadata_annotated_proteins = {}  # key:protein_seq, val:metadata
     metadata_records = []
 
-    for protein_seq, orf_ids in annotated_proteins.items():
-        for orf_id in orf_ids:
-            transcript = orf_id.split("|")[1].split("_")[0]
-            if transcript in transcript_biotypes:
-                transcript_biotype = transcript_biotypes[transcript]
-                transcript_coordinates = transcript_genome_coordinates[transcript]
-                gene_id = transcript_gene_id_map[transcript]
-                strand = transcript_strand[transcript]
-                orf_coordinate = orf_id.split("|")[2].strip()
+    for protein_seq, annotated_protein_infos in annotated_proteins.items():
+        is_protein_seq_in_uniprot = (protein_seq in uniprot)
+        for annotated_protein_info in annotated_protein_infos:
+            [orf_id, orf_coordinate] = [col.strip() for col in annotated_protein_info.split('|')[1:3]]
+            transcript = orf_id.split('_')[0]
+            if transcript not in transcript_biotypes:
+                continue
 
-                gene_name = transcript_gene_name_map[transcript]
-                if not re.match(r".*\S.*", gene_name.strip()):
-                    gene_name = "-"  # if there is no gene name
+            gene_name = transcript_gene_name_map[transcript]
+            if not re.match(r".*\S.*", gene_name.strip()):
+                gene_name = '-'  # if there is no gene name
 
-                longest_orf = "N"
-                if orf_id.split("|")[1] in transcript_longest_orf_map:
-                    longest_orf = "Y"
+            gene_id = transcript_gene_id_map[transcript]
+            strand = transcript_strand[transcript]
+            transcript_biotype = transcript_biotypes[transcript]
+            transcript_coordinates = transcript_genome_coordinates[transcript]
+            longest_orf = 'Y' if orf_id in transcript_longest_orf_map else 'N'
 
-                # uniprot proteins
-                if protein_seq in uniprot:
-                    if uniprot[protein_seq].split("|")[0] == "sp":
-                        protein_status = "reviewed(Swiss-Prot)"
-                    elif uniprot[protein_seq].split("|")[0] == "tr":
-                        protein_status = "unreviewed(TrEMBL)"
+            protein_status = '-'
+            protein_description = '-'
+            if is_protein_seq_in_uniprot:   # UniProt proteins
+                [database, protein_accession, protein_description] = uniprot[protein_seq].split('|')[:3]
+                protein_status = "reviewed(Swiss-Prot)" if database == "sp" else "unreviewed(TrEMBL)"
+            else:                           # RefProt proteins
+                protein_accession = refprot[protein_seq]
 
-                    protein_accession = uniprot[protein_seq].split("|")[1]
-                    protein_description = uniprot[protein_seq].split("|")[2]
-
-                    # annotate ORFs
-                    get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "annotated", "CDS", "-", longest_orf, protein_status, orf_metadata_annotated_proteins, reading_frame_map[transcript], var_ORF_anno)
-
-                # Refseq/Ensembl proteins
-                elif protein_seq in refprot:
-                    protein_status = "-"
-                    protein_accession = refprot[protein_seq]
-                    protein_description = "-"
-
-                    # annotate ORFs
-                    get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "annotated", "CDS", "-", longest_orf, protein_status, orf_metadata_annotated_proteins, reading_frame_map[transcript], var_ORF_anno)
+            # annotate ORFs
+            get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "annotated", "CDS", "-", longest_orf, protein_status, orf_metadata_annotated_proteins, reading_frame_map[transcript], var_ORF_anno)
 
     # Calculate annotated ORF outputs
     annotated_orf_map = {}  # k:protein_seq, v:fasta header annotations
