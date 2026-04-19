@@ -30,6 +30,47 @@ def variant_protein_annotations(var_ORF_anno, var_orfs, wt_protein):
             res = '\t'.join(map(str, [var_protein, aa_change, coordinates, var_type, sq_properties]))
     return res
 
+# function to write ORF sequences into the proteome database FASTA file
+def writeORFsIntoFASTA(orf_info_map, organism_info, proteomedb_filename):
+    (organism, organism_latin_name) = organism_info
+    fa_seqs = ''
+    with open(proteomedb_filename, 'a') as f:
+        for prot_sq, annotations in orf_info_map.items():
+            accession = ""
+            description = set()
+            orf_coord = set()   # ORF coordinates
+            GA = set()          # gene accession
+            GN = set()          # gene name
+            TA = set()          # transcript
+
+            # protein_accession+"|"+orf_coordinate+"|"+gene_id+"|"+gene_name+"|"+transcript+"|"+protein_description
+            for header_info in annotations:
+                cols = header_info.split('|')
+                [accession, orf_coordinates, gene_id, gene_name, transcript] = cols[:5]
+                orf_coord.add(orf_coordinates)
+                GA.add(gene_id)
+                GN.add(gene_name)
+                TA.add(transcript)
+                if len(cols) == 6:
+                    description.add(cols[-1])
+
+            orf_coord_s = ','.join(orf_coord)
+            TA_s = ','.join(TA)
+            GA_s = ','.join(GA)
+
+            des_s = ','.join(description)
+            if not des_s:
+                des_s = '-'
+
+            GN_s = ','.join(GN)
+            if not GN_s:
+                GN_s = '-'
+
+            orf_type = "nv" if (len(description) == 0 and "ORF_" in accession) else "kn"
+
+            fa_seqs += f">{orf_type}|{accession}|{accession}_{organism} {des_s} OS={organism_latin_name} CO={orf_coord_s} GA={GA_s} GN={GN_s} TA={TA_s}\n" + f"{prot_sq}\n"
+        f.write(fa_seqs)
+
 def main():
     args = sys.argv
     if len(args) != 10:
@@ -78,7 +119,15 @@ def main():
         print(f"The ORF length '{arg_orf_length}' cannot be parsed as an integer.")
         sys.exit(1)
 
-    fw_proteomedb = open(os.path.join(arg_outdir, "proteome_database.fasta"), 'w')
+    # Check if the organism is supported
+    org_map = {"HUMAN": "Homo sapiens", "CAEEL": "Caenorhabditis elegans", "MOUSE": "Mus musculus", "RAT": "Rattus norvegicus", "DROME": "Drosophila melanogaster", "DANRE": "Danio rerio"}
+    if arg_organism.upper().strip() not in org_map:
+        print(f"The organism name '{arg_organism}' must be 'HUMAN', 'CAEEL', 'MOUSE', 'RAT', 'DROME' or 'DANRE' (case-insensitive).")
+        sys.exit(1)
+    organism_latin_name = org_map[arg_organism.upper().strip()]
+    organism_info = (arg_organism.upper().strip(), organism_latin_name)
+
+    proteomedb_filename = os.path.join(arg_outdir, "proteome_database.fasta")
     annotate_canonical_orfs_only = (arg_canonical_or_all.lower().strip() == "canonical")
 
     # custom openprot + uniprot annotation database
@@ -218,45 +267,6 @@ def main():
             orf_annotation = protein_accession + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + orf_coordinate + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + protein_seq + "\t" + longest_orf + "\t" + protein_status + "\t-\t" + calculate_sequence_properties(protein_seq) + "\n"
             orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)
 
-    # function to generate fasta sequence for proteome database
-    def formatFastaheader(orf_info_map, outfile):  # takes annotated ORFs map and output fasta file handler
-        for prot_sq, annotations in orf_info_map.items():
-            accession = ""
-            org = arg_organism
-            orgmap = {"HUMAN": "Homo sapiens", "CAEEL": "Caenorhabditis elegans", "MOUSE": "Mus musculus", "RAT": "Rattus norvegicus", "DROME": "Drosophila melanogaster", "DANRE": "Danio rerio"}
-
-            orf_coord = []  # ORF coordinates
-            GA = []  # gene accession
-            GN = []  # gene name
-            TA = []  # transcript\
-            description = []
-            # protein_accession+"|"+orf_coordinate+"|"+gene_id+"|"+gene_name+"|"+transcript+"|"+protein_description
-            for header_info in annotations:
-                accession = header_info.split("|")[0]  # accession
-                orf_coord.append(header_info.split("|")[1])  # ORF coordinates
-                GA.append(header_info.split("|")[2])  # gene accession
-                GN.append(header_info.split("|")[3])  # gene name
-                TA.append(header_info.split("|")[4])  # transcript
-                if len(header_info.split("|")) == 6:
-                    description.append(header_info.split("|")[5])
-            orf_coord_s = "CO=" + ",".join(list(set(orf_coord)))
-            TA_s = "TA=" + ",".join(list(set(TA)))
-            GA_s = "GA=" + ",".join(list(set(GA)))
-            des_s = ",".join(list(set(description)))
-
-            if len(GN) == 0:  # varify
-                GN.append("-")
-            GN_s = "GN=" + ",".join(list(set(GN)))
-            if len(list(set(description))) > 0:
-                fa_seq = ">kn|" + accession + "|" + accession + "_" + org + " " + des_s + " OS=" + orgmap[org] + " " + orf_coord_s + " " + GA_s + " " + GN_s + " " + TA_s + "\n" + prot_sq + "\n"
-            else:
-                if "ORF_" in accession:
-                    fa_seq = ">nv|" + accession + "|" + accession + "_" + org + " -" + " OS=" + orgmap[org] + " " + orf_coord_s + " " + GA_s + " " + GN_s + " " + TA_s + "\n" + prot_sq + "\n"
-                else:
-                    fa_seq = ">kn|" + accession + "|" + accession + "_" + org + " -" + " OS=" + orgmap[org] + " " + orf_coord_s + " " + GA_s + " " + GN_s + " " + TA_s + "\n" + prot_sq + "\n"
-
-            outfile.write(fa_seq)
-
     annotated_proteins = {}                 # store annotated proteins: k:protein sequence, v:transcript|orf_id|genomic_coordinates
     unannotated_proteins = {}               # stores unannotated proteins: k:protein sequence, v:orf_id|genomic_coordinates
     unannotated_protein_coordinates = {}    # stores unannotated protein coordinates as key: k: orf_id|genomic_coordinates,v:protein sequence
@@ -332,41 +342,30 @@ def main():
     orf_clus_file = os.path.join(arg_outdir, "cdhit_out")
     SeqClust(orf_temp_file, orf_clus_file)
 
-    orfbiotype_transcript_map = {}  # k:orf, v:transcript|biotype
     # annotations of known proteins
     orf_metadata_annotated_proteins = {}  # key:protein_seq, val:metadata
     metadata_records = []
 
-    for k in annotated_proteins.keys():
-        protein_seq = k
-        transcripts = []
-        gene_accession = []
-        gene_symbol = []
-        orf_coordinates = []
-        for orf_id in annotated_proteins[k]:
-
+    for protein_seq, orf_ids in annotated_proteins.items():
+        for orf_id in orf_ids:
             transcript = orf_id.split("|")[1].split("_")[0]
-            if transcript in transcript_biotypes.keys():
-                transcripts.append(transcript)
+            if transcript in transcript_biotypes:
                 transcript_biotype = transcript_biotypes[transcript]
                 transcript_coordinates = transcript_genome_coordinates[transcript]
                 gene_id = transcript_gene_id_map[transcript]
-                gene_accession.append(gene_id)
-                gene_name = transcript_gene_name_map[transcript]
-                if re.match(r".*\S.*", gene_name.strip()):
-                    gene_symbol.append(gene_name.strip())
-                else:
-                    gene_name = "-"  # if there is no gene name
                 strand = transcript_strand[transcript]
                 orf_coordinate = orf_id.split("|")[2].strip()
-                orf_coordinates.append(orf_coordinate)  # orf genome coordinates
+
+                gene_name = transcript_gene_name_map[transcript]
+                if not re.match(r".*\S.*", gene_name.strip()):
+                    gene_name = "-"  # if there is no gene name
+
                 longest_orf = "N"
-                if orf_id.split("|")[1] in transcript_longest_orf_map.keys():
+                if orf_id.split("|")[1] in transcript_longest_orf_map:
                     longest_orf = "Y"
 
                 # uniprot proteins
-                if protein_seq in uniprot.keys():
-
+                if protein_seq in uniprot:
                     if uniprot[protein_seq].split("|")[0] == "sp":
                         protein_status = "reviewed(Swiss-Prot)"
                     elif uniprot[protein_seq].split("|")[0] == "tr":
@@ -375,23 +374,19 @@ def main():
                     protein_accession = uniprot[protein_seq].split("|")[1]
                     protein_description = uniprot[protein_seq].split("|")[2]
 
-                    orfbiotype_transcript_map.setdefault(protein_accession, []).append(transcript + "|CDS")
                     # annotate ORFs
-
                     get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "annotated", "CDS", "-", longest_orf, protein_status, orf_metadata_annotated_proteins, reading_frame_map[transcript], var_ORF_anno)
 
                 # Refseq/Ensembl proteins
-                elif protein_seq in refprot.keys():
+                elif protein_seq in refprot:
                     protein_status = "-"
                     protein_accession = refprot[protein_seq]
                     protein_description = "-"
-                    orfbiotype_transcript_map.setdefault(protein_accession, []).append(transcript + "|CDS")
 
                     # annotate ORFs
                     get_protein_annotation(transcript, gene_id, gene_name, protein_description, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, "annotated", "CDS", "-", longest_orf, protein_status, orf_metadata_annotated_proteins, reading_frame_map[transcript], var_ORF_anno)
-    # annotated_proteins close
 
-    # write output to metadata and fasta file
+    # Calculate annotated ORF outputs
     annotated_orf_map = {}  # k:protein_seq, v:fasta header annotations
     for protein_seq, annotations in orf_metadata_annotated_proteins.items():
         for protein_anno in annotations:
@@ -407,7 +402,7 @@ def main():
             annotated_orf_map.setdefault(protein_seq, []).append(fa_header)
 
     # Write annotated ORFs into the proteome database FASTA file
-    formatFastaheader(annotated_orf_map, fw_proteomedb)
+    writeORFsIntoFASTA(annotated_orf_map, organism_info, proteomedb_filename)
 
     # Novel proteins
     AN = Annotations()
@@ -530,7 +525,7 @@ def main():
         f.writelines(metadata_records_uniq)
 
     # Write novel ORFs into the proteome database FASTA file
-    formatFastaheader(novel_orf_map, fw_proteomedb)
+    writeORFsIntoFASTA(novel_orf_map, organism_info, proteomedb_filename)
 
     # Remove intermediate files
     remove_file_if_exists(orf_temp_file)
