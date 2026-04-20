@@ -241,13 +241,12 @@ def main():
                     orf_annotation = protein_accession + "_var" + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + var_seq_coordinates + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + var_seq + "\t" + longest_orf + "\t" + protein_status + "\t" + variants + "\t" + calculate_sequence_properties(var_seq) + "\n"
                     orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)
                 elif var_type == "HT":  # heterozygous variants
-                    orf_annotation = protein_accession + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + orf_coordinate + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + protein_seq + "\t" + longest_orf + "\t" + protein_status + "\t-\t" + calculate_sequence_properties(protein_seq) + "\n"
+                    orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
                     orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)  # wildtype sequence
                     orf_annotation = protein_accession + "_var" + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + var_seq_coordinates + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + var_seq + "\t" + longest_orf + "\t" + protein_status + "\t" + variants + "\t" + calculate_sequence_properties(var_seq) + "\n"
                     orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)  # variant sequence
-
         else:  # if transcript not in var_transcript_ORF_map
-            orf_annotation = protein_accession + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + orf_coordinate + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + protein_seq + "\t" + longest_orf + "\t" + protein_status + "\t-\t" + calculate_sequence_properties(protein_seq) + "\n"
+            orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
             orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)
 
     annotated_proteins = {}                 # store annotated proteins: k:protein sequence, v:transcript|orf_id|genomic_coordinates
