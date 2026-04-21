@@ -82,14 +82,10 @@ def UTRAnnotations(utrmap, orf, st, trcds): # utrcoord, orfcoord, strand, transc
     return orfBT
 
 def isIntergenic(orf_coord, gene_coord_map):
-    if not (':' in orf_coord and '-' in orf_coord):
-        return False
     [orf_chrom, orf_range] = orf_coord.split(':')[:2]
     [orf_start, orf_end] = [int(num) for num in orf_range.split('-')]
-    for gene_coord in gene_coord_map.values():
-        [gene_chrom, gene_range] = gene_coord.split(':')[:2]
-        [gene_start, gene_end] = [int(num) for num in gene_range.split('-')]
-        if orf_chrom == gene_chrom and orf_start >= gene_start and orf_end <= gene_end:
+    for (gene_start, gene_end) in gene_coord_map[orf_chrom]:
+        if orf_start >= gene_start and orf_end <= gene_end:
             return True
     return False
 

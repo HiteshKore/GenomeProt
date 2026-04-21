@@ -11,12 +11,12 @@ class GTFParser():
         if not self.valid:
             return
 
-        chrom = cols[0]
+        self.chrom = cols[0]
         self.feature = cols[2]
-        start = int(cols[3])
-        end = int(cols[4])
+        self.start = int(cols[3])
+        self.end = int(cols[4])
         self.strand = cols[6]
-        self.coordinates = f"{chrom}:{start}-{end}"
+        self.coordinates = f"{self.chrom}:{self.start}-{self.end}"
 
         meta_info_vals = cols[8].split(';')
         def concat_meta_attributes(attribute_name):

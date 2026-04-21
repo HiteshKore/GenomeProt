@@ -137,14 +137,14 @@ def main():
     getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)
 
     # Protein-coding genes
-    protein_coding_gene_coordinates = {}    # k:gene_id,k:gene coordinates
+    protein_coding_gene_coordinates = {}    # k:chrom,v:set((gene start, gene end))
 
     # Transcripts
-    transcript_biotypes = {}                # k:transcript_id i.e ENST,k: transcript biotype
-    transcript_genome_coordinates = {}      # k:transcript_id i.e ENST,k: genome coordinates
-    transcript_gene_id_map = {}             # k:transcript_id i.e ENST,k: gene id i.e. ENSG
-    transcript_gene_name_map = {}           # k:transcript_id i.e ENST,k: gene name
-    transcript_strand = {}                  # k:transcript_id i.e ENST,k: strand
+    transcript_biotypes = {}                # k:transcript_id i.e ENST,v: transcript biotype
+    transcript_genome_coordinates = {}      # k:transcript_id i.e ENST,v: genome coordinates
+    transcript_gene_id_map = {}             # k:transcript_id i.e ENST,v: gene id i.e. ENSG
+    transcript_gene_name_map = {}           # k:transcript_id i.e ENST,v: gene name
+    transcript_strand = {}                  # k:transcript_id i.e ENST,v: strand
 
     # UTRs and CDSs
     utr_coordinates = {}  # genome coordinates of transcript utrs k:transcript_id i.e ENST,k: genomic coordinates
@@ -156,12 +156,12 @@ def main():
             if not GP.valid:
                 continue
 
-            feature, strand, coordinates = GP.feature, GP.strand, GP.coordinates
+            feature, strand, chrom, start, end, coordinates = GP.feature, GP.strand, GP.chrom, GP.start, GP.end, GP.coordinates
             gene_id, gene_name, gene_type = GP.gene_id, GP.gene_name, GP.gene_type
             transcript_id, transcript_type = GP.transcript_id, GP.transcript_type
 
             if feature == "gene" and gene_type == "protein_coding":     # Fetch coordinates for protein-coding genes
-                protein_coding_gene_coordinates[gene_id] = coordinates
+                protein_coding_gene_coordinates.setdefault(chrom, set()).add((start, end))
             elif feature == "transcript":
                 transcript_biotypes[transcript_id] = transcript_type
                 transcript_genome_coordinates[transcript_id] = coordinates
@@ -377,7 +377,6 @@ def main():
 
     # Novel proteins
     orf_annotation_map = {}  # stores ORF annotations k:temporory ORF_id, annotations
-
     cdhit_clustering_output_file = os.path.join(arg_outdir, "cdhit_out.clstr")  # cluster file
     with open(cdhit_clustering_output_file, 'r') as cdhit_clustering_output:
         counter = 1     # Counter for temporary ORF IDs
