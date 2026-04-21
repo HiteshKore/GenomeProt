@@ -376,7 +376,6 @@ def main():
     writeORFsIntoFASTA(annotated_orf_map, organism_info, proteomedb_filename)
 
     # Novel proteins
-    AN = Annotations()
     orf_annotation_map = {}  # stores ORF annotations k:temporory ORF_id, annotations
 
     cdhit_clustering_output_file = os.path.join(arg_outdir, "cdhit_out.clstr")  # cluster file
@@ -420,14 +419,14 @@ def main():
                     gene_name = '-'
 
                 if transcript_biotype == "protein_coding":  # protein-coding transcripts
-                    localisation = AN.UTRAnnotations(transcript, utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
-                    if not ("UTR" in localisation and "CDS:3UTR" not in localisation):  # ORF overlaps with UTR region
+                    localisation = UTRAnnotations(utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
+                    if not ("UTR" in localisation and localisation != "CDS:3UTR"):  # ORF overlaps with UTR region
                         continue
                     if len(protein_seq) < arg_orf_length:   # for short uORFs, remove CDS annotation
                         localisation = localisation.split(':')[0]
                 elif transcript in utr_coordinates:         # transcripts with UTRs but are 'non-coding'
-                    localisation = AN.UTRAnnotations(transcript, utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
-                    if "UTR" in localisation and "CDS:3UTR" not in localisation:        # ORF overlaps with UTR region
+                    localisation = UTRAnnotations(utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
+                    if "UTR" in localisation and localisation != "CDS:3UTR":        # ORF overlaps with UTR region
                         if len(protein_seq) < arg_orf_length:
                             localisation = localisation.split(':')[0]
                     else:   # if ORF is not in UTR regions

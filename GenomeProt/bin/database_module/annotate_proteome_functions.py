@@ -26,97 +26,60 @@ def getDbAnnotations(db_filename, openprot_map, ref_prot_map, uniprot_map):  # R
                 uniprot_gene_description = columns[3]
                 uniprot_map[seq] = f"{uniprot_accession}|{uniprot_gene_description}"
 
-class Annotations():
-    def UTRAnnotations(self,tr,utrmap,orf,st,trcds): #transcript,utrcord, orfcoord,strand,transcript coordinates
-        if ":" in orf and "-" in orf:
-          orfBT=""
-          ochr=orf.split(':')[0]
-          utr_anno={} #annotates 5' and 3' UTR coordinates: k: UTR coordinates v:3UTR/5UTR
-          utr_orf_pos=[]
-          #segreagate 3UTR and 5UTR coordinates and determine postion of ORFs in UTR exons
-          if st=="+":
-            ostart=int(orf.split(":")[1].split('-')[0])
-            oend=int(orf.split(":")[1].split('-')[1])
-            first_cds=int(trcds[0].split(':')[1].split("-")[0]) #start position of first CDs of transcript
-            last_cds=int(trcds[-1].split(":")[1].split("-")[1]) # end position of last CDS of transcript
-            for utr in utrmap:  #Identifying 5' UTR and 3'UTR exons among UTR cooordinates of transcript
-              uchr=utr.split(':')[0].strip()
-              if uchr==ochr:
-                u_start=int(utr.split(':')[1].split('-')[0])
-                u_end=int(utr.split(':')[1].split('-')[1])
-                #marking 5UTR and 3UTR
-                if u_start < first_cds and u_end < first_cds:#if UTR start and end is lesser than first cds start then it is 5UTR
-                  utr_anno[utr]='5UTR'
-                elif u_start > last_cds and u_end>last_cds: #if UTR start and end is greater than first cds then it is 5UTR
-                  utr_anno[utr]='3UTR'
+def UTRAnnotations(utrmap, orf, st, trcds): # utrcoord, orfcoord, strand, transcript coordinates
+    if not (':' in orf and '-' in orf and (st == '+' or st == '-')):
+        return ''
 
-            for utrs in utrmap:
-              uchr=utrs.split(':')[0].strip()
-              u_start=int(utrs.split(':')[1].split('-')[0])
-              u_end=int(utrs.split(':')[1].split('-')[1])
-              if uchr==ochr:
-                if ostart >=u_start and ostart < u_end: #if ORF start is greater than UTR start and less than than UTR end
-                  utr_orf_pos.append("*"+utr_anno[utrs]) # * indicates if ORF starts in 5' or 3' UTR
-                elif ostart >u_start and ostart <= u_end:
-                  utr_orf_pos.append("*"+utr_anno[utrs])
+    is_forward_strand = (st == '+')
+    [ochr, orf_info] = [col.strip() for col in orf.split(':')[:2]]
+    [orf_start, orf_end] = [int(col) for col in orf_info.split('-')[:2]]
+    if not is_forward_strand:
+        orf_start, orf_end = orf_end, orf_start
 
-                if oend >= u_start and oend< u_end: #if ORF start is greater than UTR start and less than than UTR end
-                  utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
-                elif oend > u_start and oend<= u_end: #if ORF start is greater than UTR start and less than than UTR end
-                  utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
+    first_cds = int(trcds[0].split(':')[1].split('-')[0 if is_forward_strand else 1])  # start position of first CDS of transcript
+    last_cds = int(trcds[-1].split(':')[1].split('-')[1 if is_forward_strand else 0])  # end position of last CDS of transcript
 
-          if st=="-":
-            ostart=int(orf.split(":")[1].split('-')[1])
-            oend=int(orf.split(":")[1].split('-')[0])
-            first_cds=int(trcds[0].split(':')[1].split("-")[1])
-            last_cds=int(trcds[-1].split(":")[1].split("-")[0])
-            for utr in utrmap:
-              uchr=utr.split(':')[0].strip()
-              if uchr==ochr:
-                u_start=int(utr.split(':')[1].split('-')[1])
-                u_end=int(utr.split(':')[1].split('-')[0])
-                if u_start > first_cds and u_end > first_cds :
-                  utr_anno[utr]='5UTR'
-                elif u_start < last_cds and u_end<last_cds:
-                  utr_anno[utr]='3UTR'
+    # segreagate 3UTR and 5UTR coordinates and determine postion of ORFs in UTR exons
+    utr_orf_pos = []
+    for utr in utrmap:  # Identifying 5' UTR and 3'UTR exons among UTR cooordinates of transcript
+        uchr = utr.split(':')[0].strip()
+        if uchr != ochr:
+            continue
 
-            for utrs in utrmap:
-              uchr=utrs.split(':')[0].strip()
-              if uchr==ochr:
-                u_start=int(utrs.split(':')[1].split('-')[1])
-                u_end=int(utrs.split(':')[1].split('-')[0])
-                #start
-                if ostart <= u_start and ostart > u_end: #if ORF start is lesser than UTR start and greater than than UTR end
-                  utr_orf_pos.append("*"+utr_anno[utrs]) # * indicates if ORF starts in 5' or 3' UTR
-                elif ostart < u_start and ostart >= u_end:
-                  utr_orf_pos.append("*"+utr_anno[utrs])
-                #end
-                if oend<= u_start and oend > u_end: #if ORF end is lesser than UTR start and greater than than UTR end
-                    utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
-                elif oend< u_start and oend >= u_end:
-                  utr_orf_pos.append("**"+utr_anno[utrs])
+        [utr_start, utr_end] = [int(col) for col in utr.split(':')[1].split('-')[:2]]
+        if not is_forward_strand:
+            utr_start, utr_end = utr_end, utr_start
 
-          # Determine ORF type
-          if len(utr_orf_pos)==1:
-            if utr_orf_pos[0]=='*5UTR':
-              orfBT="5UTR:CDS"
-            elif utr_orf_pos[0]=='*3UTR':
-              orfBT="3UTR"
-            elif utr_orf_pos[0]=='**3UTR':
-              orfBT="CDS:3UTR" #Alt-CDS:3UTR
-            elif utr_orf_pos[0]=='**5UTR': #handeling ambiguity due to ORFs locations predicted by ORFik are off by certain nucleiotide differences
-              orfBT="5UTR"
+        utr_annotation = ''
+        if (    is_forward_strand and utr_start < first_cds and utr_end < first_cds) or \
+           (not is_forward_strand and utr_start > first_cds and utr_end > first_cds):
+            utr_annotation = "5UTR"
+        elif (    is_forward_strand and utr_start > last_cds and utr_end > last_cds) or \
+             (not is_forward_strand and utr_start < last_cds and utr_end < last_cds):
+            utr_annotation = "3UTR"
+        if utr_annotation == '':
+            continue
 
-          elif len(utr_orf_pos)==2:
-            if utr_orf_pos[0]=='*3UTR' and utr_orf_pos[1]=='**3UTR':
-              orfBT="3UTR"
-            elif utr_orf_pos[0]=='*5UTR' and utr_orf_pos[1]=='**5UTR':
-              orfBT="5UTR"
-            elif utr_orf_pos[0]=='*5UTR' and utr_orf_pos[1]=='**3UTR':
-              orfBT="5UTR:3UTR"
-            elif utr_orf_pos[0]=='**3UTR' and utr_orf_pos[1]=='*5UTR':
-              orfBT="5UTR:3UTR"
-          return orfBT
+        if (    is_forward_strand and ((utr_start <= orf_start < utr_end) or (utr_start < orf_start <= utr_end))) or \
+           (not is_forward_strand and ((orf_start <= utr_start and orf_start > utr_end) or (orf_start < utr_start and orf_start >= utr_end))):
+            utr_orf_pos.append('*' + utr_annotation)
+        if (    is_forward_strand and ((utr_start <= orf_end < utr_end) or (utr_start < orf_end <= utr_end))) or \
+           (not is_forward_strand and ((orf_end <= utr_start and orf_end > utr_end) or (orf_end < utr_start and orf_end >= utr_end))):
+            utr_orf_pos.append("**" + utr_annotation)
+
+    # Determine the ORF type
+    orfBT = ""
+    if utr_orf_pos == ["*5UTR"]:
+        orfBT = "5UTR:CDS"
+    elif utr_orf_pos == ["**3UTR"]:
+        orfBT = "CDS:3UTR"  # Alt-CDS:3UTR
+    elif utr_orf_pos == ["**5UTR"] or utr_orf_pos == ["*5UTR", "**5UTR"]:   # handling ambiguity due to ORF locations predicted by ORFik being off by certain nucleotide differences
+        orfBT = "5UTR"
+    elif utr_orf_pos == ["*3UTR"] or utr_orf_pos == ["*3UTR", "**3UTR"]:
+        orfBT = "3UTR"
+    elif utr_orf_pos == ["*5UTR", "**3UTR"] or utr_orf_pos == ["**3UTR", "*5UTR"]:
+        orfBT = "5UTR:3UTR"
+    return orfBT
 
 def isIntergenic(orf_coord, gene_coord_map):
     if not (':' in orf_coord and '-' in orf_coord):
