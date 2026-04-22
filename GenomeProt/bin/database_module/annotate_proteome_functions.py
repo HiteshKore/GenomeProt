@@ -1,8 +1,7 @@
-from pycdhit import cd_hit, read_clstr
+from pycdhit import cd_hit
 import peptides as pep
 from Bio import pairwise2
-from Bio.SubsMat import MatrixInfo as matlist
-from Bio.pairwise2 import format_alignment
+from Bio.SubsMat import MatrixInfo
 
 def SeqClust(fasta, out):
     cd_hit(i = fasta, o = out, c = 1.0, d = 0, sc = 1, n = 3, G = 0, aS = 1, aL = 0, A = 0, T = 4, M = 4096)
@@ -113,7 +112,7 @@ def calculateAliphatic_index(peptide_obj):
 
 def calculate_similarity(seq1, seq2):
     # Use a substitution matrix like BLOSUM62
-    matrix = matlist.blosum62
+    matrix = MatrixInfo.blosum62
 
     # Set gap open and gap extend penalties
     gap_open = -10  # Penalty for opening a gap

@@ -71,6 +71,45 @@ def writeORFsIntoFASTA(orf_info_map, organism_info, proteomedb_filename):
             fa_seqs += f">{orf_type}|{accession}|{accession}_{organism} {des_s} OS={organism_latin_name} CO={orf_coord_s} GA={GA_s} GN={GN_s} TA={TA_s}\n" + f"{prot_sq}\n"
         f.write(fa_seqs)
 
+# function to annotate protein sequence based on genomic coordinates, biotypes, physioco-chemical properties
+def get_protein_annotation(transcript, gene_id, gene_name, protein_des, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, orf_type, localisation, openprot_annotations, longest_orf, protein_status, orf_metadata_map, reading_frame_info, var_ORF_anno):
+    # get reading frame information
+    matching_indices = next((i for i, protein_seq_rf in enumerate(reading_frame_info) if protein_seq in protein_seq_rf), None)
+
+    rf = reading_frame_info[matching_indices].split("|")[1]
+
+    if transcript in var_transcript_ORF_map:
+        var_prot_attr = variant_protein_annotations(var_ORF_anno, var_transcript_ORF_map[transcript], protein_seq)  # identify variants and calculate physico-chemical properties
+        if var_prot_attr != "":
+            var_seq = var_prot_attr.split("\t")[0]
+            variants = var_prot_attr.split("\t")[1]
+            var_seq_coordinates = var_prot_attr.split("\t")[2]
+            chr = var_seq_coordinates.strip().split(":")[0]
+            if strand == "-":
+                orf_start = int(var_seq_coordinates.strip().split(":")[1].split("-")[0]) + 3
+                orf_end = var_seq_coordinates.strip().split(":")[1].split("-")[1]
+                rf = (int(orf_end) - 1) % 3
+                var_seq_coordinates = chr + ":" + str(orf_start) + "-" + orf_end
+            elif strand == "+":
+                orf_start = var_seq_coordinates.strip().split(":")[1].split("-")[0]
+                orf_end = int(var_seq_coordinates.strip().split(":")[1].split("-")[1]) - 3  # 3 nucleiotides substracted as ORFik counts stop codon position
+                rf = (int(orf_start) - 1) % 3
+                var_seq_coordinates = chr + ":" + orf_start + "-" + str(orf_end)
+
+            var_type = var_prot_attr.split("\t")[3]  # variants
+            var_seq_prop = var_prot_attr.split("\t")[4]  # sequence properties
+            if var_type == "HM":  # homozygous variants
+                orf_annotation = protein_accession + "_var" + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + var_seq_coordinates + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + var_seq + "\t" + longest_orf + "\t" + protein_status + "\t" + variants + "\t" + calculate_sequence_properties(var_seq) + "\n"
+                orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)
+            elif var_type == "HT":  # heterozygous variants
+                orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
+                orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)  # wildtype sequence
+                orf_annotation = protein_accession + "_var" + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + var_seq_coordinates + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + var_seq + "\t" + longest_orf + "\t" + protein_status + "\t" + variants + "\t" + calculate_sequence_properties(var_seq) + "\n"
+                orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)  # variant sequence
+    else:  # if transcript not in var_transcript_ORF_map
+        orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
+        orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)
+
 def main():
     args = sys.argv
     if len(args) != 10:
@@ -210,45 +249,6 @@ def main():
                     var_transcript_ORF_map.setdefault(transcript, []).append(var_sq)
                     var_ORF_anno[var_sq] = f"{orf_coordinate}|{mutation_type}"
 
-    # function to annotate protein sequence based on genomic coordinates, biotypes, physioco-chemical properties
-    def get_protein_annotation(transcript, gene_id, gene_name, protein_des, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, orf_type, localisation, openprot_annotations, longest_orf, protein_status, orf_metadata_map, reading_frame_info, var_ORF_anno):
-        # get reading frame information
-        matching_indices = next((i for i, protein_seq_rf in enumerate(reading_frame_info) if protein_seq in protein_seq_rf), None)
-
-        rf = reading_frame_info[matching_indices].split("|")[1]
-
-        if transcript in var_transcript_ORF_map:
-            var_prot_attr = variant_protein_annotations(var_ORF_anno, var_transcript_ORF_map[transcript], protein_seq)  # identify variants and calculate physico-chemical properties
-            if var_prot_attr != "":
-                var_seq = var_prot_attr.split("\t")[0]
-                variants = var_prot_attr.split("\t")[1]
-                var_seq_coordinates = var_prot_attr.split("\t")[2]
-                chr = var_seq_coordinates.strip().split(":")[0]
-                if strand == "-":
-                    orf_start = int(var_seq_coordinates.strip().split(":")[1].split("-")[0]) + 3
-                    orf_end = var_seq_coordinates.strip().split(":")[1].split("-")[1]
-                    rf = (int(orf_end) - 1) % 3
-                    var_seq_coordinates = chr + ":" + str(orf_start) + "-" + orf_end
-                elif strand == "+":
-                    orf_start = var_seq_coordinates.strip().split(":")[1].split("-")[0]
-                    orf_end = int(var_seq_coordinates.strip().split(":")[1].split("-")[1]) - 3  # 3 nucleiotides substracted as ORFik counts stop codon position
-                    rf = (int(orf_start) - 1) % 3
-                    var_seq_coordinates = chr + ":" + orf_start + "-" + str(orf_end)
-
-                var_type = var_prot_attr.split("\t")[3]  # variants
-                var_seq_prop = var_prot_attr.split("\t")[4]  # sequence properties
-                if var_type == "HM":  # homozygous variants
-                    orf_annotation = protein_accession + "_var" + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + var_seq_coordinates + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + var_seq + "\t" + longest_orf + "\t" + protein_status + "\t" + variants + "\t" + calculate_sequence_properties(var_seq) + "\n"
-                    orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)
-                elif var_type == "HT":  # heterozygous variants
-                    orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
-                    orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)  # wildtype sequence
-                    orf_annotation = protein_accession + "_var" + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + var_seq_coordinates + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + var_seq + "\t" + longest_orf + "\t" + protein_status + "\t" + variants + "\t" + calculate_sequence_properties(var_seq) + "\n"
-                    orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)  # variant sequence
-        else:  # if transcript not in var_transcript_ORF_map
-            orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
-            orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)
-
     annotated_proteins = {}                 # store annotated proteins: k:protein sequence, v:transcript|orf_id|genomic_coordinates
     unannotated_proteins = {}               # stores unannotated proteins: k:protein sequence, v:orf_id|genomic_coordinates
     unannotated_protein_coordinates = {}    # stores unannotated protein coordinates as key: k: orf_id|genomic_coordinates,v:protein sequence
@@ -337,8 +337,8 @@ def main():
                 continue
 
             gene_name = transcript_gene_name_map[transcript]
-            if not re.match(r".*\S.*", gene_name):
-                gene_name = '-'  # if there is no gene name
+            if not gene_name:
+                gene_name = '-'
 
             gene_id = transcript_gene_id_map[transcript]
             strand = transcript_strand[transcript]
@@ -414,7 +414,7 @@ def main():
                 longest_orf = 'Y' if orf_id in transcript_longest_orf_map else 'N'
 
                 gene_name = transcript_gene_name_map[transcript]
-                if not re.match(r".*\S.*", gene_name):
+                if not gene_name:
                     gene_name = '-'
 
                 if transcript_biotype == "protein_coding":  # protein-coding transcripts
