@@ -113,7 +113,7 @@ def get_protein_annotation(transcript, gene_id, gene_name, protein_des, var_tran
 def main():
     args = sys.argv
     if len(args) != 10:
-        print(f"Usage: {args[0]} annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism>")
+        print("Usage: python annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism>")
         sys.exit(1)
 
     # Store the arguments
