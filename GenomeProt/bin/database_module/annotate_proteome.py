@@ -388,7 +388,7 @@ def main():
                 continue
 
             # remove representative sequences of known proteins
-            if re.search(r">ENS.*P.*", line):
+            if re.search(r">ENS\w*P\d{11}", line):
                 continue
 
             longest_seq_orf_id = line.split('>')[1].split("...")[0]                 # ORF ID of the longest representative ORF in the cluster

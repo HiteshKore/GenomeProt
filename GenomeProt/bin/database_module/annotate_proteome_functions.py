@@ -84,7 +84,7 @@ def isIntergenic(orf_coord, gene_coord_map):
     [orf_chrom, orf_range] = orf_coord.split(':')[:2]
     [orf_start, orf_end] = [int(num) for num in orf_range.split('-')]
     for (gene_start, gene_end) in gene_coord_map[orf_chrom]:
-        if orf_start >= gene_start and orf_end <= gene_end:
+        if gene_start <= orf_start and orf_end <= gene_end:
             return True
     return False
 
