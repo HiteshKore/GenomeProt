@@ -112,12 +112,12 @@ def get_protein_annotation(transcript, gene_id, gene_name, protein_des, var_tran
 
 def main():
     args = sys.argv
-    if len(args) != 10:
-        print("Usage: python annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism>")
+    if 10 <= len(args) <= 12:
+        print("Usage: python annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism> (num_threads) (memory_limit)")
         sys.exit(1)
 
     # Store the arguments
-    [arg_reference_gtf_filename, arg_combined_protein_db_filename, arg_orfome_filename, arg_orfome_transcript_gtf_filename, arg_outdir, arg_canonical_or_all, arg_orf_length, arg_mutant_protein_db_filename, arg_organism] = args[1:]
+    [arg_reference_gtf_filename, arg_combined_protein_db_filename, arg_orfome_filename, arg_orfome_transcript_gtf_filename, arg_outdir, arg_canonical_or_all, arg_orf_length, arg_mutant_protein_db_filename, arg_organism] = args[1:10]
 
     # Check the arguments
     error_message = ""
@@ -168,6 +168,20 @@ def main():
 
     proteomedb_filename = os.path.join(arg_outdir, "proteome_database.fasta")
     annotate_canonical_orfs_only = (arg_canonical_or_all.lower().strip() == "canonical")
+
+    # Number of threads for cd-hit to use
+    num_threads = 1
+    try:
+        num_threads = max(0, int(args[10]))
+    except:
+        pass
+
+    # Maximum amount of memory (in MB) for cd-hit to use
+    memory_limit = 800
+    try:
+        memory_limit = max(0, int(args[11]))
+    except:
+        pass
 
     # Load the combined OpenProt + UniProt annotation database
     openprot = {}   # OpenProt annotations: k:seq v:protein_id
@@ -322,7 +336,7 @@ def main():
 
     # Perform cd-hit clustering on unannotated proteins to consider longest representative protein sequence
     orf_clus_file = os.path.join(arg_outdir, "cdhit_out")
-    SeqClust(orf_temp_file, orf_clus_file)
+    SeqClust(orf_temp_file, orf_clus_file, num_threads, memory_limit)
 
     # annotations of known proteins
     orf_metadata_annotated_proteins = {}  # key:protein_seq, val:metadata

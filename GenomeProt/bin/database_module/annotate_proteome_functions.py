@@ -3,8 +3,8 @@ import peptides as pep
 from Bio import pairwise2
 from Bio.SubsMat import MatrixInfo
 
-def SeqClust(fasta, out):
-    cd_hit(i = fasta, o = out, c = 1.0, d = 0, sc = 1, n = 3, G = 0, aS = 1, aL = 0, A = 0, T = 4, M = 4096)
+def SeqClust(fasta, out, num_threads, memory_limit):
+    cd_hit(i = fasta, o = out, c = 1.0, d = 0, sc = 1, n = 3, G = 0, aS = 1, aL = 0, A = 0, T = num_threads, M = memory_limit)
 
 def getDbAnnotations(db_filename, openprot_map, ref_prot_map, uniprot_map):  # Reference protein sequence database
     with open(db_filename, 'r') as f:
