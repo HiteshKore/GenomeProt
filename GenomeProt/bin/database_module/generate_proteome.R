@@ -1,5 +1,3 @@
-source("global.R")
-
 # import gtf and filter for minimum transcript counts
 filter_custom_gtf <- function(customgtf, organism, tx_counts = NA, min_count = NA, outdir) {
   # import bambu gtf
@@ -43,15 +41,15 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts = NA, min_count = N
   bambu_df <- bambu_data %>% as_tibble()
 
   # remove version numbers for search
-  bambu_df <- bambu_df %>% separate(gene_id, into="ensg_id", sep="\\.", remove = FALSE)
+  bambu_df <- bambu_df %>% separate(gene_id, into = "ensg_id", sep = "\\.", remove = FALSE)
 
   # use mygene to search for gene names
-  gene_query <- mygene::queryMany(unique(bambu_df$ensg_id), scopes="ensembl.gene", fields="symbol", species=as.character(organism),  returnall=TRUE)
+  gene_query <- mygene::queryMany(unique(bambu_df$ensg_id), scopes = "ensembl.gene", fields = "symbol", species = as.character(organism), returnall = TRUE)
 
   # make df
   gene_df <- as.data.frame(gene_query[["response"]])
 
-  gene_df<-gene_df %>% group_by(query) %>% slice_tail(n=1)%>%ungroup()
+  gene_df <- gene_df %>% group_by(query) %>% slice_tail(n = 1) %>% ungroup()
 
   # if there was no name found, use original ID
   gene_df <- gene_df %>%
@@ -62,21 +60,21 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts = NA, min_count = N
     dplyr::select(query, gene_name)
 
   # merge results
-  bambu_merged <- merge(bambu_df, gene_df, by.x="ensg_id", by.y="query", all.x=T, all.y=F)
+  bambu_merged <- merge(bambu_df, gene_df, by.x = "ensg_id", by.y = "query", all.x = T, all.y = F)
 
   bambu_merged$ensg_id <- NULL
 
   # make GRanges including new names
   bambu_data_gr <- makeGRangesFromDataFrame(bambu_merged,
-                                            keep.extra.columns=TRUE, ignore.strand=FALSE, seqinfo=NULL,
-                                            seqnames.field="seqnames", start.field="start", end.field="end", strand.field="strand",
-                                            starts.in.df.are.0based=FALSE)
+                                            keep.extra.columns = TRUE, ignore.strand = FALSE, seqinfo = NULL,
+                                            seqnames.field = "seqnames", start.field = "start", end.field = "end", strand.field = "strand",
+                                            starts.in.df.are.0based = FALSE)
 
   # remove extra mcols
-  columns_present <- all(c("gene_name.x", "gene_name.y") %in%  colnames(data.frame(bambu_data_gr)))
+  columns_present <- all(c("gene_name.x", "gene_name.y") %in% colnames(data.frame(bambu_data_gr)))
 
   if (columns_present) {
-    mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name.x","gene_name.y", "exon_number")]
+    mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name.x", "gene_name.y", "exon_number")]
   } else {
     mcols(bambu_data_gr) <- mcols(bambu_data_gr)[, c("source", "type", "score", "phase", "transcript_id", "gene_id", "gene_name", "exon_number")]
   }
@@ -98,7 +96,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts = NA, min_count = N
   # export filtered gtf
   export(bambu_export, file.path(outdir, "proteome_database_transcripts.gtf"), format = "gtf")
 
-  print("Exported filtered GTF")
+  message("Exported filtered GTF")
 }
 
 # function for variant protein seqs
@@ -164,7 +162,7 @@ count_variable_nucleotides <- function(mut_seq, wt_seq) {
   sum(strsplit(mut_seq, "")[[1]] != strsplit(wt_seq, "")[[1]])
 }
 
-get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_hm_ht,custom_gtf, organism, outdir, orf_len) {
+get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_hm_ht, custom_gtf, genomedb, outdir, orf_len) {
   if (file.exists(custom_genome_hm) && file.exists(custom_genome_hm_ht)) {
     # import filtered gtf as a txdb
     txdb <- makeTxDbFromGFF(custom_gtf)
@@ -188,29 +186,7 @@ get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_
      }
 
     # wild type
-    # set organism
-    if (organism == "HUMAN") {
-      library(BSgenome.Hsapiens.UCSC.hg38)
-      genomedb <- BSgenome.Hsapiens.UCSC.hg38
-    } else if (organism == "MOUSE") {
-      library(BSgenome.Mmusculus.UCSC.mm39)
-      genomedb <- BSgenome.Mmusculus.UCSC.mm39
-    } else if (organism == "CAEEL") { #celegans
-      library(BSgenome.Celegans.UCSC.ce11)
-      genomedb <- BSgenome.Celegans.UCSC.ce11
-    } else if (organism == "DROME") { #drosophila
-      library(BSgenome.Dmelanogaster.UCSC.dm6)
-      genomedb <- BSgenome.Dmelanogaster.UCSC.dm6
-    } else if (organism == "RAT") { #rat
-      library(BSgenome.Rnorvegicus.UCSC.rn7)
-      genomedb <- BSgenome.Rnorvegicus.UCSC.rn7
-    } else if (organism == "DANRE") { #zebrafish
-      library(BSgenome.Drerio.UCSC.danRer11)
-      genomedb <- BSgenome.Drerio.UCSC.danRer11
-    }
-
-     wt_genomedb <- genomedb
-     wt_sequences <- GenomicFeatures::extractTranscriptSeqs(wt_genomedb, txs_grl)
+     wt_sequences <- GenomicFeatures::extractTranscriptSeqs(genomedb, txs_grl)
 
      fasta_df_wt <- data.frame(
        transcript = names(wt_sequences),
@@ -288,42 +264,19 @@ get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_
     # export protein seqs for python script
     write_tsv(variant_protein_seqs, file.path(outdir, "Mutant_ORFome_aa.txt"))
   } else {
-    print("File does not exist")
+    message("File does not exist")
   }
 }
 
 # generate FASTA of transcript sequences
-get_transcript_orfs <- function(filteredgtf, organism, orf_len = 30, find_UTR_5_orfs = FALSE, find_UTR_3_orfs = FALSE, referencegtf, outdir) {
-  # set organism
-  if (organism == "HUMAN") {
-    library(BSgenome.Hsapiens.UCSC.hg38)
-    genomedb <- BSgenome.Hsapiens.UCSC.hg38
-  } else if (organism == "MOUSE") {
-    library(BSgenome.Mmusculus.UCSC.mm39)
-    genomedb <- BSgenome.Mmusculus.UCSC.mm39
-  } else if (organism == "CAEEL") {
-    library(BSgenome.Celegans.UCSC.ce11)
-    genomedb <- BSgenome.Celegans.UCSC.ce11
-  } else if (organism == "DROME") {
-    library(BSgenome.Dmelanogaster.UCSC.dm6)
-    genomedb <- BSgenome.Dmelanogaster.UCSC.dm6
-  } else if (organism == "RAT") {
-    library(BSgenome.Rnorvegicus.UCSC.rn7)
-    genomedb <- BSgenome.Rnorvegicus.UCSC.rn7
-  } else if (organism == "DANRE") {
-    library(BSgenome.Drerio.UCSC.danRer11)
-    genomedb <- BSgenome.Drerio.UCSC.danRer11
+get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_orfs = FALSE, find_UTR_3_orfs = FALSE, referencegtf, outdir) {
+  ref_txdb <- NULL
+  if ((find_UTR_5_orfs == TRUE) | (find_UTR_5_orfs == TRUE)) {  # required for UTR regions
+    ref_txdb <- makeTxDbFromGFF(referencegtf)
   }
 
-  # required for UTR regions
-  #referencegtf="/home/hiteshk/GenomeProt_git/GenomeProt/testdata/gencode_v47_sorted.gtf"
-  ref_txdb <- makeTxDbFromGFF(referencegtf)
-
-  # import filtered gtf as a txdb
-  #filteredgtf="/home/hiteshk/GenomeProt/PGData/Lorey_melanoma_data/test_dataset/proteome_database_transcripts.gtf"
-  #orf_len=30
-  txdb <- makeTxDbFromGFF(filteredgtf)
-  txs <- exonsBy(txdb, by = c("tx", "gene"), use.names = TRUE)
+  # import filtered gtf
+  txs <- exonsBy(makeTxDbFromGFF(filteredgtf), by = c("tx", "gene"), use.names = TRUE)
 
   # convert txdb to GRangesList
   txs_grl <- GRangesList(txs)
@@ -352,6 +305,11 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len = 30, find_UTR_5_
   apply_orfik <- function(grl, orfik_min_length, orfik_max_length, orfik_type) {
     # extract transcript nt sequence
     tx_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, grl)
+    tx_seq_3nt_indices <- which(width(tx_seqs) >= 3)
+    if (length(tx_seq_3nt_indices) == 0) {
+      message("None of the transcript sequences contain at least 3 nucleotides, skipping ORF prediction...")
+      return(NULL)
+    }
 
     # ORFik
     ORFs <- findMapORFs(grl,
@@ -365,21 +323,14 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len = 30, find_UTR_5_
     orf_aa_seq_df_genomic_coordinates_merge_frm <- NULL
     ORFs_unlisted <- unlist(ORFs) %>% as_tibble()
     if (NROW(ORFs_unlisted) > 0) {
-      # only keep transcript sequences that have at least 3 nucleotides
-      tx_seqs <- tx_seqs[which(width(tx_seqs) >= 3)]
-      if (length(tx_seqs) == 0) {
-        message("None of the transcript sequences contain at least 3 nucleotides, skipping ORF prediction...")
-        return(NULL)
-      }
-
-      # translate the transcripts sequences into 3 reading frame to extract the frame information
-      aa_sequences <- translate_sequences(tx_seqs)
+      # translate all transcript sequences with at least 3 nucleotides into 3 reading frames
+      aa_sequences <- translate_sequences(tx_seqs[tx_seq_3nt_indices])
 
       aa_sequences_df <- data.frame(name = names(aa_sequences), sequence = aa_sequences, stringsAsFactors = FALSE, row.names = NULL) %>%
         mutate(
           tx_id = sub("_.*$", "", name),  # keep up to second dot
           tx_rf_id = sub("^[^.]+\\.[^.]+\\.", "", name)    # keep after second dot
-        )%>%dplyr::select(-name)
+        ) %>% dplyr::select(-name)
 
       # add width column, filter for ORFs of defined length
       orf_genome_coordinates <- ORFs_unlisted %>%
@@ -432,24 +383,18 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len = 30, find_UTR_5_
   # ORF discovery
   # set ORF max length to large number (to disable)
   # set longestORF to FALSE to ensure we identify CDS
-  all_ORFs <- apply_orfik(txs_grl, as.numeric(orf_len), 100000, FALSE)
+  combined <- apply_orfik(txs_grl, as.numeric(orf_len), 100000, FALSE)
 
-  # create tmp copy
-  tmp <- all_ORFs
-
-  # extract 5UTR ORFs
+  # extract 5' UTR ORFs
   if (find_UTR_5_orfs == TRUE) {
     # extract 5' UTR regions from ref gtf
-    utrs5 <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
-    if (length(utrs5) > 0) {
-      utrs5_filtered <- utrs5[names(utrs5) %in% names(txs)]
-      if (length(utrs5_filtered) > 0) {
+    utrs <- fiveUTRsByTranscript(ref_txdb, use.names = TRUE)
+    if (length(utrs) > 0) {
+      utrs <- utrs[names(utrs) %in% names(txs)]
+      if (length(utrs) > 0) {
         # ORF max length is now the main ORF min length
         # only keep longest UTR ORFs
-        utr5_ORFs <- apply_orfik(utrs5_filtered, 10, as.numeric(orf_len), TRUE)
-
-        # update tmp
-        tmp <- rbind(tmp, utr5_ORFs)
+        combined <- rbind(combined, apply_orfik(utrs, 10, as.numeric(orf_len), TRUE))
       } else {
         message("No 5' UTRs from the reference transcript annotation found in the filtered transcripts, skipping ORF prediction in 5' UTRs...")
       }
@@ -458,19 +403,16 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len = 30, find_UTR_5_
     }
   }
 
-  # extract 3UTR ORFs
+  # extract 3' UTR ORFs
   if (find_UTR_3_orfs == TRUE) {
     # extract 3' UTR regions from ref gtf
-    utrs3 <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
-    if (length(utrs3) > 0) {
-      utrs3_filtered <- utrs3[names(utrs3) %in% names(txs)]
-      if (length(utrs3_filtered) > 0) {
+    utrs <- threeUTRsByTranscript(ref_txdb, use.names = TRUE)
+    if (length(utrs) > 0) {
+      utrs <- utrs[names(utrs) %in% names(txs)]
+      if (length(utrs) > 0) {
         # ORF max length is now the main ORF min length
         # only keep longest UTR ORFs
-        utr3_ORFs <- apply_orfik(utrs3_filtered, 10, as.numeric(orf_len), TRUE)
-
-        # update tmp
-        tmp <- rbind(tmp, utr3_ORFs)
+        combined <- rbind(combined, apply_orfik(utrs, 10, as.numeric(orf_len), TRUE))
       } else {
         message("No 3' UTRs from the reference transcript annotation found in the filtered transcripts, skipping ORF prediction in 3' UTRs...")
       }
@@ -480,7 +422,7 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len = 30, find_UTR_5_
   }
 
   # rename final ORFs with new numerical IDs
-  combined <- tmp %>%
+  combined <- combined %>%
     separate(ORF_id, into = c("transcript_id"), sep = c("\\_"), remove = F) %>%
     group_by(transcript_id) %>%
     dplyr::mutate(tx_id_number = row_number()) %>%
@@ -494,10 +436,12 @@ get_transcript_orfs <- function(filteredgtf, organism, orf_len = 30, find_UTR_5_
 
   # export protein seqs for python script
   write_tsv(combined, file.path(outdir, "ORFome_aa.txt"))
-  print("Exported ORFik data")
+  message("Exported ORFik data")
 
   return(combined)
 }
+
+library(optparse)
 
 # define options
 option_list = list(
@@ -506,7 +450,7 @@ option_list = list(
   make_option(c("-r", "--reference"), type="character", default=NULL,
               help="reference GTF", metavar="character"),
   make_option(c("-G", "--genome"), type="character", default=NULL, # optional; only required for generating variant-aware databases
-              help="reference genome fa", metavar="character"),
+              help="reference genome FASTA", metavar="character"),
   make_option(c("-c", "--counts"), type="character", default=NULL,
               help="transcript counts file", metavar="character"),
   make_option(c("-m", "--mincount"), type="integer", default=NULL,
@@ -520,7 +464,7 @@ option_list = list(
   make_option(c("-d", "--dorfs"), type="logical", default=NULL,
               help="Find dORFs", metavar="TRUE/FALSE"),
   make_option(c("-v", "--vcf"), type="character", default=NULL,
-              help="vcf file", metavar="character"),
+              help="VCF file", metavar="character"),
   make_option(c("-s", "--savepath"), type="character", default=NULL,
               help="Output directory", metavar="character")
 )
@@ -534,30 +478,64 @@ reference_gtf <- opt$reference
 tx_count_path <- opt$counts
 minimum_tx_count <- opt$m
 ref_genome <- opt$genome
-organism <- opt$organism
+organism <- toupper(trimws(as.character(opt$organism)))
 min_orf_length <- opt$length
 find_5_orfs <- opt$uorfs
 find_3_orfs <- opt$dorfs
 vcf_file <- opt$vcf
 output_directory <- opt$savepath
 
-#for testing
-#gtf_path <- "/home/hiteshk/GenomeProt/PGData/Lorey_melanoma_data/test_dataset/proteome_database_transcripts.gtf"
-#reference_gtf <- "/home/hiteshk/GenomeProt_git/GenomeProt/testdata/gencode_v47_sorted.gtf"
-#tx_count_path <- opt$counts
-#minimum_tx_count <-
-#ref_genome <-
-#organism <- "HUMAN"
-#min_orf_length <- 30
-#find_5_orfs <- TRUE
-#find_3_orfs <- FALSE
-#vcf_file <- opt$vcf
-#output_directory <- "/home/hiteshk/GenomeProt/PGData/Lorey_melanoma_data/test_dataset/"
+# check the input arguments
+error_message <- ""
+
+if (!file.exists(gtf_path)) {
+  error_message <- paste0("The custom user GTF '", gtf_path, "' does not exist.")
+} else if (!file.exists(reference_gtf)) {
+  error_message <- paste0("The reference GTF '", reference_gtf, "' does not exist.")
+} else if (!is.null(ref_genome) && !file.exists(ref_genome)) {
+  error_message <- paste0("The reference genome FASTA '", ref_genome, "' does not exist.")
+} else if (!is.null(tx_count_path) && !file.exists(tx_count_path)) {
+  error_message <- paste0("The transcript counts file '", tx_count_path, "' does not exist.")
+} else if (!is.null(vcf_file) && !file.exists(vcf_file)) {
+  error_message <- paste0("The VCF file '", vcf_file, "' does not exist.")
+} else if (!(organism %in% c("HUMAN", "MOUSE", "CAEEL", "DROME", "RAT", "DANRE"))) {
+  error_message <- paste0("Organism '", as.character(opt$organism), "' is not supported. Please specify one of the following (case-insensitive): 'HUMAN', 'MOUSE', 'RAT', 'CAEEL' (C. elegans), 'DROME' (Drosophila), or 'DANRE' (Zebrafish).")
+} else if (file.exists(output_directory)) {
+  error_message <- paste0("'", output_directory, "' exists but is not a directory.")
+}
+
+if (nchar(error_message) > 0) {
+  stop(error_message)
+}
+
+# select the reference genome corresponding to the specified organism
+if (organism == "HUMAN") {
+  library(BSgenome.Hsapiens.UCSC.hg38)
+  genomedb <- BSgenome.Hsapiens.UCSC.hg38
+} else if (organism == "MOUSE") {
+  library(BSgenome.Mmusculus.UCSC.mm39)
+  genomedb <- BSgenome.Mmusculus.UCSC.mm39
+} else if (organism == "CAEEL") {   # C. elegans
+  library(BSgenome.Celegans.UCSC.ce11)
+  genomedb <- BSgenome.Celegans.UCSC.ce11
+} else if (organism == "DROME") {   # Drosophila
+  library(BSgenome.Dmelanogaster.UCSC.dm6)
+  genomedb <- BSgenome.Dmelanogaster.UCSC.dm6
+} else if (organism == "RAT") {
+  library(BSgenome.Rnorvegicus.UCSC.rn7)
+  genomedb <- BSgenome.Rnorvegicus.UCSC.rn7
+} else if (organism == "DANRE") {   # Zebrafish
+  library(BSgenome.Drerio.UCSC.danRer11)
+  genomedb <- BSgenome.Drerio.UCSC.danRer11
+}
 
 # create the output directory if it does not already exist
 if (!dir.exists(output_directory)) {
   dir.create(output_directory)
 }
+
+# load the rest of the libraries needed for the remainder of the script to run
+source("global.R")
 
 if (!grepl("proteome_database_transcripts.gtf", gtf_path)) {
   if (!is.null(tx_count_path)) {
@@ -570,7 +548,7 @@ if (!grepl("proteome_database_transcripts.gtf", gtf_path)) {
   filtered_gtf <- gtf_path
 }
 
-wt_orfome <- get_transcript_orfs(filteredgtf = filtered_gtf, organism = organism, orf_len = min_orf_length, find_UTR_5_orfs = find_5_orfs, find_UTR_3_orfs = find_3_orfs, referencegtf = reference_gtf, outdir = output_directory)
+wt_orfome <- get_transcript_orfs(filteredgtf = filtered_gtf, genomedb = genomedb, orf_len = min_orf_length, find_UTR_5_orfs = find_5_orfs, find_UTR_3_orfs = find_3_orfs, referencegtf = reference_gtf, outdir = output_directory)
 
 # generate custom genome
 if (!is.null(ref_genome) && !is.null(vcf_file)) { # if a genome and vcf have been uploaded
@@ -583,5 +561,5 @@ if (!is.null(ref_genome) && !is.null(vcf_file)) { # if a genome and vcf have bee
   genome_alt_hm <- file.path(output_directory, basename(ref_genome) %>% str_replace(., ".fa", "_hm.fa"))
 
   # apply variant protein function
-  get_variant_protein_seqs(wt_orfome = wt_orfome, custom_genome_hm = genome_alt_hm, custom_genome_hm_ht = genome_alt_hm_ht, custom_gtf = file.path(output_directory, "proteome_database_transcripts.gtf"), organism = organism, outdir = output_directory, min_orf_length)
+  get_variant_protein_seqs(wt_orfome = wt_orfome, custom_genome_hm = genome_alt_hm, custom_genome_hm_ht = genome_alt_hm_ht, custom_gtf = file.path(output_directory, "proteome_database_transcripts.gtf"), genomedb = genomedb, outdir = output_directory, min_orf_length)
 }
