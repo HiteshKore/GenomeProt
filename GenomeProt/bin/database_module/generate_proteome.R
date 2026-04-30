@@ -164,14 +164,10 @@ count_variable_nucleotides <- function(mut_seq, wt_seq) {
 
 get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_hm_ht, custom_gtf, genomedb, outdir, orf_len) {
   if (file.exists(custom_genome_hm) && file.exists(custom_genome_hm_ht)) {
-    # import filtered gtf as a txdb
-    txdb <- makeTxDbFromGFF(custom_gtf)
-    txs <- exonsBy(txdb, by=c("tx", "gene"), use.names=TRUE)
-    # convert txdb to GRangesList
-    txs_grl <- GRangesList(txs)
+    txs <- exonsBy(makeTxDbFromGFF(custom_gtf), by = c("tx", "gene"), use.names = TRUE)
     if (file.size(custom_genome_hm) > 0) {
 
-      orfome_hm<-get_variant_orfome(custom_genome_hm,custom_gtf,orf_len,txs_grl)
+      orfome_hm<-get_variant_orfome(custom_genome_hm,custom_gtf,orf_len,txs)
       orfome_hm_transcript_db<-orfome_hm$transcript_db
       orfome_hm_orf_aa_seq_df_genome_coord<-orfome_hm$orf_aa_seq_df_genome_coord
 
@@ -179,14 +175,14 @@ get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_
 
      if (file.size(custom_genome_hm_ht) > 0) {
 
-     orfome_hm_ht<-get_variant_orfome(custom_genome_hm_ht,custom_gtf,orf_len,txs_grl)
+     orfome_hm_ht<-get_variant_orfome(custom_genome_hm_ht,custom_gtf,orf_len,txs)
      orfome_hm_ht_transcript_db<-orfome_hm_ht$transcript_db
      orfome_hm_ht_orf_aa_seq_df_genome_coord<-orfome_hm_ht$orf_aa_seq_df_genome_coord
 
      }
 
     # wild type
-     wt_sequences <- GenomicFeatures::extractTranscriptSeqs(genomedb, txs_grl)
+     wt_sequences <- GenomicFeatures::extractTranscriptSeqs(genomedb, txs)
 
      fasta_df_wt <- data.frame(
        transcript = names(wt_sequences),
@@ -278,9 +274,6 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
   # import filtered gtf
   txs <- exonsBy(makeTxDbFromGFF(filteredgtf), by = c("tx", "gene"), use.names = TRUE)
 
-  # convert txdb to GRangesList
-  txs_grl <- GRangesList(txs)
-
   # translate into all 3 reading frames
   translate_sequences <- function(sequences) {
     frames <- c(
@@ -352,10 +345,8 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
       # rename
       orf_genome_coordinates$ORF_id <- orf_genome_coordinates$names
       orf_genome_coordinates$names <- NULL
-      # convert these ORF coordinates into nucleotide sequences
-      orf_seqs <- GenomicFeatures::extractTranscriptSeqs(genomedb, ORFs)
-      # convert the nucleotide sequences to amino acid sequences
-      orf_aa_seq <- Biostrings::translate(orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE) # Verify this if it is repetitive
+      # convert these ORF coordinates into amino acid sequences
+      orf_aa_seq <- Biostrings::translate(GenomicFeatures::extractTranscriptSeqs(genomedb, ORFs), if.fuzzy.codon = "solve", no.init.codon = TRUE) # Verify this if it is repetitive
       # create data frame of all possible ORFs
       orf_aa_seq_df <- data.frame(ORF_id = orf_aa_seq@ranges@NAMES, ORF_sequence = orf_aa_seq, row.names = NULL)
       # merge with coordinates
@@ -383,7 +374,7 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
   # ORF discovery
   # set ORF max length to large number (to disable)
   # set longestORF to FALSE to ensure we identify CDS
-  combined <- apply_orfik(txs_grl, orf_len, 100000, FALSE)
+  combined <- apply_orfik(txs, orf_len, 100000, FALSE)
 
   # extract 5' UTR ORFs
   if (find_UTR_5_orfs == TRUE) {
