@@ -15,7 +15,7 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts = NA, min_count = N
     # filter for counts greater than or equal to min_count in any numeric column
     counts_filt <- counts %>%
       dplyr::mutate(total = rowSums(across(where(is.numeric)), na.rm = TRUE)) %>%
-      dplyr::filter(total > as.numeric(min_count))
+      dplyr::filter(total > min_count)
 
     # extract txnames
     tx_ids <- counts_filt$TXNAME
@@ -112,7 +112,7 @@ get_variant_orfome <- function(custom_genome, custom_gtf, orf_len, txs_grl) {
                       mut_sequences,
                       groupByTx = FALSE,
                       longestORF = TRUE,
-                      minimumLength = as.numeric(orf_len),
+                      minimumLength = orf_len,
                       startCodon = "ATG",
                       stopCodon = stopDefinition(1))
 
@@ -316,7 +316,7 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
                         tx_seqs,
                         groupByTx = FALSE,
                         longestORF = orfik_type,
-                        minimumLength = as.numeric(orfik_min_length),
+                        minimumLength = orfik_min_length,
                         startCodon = "ATG",
                         stopCodon = stopDefinition(1))
 
@@ -343,7 +343,7 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
                   length = sum(width),
                   strand = strand[1]) %>%
         ungroup() %>%
-        dplyr::filter(length < (as.numeric(orfik_max_length)*3)-3) %>% # length ORFs < 30 AA
+        dplyr::filter(length < (orfik_max_length * 3) - 3) %>% # length ORFs < 30 AA
         dplyr::select(-length)
 
       # remove any ORFs from original ORF object if they were filtered out due to length settings above
@@ -383,7 +383,7 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
   # ORF discovery
   # set ORF max length to large number (to disable)
   # set longestORF to FALSE to ensure we identify CDS
-  combined <- apply_orfik(txs_grl, as.numeric(orf_len), 100000, FALSE)
+  combined <- apply_orfik(txs_grl, orf_len, 100000, FALSE)
 
   # extract 5' UTR ORFs
   if (find_UTR_5_orfs == TRUE) {
@@ -394,7 +394,7 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
       if (length(utrs) > 0) {
         # ORF max length is now the main ORF min length
         # only keep longest UTR ORFs
-        combined <- rbind(combined, apply_orfik(utrs, 10, as.numeric(orf_len), TRUE))
+        combined <- rbind(combined, apply_orfik(utrs, 10, orf_len, TRUE))
       } else {
         message("No 5' UTRs from the reference transcript annotation found in the filtered transcripts, skipping ORF prediction in 5' UTRs...")
       }
@@ -412,7 +412,7 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
       if (length(utrs) > 0) {
         # ORF max length is now the main ORF min length
         # only keep longest UTR ORFs
-        combined <- rbind(combined, apply_orfik(utrs, 10, as.numeric(orf_len), TRUE))
+        combined <- rbind(combined, apply_orfik(utrs, 10, orf_len, TRUE))
       } else {
         message("No 3' UTRs from the reference transcript annotation found in the filtered transcripts, skipping ORF prediction in 3' UTRs...")
       }
@@ -478,15 +478,44 @@ reference_gtf <- opt$reference
 tx_count_path <- opt$counts
 minimum_tx_count <- opt$m
 ref_genome <- opt$genome
-organism <- toupper(trimws(as.character(opt$organism)))
+organism <- opt$organism
 min_orf_length <- opt$length
 find_5_orfs <- opt$uorfs
 find_3_orfs <- opt$dorfs
 vcf_file <- opt$vcf
 output_directory <- opt$savepath
 
-# check the input arguments
+# check if any required arguments are missing
+
 error_message <- ""
+
+if (is.null(gtf_path)) {
+  error_message <- "Please provide a custom user GTF."
+} else if (is.null(reference_gtf)) {
+  error_message <- "Please provide a reference GTF."
+} else if (is.null(organism)) {
+  error_message <- "Please specify one of the following organisms (case-insensitive): 'HUMAN', 'MOUSE', 'RAT', 'CAEEL' (C. elegans), 'DROME' (Drosophila), or 'DANRE' (Zebrafish)."
+} else if (is.null(min_orf_length)) {
+  error_message <- "Please specify the minimum ORF length."
+} else if (is.null(find_5_orfs)) {
+  error_message <- "Please indicate whether ORFs from 5' UTRs should be predicted."
+} else if (is.null(find_3_orfs)) {
+  error_message <- "Please indicate whether ORFs from 3' UTRs should be predicted."
+} else if (is.null(output_directory)) {
+  error_message <- "Please specify an output directory."
+}
+
+if (nchar(error_message) > 0) {
+  stop(error_message)
+}
+
+# check the input arguments
+
+organism <- toupper(trimws(as.character(organism)))
+min_orf_length <- floor(as.numeric(min_orf_length))
+if (!is.null(minimum_tx_count) && !is.null(tx_count_path)) {
+  minimum_tx_count <- floor(as.numeric(minimum_tx_count))
+}
 
 if (!file.exists(gtf_path)) {
   error_message <- paste0("The custom user GTF '", gtf_path, "' does not exist.")
@@ -500,8 +529,16 @@ if (!file.exists(gtf_path)) {
   error_message <- paste0("The VCF file '", vcf_file, "' does not exist.")
 } else if (!(organism %in% c("HUMAN", "MOUSE", "CAEEL", "DROME", "RAT", "DANRE"))) {
   error_message <- paste0("Organism '", as.character(opt$organism), "' is not supported. Please specify one of the following (case-insensitive): 'HUMAN', 'MOUSE', 'RAT', 'CAEEL' (C. elegans), 'DROME' (Drosophila), or 'DANRE' (Zebrafish).")
-} else if (file.exists(output_directory)) {
+} else if (file.exists(output_directory) && !dir.exists(output_directory)) {
   error_message <- paste0("'", output_directory, "' exists but is not a directory.")
+} else if (!(find_5_orfs %in% c(TRUE, FALSE))) {
+  error_message <- "Please specify 'TRUE' or 'FALSE' on whether to predict ORFs from 5' UTRs."
+} else if (!(find_3_orfs %in% c(TRUE, FALSE))) {
+  error_message <- "Please specify 'TRUE' or 'FALSE' on whether to predict ORFs from 3' UTRs."
+} else if (!(is.finite(min_orf_length) && min_orf_length >= 0)) {
+  error_message <- paste0("The minimum ORF length '", opt$length, "' cannot be parsed as a non-negative integer.")
+} else if (!is.null(minimum_tx_count) && !is.null(tx_count_path) && !(is.finite(minimum_tx_count) && minimum_tx_count >= 0)) {
+  error_message <- paste0("The minimum transcript count '", opt$m, "' cannot be parsed as a non-negative integer.")
 }
 
 if (nchar(error_message) > 0) {
