@@ -167,6 +167,7 @@ def main():
     organism_info = (arg_organism.upper().strip(), organism_latin_name)
 
     proteomedb_filename = os.path.join(arg_outdir, "proteome_database.fasta")
+    remove_file_if_exists(proteomedb_filename)  # Since data will be appended to the proteome database FASTA file, make sure this file is always created anew
     annotate_canonical_orfs_only = (arg_canonical_or_all.lower().strip() == "canonical")
 
     # Number of threads for cd-hit to use
