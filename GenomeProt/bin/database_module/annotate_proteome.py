@@ -112,7 +112,7 @@ def get_protein_annotation(transcript, gene_id, gene_name, protein_des, var_tran
 
 def main():
     args = sys.argv
-    if 10 <= len(args) <= 12:
+    if not (10 <= len(args) <= 12):
         print("Usage: python annotate_proteome.py <reference_gtf> <custom_openprot+uniprot_db> <ORFome_aa.txt> <ORFome_transcripts.gtf> <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism> (num_threads) (memory_limit)")
         sys.exit(1)
 
