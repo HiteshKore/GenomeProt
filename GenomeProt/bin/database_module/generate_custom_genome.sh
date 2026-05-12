@@ -1,24 +1,27 @@
 #!/bin/bash
-conda_path=$(which conda)
-# usage() function to show the help message
+
+# Function to print this script's help message
 function usage() {
-    cat << EOF
+    /usr/bin/cat << EOF
 Program: Generate custom genome
 
-Usage: generate_custom_genome.sh [-h] [-g <genome_fasta>] [-r <reference GTF>] [-v <VCF file>] [-o <outdir>] 
-
-[-l <ORF length (AA)>] [-j <job identifier>] [-d <sample directory>]
+Usage: generate_custom_genome.sh [-h] [-g <genome fasta>] [-r <reference GTF>] [-v <VCF file>] [-o <outdir>]
 
 OPTIONS:
-    -h help		help options
-    -g genome fasta		Reference genome FASTA file   
-    -r reference GTF	Reference GTF file in GENCODE/ENSEMBL format
-    -v VCF file  Varinats in VCF file format
-    -o outdir		Output directory
-    
+    -h help             Print this help message
+    -g genome fasta     Reference genome FASTA file
+    -r reference GTF    Reference GTF file in GENCODE/ENSEMBL format
+    -v VCF file         Variants in VCF file format
+    -o outdir           Output directory
 EOF
 }
 
+# Get the path to the conda binary
+conda_path=$(/usr/bin/which conda)
+if [ -z "$conda_path" ]; then
+    /usr/bin/echo 'Failed to find the conda binary. Check if conda is installed or if it is within a directory specified in the $PATH variable.' >&2
+    exit 1
+fi
 
 # Ensure that the script exits if an error occurs
 set -e
@@ -30,10 +33,10 @@ if [ $# -eq 0 ]; then
 fi
 
 # Parse options using getopt
-OPTS=$(getopt -o g:r:v:o:h -n "generate_custom_genome.sh" -- "$@")
+OPTS=$(/usr/bin/getopt -o g:r:v:o:h -n "generate_custom_genome.sh" -- "$@")
 
 if [ $? != 0 ]; then
-    echo "Failed to parse options." >&2
+    /usr/bin/echo "Failed to parse options." >&2
     usage
     exit 1
 fi
@@ -54,12 +57,10 @@ while true; do
             ;;
         -r)
             reference_gtf=$2
-            
             shift 2
             ;;
         -v)
             vcf_file=$2
-            
             shift 2
             ;;
         -o)
@@ -71,52 +72,38 @@ while true; do
             break
             ;;
         *)
-            echo "Invalid option: $1" >&2
+            /usr/bin/echo "Invalid option: $1" >&2
             usage
             exit 1
             ;;
     esac
 done
 
+vcf_file_name=$(/usr/bin/basename $vcf_file)
+vcf_file_without_extn=$(/usr/bin/echo $vcf_file_name | /usr/bin/sed s'/.vcf//g')
 
-# genome_fa=/home/hiteshk/GenomeProt/PGCode/reference/GRCh38.primary_assembly_chrX.fa
-# reference_gtf=/home/hiteshk/GenomeProt/PGCode/reference/gencode.v45.chr_patch_hapl_scaff.annotation_hs_chrX.gtf
-# vcf_file=/home/hiteshk/GenomeProt/PGData/Mutant_peptide_Db/Cosmic_chrX.vcf.gz
-# outdir=$(dirname "$vcf_file")/
+genome_file=$(/usr/bin/basename $genome_fa)
+genome_file_without_extn=$(/usr/bin/echo $genome_file | /usr/bin/sed s'/.fa//g')
 
-vcf_file_name=$( basename $vcf_file)
-
-vcf_file_without_extn=$(echo $vcf_file_name| sed s'/.vcf//g')
-
-genome_file=$( basename $genome_fa)
-genome_file_without_extn=$( echo $genome_file | sed s'/.fa//g')
-
-
+# Segregate homozygous and heterozygous variants in the VCF file into two separate files
 $conda_path run -n GenomeProt_env --no-capture-output python3 bin/database_module/vcfparser.py "$vcf_file" "$outdir"
 
+# Compress the VCF files
+$conda_path run -n GenomeProt_env bgzip "${outdir}/${vcf_file_without_extn}_heterozygous.vcf" -o "${outdir}/${vcf_file_without_extn}_heterozygous.vcf.gz"
+$conda_path run -n GenomeProt_env bgzip "${outdir}/${vcf_file_without_extn}_homozygous.vcf" -o "${outdir}/${vcf_file_without_extn}_homozygous.vcf.gz"
 
-$conda_path run -n GenomeProt_env bgzip  "${outdir}${vcf_file_without_extn}_heterozygous.vcf" -o "${outdir}${vcf_file_without_extn}_heterozygous.vcf.gz"
+# Index the VCF files
+$conda_path run -n GenomeProt_env tabix -p vcf "${outdir}/${vcf_file_without_extn}_homozygous.vcf.gz"
+$conda_path run -n GenomeProt_env tabix -p vcf "${outdir}/${vcf_file_without_extn}_heterozygous.vcf.gz"
 
-$conda_path run -n GenomeProt_env bgzip "${outdir}${vcf_file_without_extn}_homozygous.vcf" -o "${outdir}${vcf_file_without_extn}_homozygous.vcf.gz"
+# Create the consensus sequence by applying the homozygous VCF variants to the reference genome
+$conda_path run -n GenomeProt_env bcftools consensus -f "$genome_fa" -o "${outdir}/${genome_file_without_extn}_hm.fa" "${outdir}/${vcf_file_without_extn}_homozygous.vcf.gz" -H 2
 
-$conda_path run -n GenomeProt_env tabix -p vcf "${outdir}${vcf_file_without_extn}_homozygous.vcf.gz"
-
-$conda_path run -n GenomeProt_env tabix -p vcf "${outdir}${vcf_file_without_extn}_heterozygous.vcf.gz"
-
-
-$conda_path run -n GenomeProt_env bcftools consensus -f "$genome_fa" -o "${outdir}${genome_file_without_extn}_hm.fa"  "${outdir}${vcf_file_without_extn}_homozygous.vcf.gz" -H 2
-
- 
- if [ ! -s "${outdir}${genome_file_without_extn}_hm_ht.fa" ]; then 
+# Create the consensus sequence by applying the heterozygous VCF variants to the genome
+if [ ! -s "${outdir}/${genome_file_without_extn}_hm_ht.fa" ]; then
     echo "File is empty"
-    $conda_path run -n GenomeProt_env bcftools consensus -f "$genome_fa" -o "${outdir}${genome_file_without_extn}_hm_ht.fa" "${outdir}${vcf_file_without_extn}_heterozygous.vcf.gz" -H 2
-else 
+    $conda_path run -n GenomeProt_env bcftools consensus -f "$genome_fa" -o "${outdir}/${genome_file_without_extn}_hm_ht.fa" "${outdir}/${vcf_file_without_extn}_heterozygous.vcf.gz" -H 2
+else
     echo "File is not empty"
-    $conda_path run -n GenomeProt_env bcftools consensus -f "${outdir}${genome_file_without_extn}_hm.fa" -o "${outdir}${genome_file_without_extn}_hm_ht.fa" "${outdir}${vcf_file_without_extn}_heterozygous.vcf.gz" -H 2
+    $conda_path run -n GenomeProt_env bcftools consensus -f "${outdir}/${genome_file_without_extn}_hm.fa" -o "${outdir}/${genome_file_without_extn}_hm_ht.fa" "${outdir}/${vcf_file_without_extn}_heterozygous.vcf.gz" -H 2
 fi
-
- 
- 
- 
-
-
