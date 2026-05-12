@@ -1,5 +1,5 @@
 #############GTF FILE PARSER###########################################
-# Script By: Hitesh Kore
+# Script By: Hitesh Kore and Ching Yin Wan
 #######################################################################
 
 class GTFParser():
