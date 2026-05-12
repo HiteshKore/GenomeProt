@@ -99,16 +99,16 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts = NA, min_count = N
   message("Exported filtered GTF")
 }
 
-# function for variant protein seqs
-get_variant_orfome <- function(custom_genome, custom_gtf, orf_len, txs_grl) {
-  custom_genome_hm_fa <- FaFile(custom_genome)
+# function for variant protein sequences
+get_variant_orfome <- function(custom_genome, orf_len, txs) {
+  custom_genome_fa <- FaFile(custom_genome)
   indexFa(custom_genome)
 
   # fetch variant transcript sequences
-  mut_sequences <- GenomicFeatures::extractTranscriptSeqs(custom_genome_hm_fa, txs_grl)
+  mut_sequences <- GenomicFeatures::extractTranscriptSeqs(custom_genome_fa, txs)
 
   # translate ORFs using ORFik
-  ORFs <- findMapORFs(txs_grl,
+  ORFs <- findMapORFs(txs,
                       mut_sequences,
                       groupByTx = FALSE,
                       longestORF = TRUE,
@@ -129,139 +129,123 @@ get_variant_orfome <- function(custom_genome, custom_gtf, orf_len, txs_grl) {
               strand = strand[1]) %>%
     ungroup() %>%
     dplyr::select(-length)
-  # remove any ORFs from original ORF object if they were filtered out due to length settings above
+
+  # remove any ORFs from the original ORFs object if they were filtered out due to the length settings above
   ORFs <- ORFs[names(ORFs) %in% orf_genome_coordinates$names]
 
-  orf_seqs <- GenomicFeatures::extractTranscriptSeqs(custom_genome_hm_fa, ORFs)
+  orf_seqs <- GenomicFeatures::extractTranscriptSeqs(custom_genome_fa, ORFs)
 
   # convert nucleotide sequences to amino acid sequences
   orf_aa_seq <- Biostrings::translate(orf_seqs, if.fuzzy.codon = "solve", no.init.codon = TRUE)
 
   # create data frame of all possible ORFs
-  orf_aa_seq_df <- data.frame(ORF_id = orf_aa_seq@ranges@NAMES,protein_sequence = orf_aa_seq, row.names=NULL)
+  orf_aa_seq_df <- data.frame(ORF_id = orf_aa_seq@ranges@NAMES, protein_sequence = orf_aa_seq, row.names = NULL)
 
-  # remove special characters from protein sequence and add column with transcript id
+  # remove special characters from the protein sequence and add a column with transcript IDs
   orf_aa_seq_df <- orf_aa_seq_df %>%
-    dplyr::mutate(transcript=str_replace(ORF_id, "_.*", "")) %>%
-    dplyr::mutate(protein_sequence=str_replace(protein_sequence,"\\*$", ""))
+    dplyr::mutate(transcript = str_replace(ORF_id, "_.*", "")) %>%
+    dplyr::mutate(protein_sequence = str_replace(protein_sequence, "\\*$", ""))
 
   # combine protein sequences with ORF genomic coordinates
-  orf_aa_seq_df_genome_coord <- left_join(orf_aa_seq_df,orf_genome_coordinates,by=c("ORF_id"="names"))
+  orf_aa_seq_df_genome_coord <- left_join(orf_aa_seq_df, orf_genome_coordinates, by = c("ORF_id" = "names"))
 
   fasta_df_mut <- data.frame(
     transcript = names(mut_sequences),
     mut_seq = as.character(mut_sequences),
     stringsAsFactors = FALSE
   )
-  return(list(transcript_db=fasta_df_mut,orf_aa_seq_df_genome_coord=orf_aa_seq_df_genome_coord))
+
+  return(list(transcript_db = fasta_df_mut, orf_aa_seq_df_genome_coord = orf_aa_seq_df_genome_coord))
 }
 
 # fetch variant protein sequences based on VCF file
-# function to calculate the number of variable nucleiotides
+# function to calculate the number of variable nucleotides
 count_variable_nucleotides <- function(mut_seq, wt_seq) {
   sum(strsplit(mut_seq, "")[[1]] != strsplit(wt_seq, "")[[1]])
 }
 
-get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_hm_ht, custom_gtf, genomedb, outdir, orf_len) {
-  if (file.exists(custom_genome_hm) && file.exists(custom_genome_hm_ht)) {
-    txs <- exonsBy(makeTxDbFromGFF(custom_gtf), by = c("tx", "gene"), use.names = TRUE)
-    if (file.size(custom_genome_hm) > 0) {
+get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_hm_ht, filteredgtf, genomedb, outdir, orf_len) {
+  # import filtered gtf
+  txs <- exonsBy(makeTxDbFromGFF(filteredgtf), by = c("tx", "gene"), use.names = TRUE)
 
-      orfome_hm<-get_variant_orfome(custom_genome_hm,custom_gtf,orf_len,txs)
-      orfome_hm_transcript_db<-orfome_hm$transcript_db
-      orfome_hm_orf_aa_seq_df_genome_coord<-orfome_hm$orf_aa_seq_df_genome_coord
+  is_homozygous_genome_nonempty <- (file.size(custom_genome_hm) > 0)
 
-    }
-
-     if (file.size(custom_genome_hm_ht) > 0) {
-
-     orfome_hm_ht<-get_variant_orfome(custom_genome_hm_ht,custom_gtf,orf_len,txs)
-     orfome_hm_ht_transcript_db<-orfome_hm_ht$transcript_db
-     orfome_hm_ht_orf_aa_seq_df_genome_coord<-orfome_hm_ht$orf_aa_seq_df_genome_coord
-
-     }
-
-    # wild type
-     wt_sequences <- GenomicFeatures::extractTranscriptSeqs(genomedb, txs)
-
-     fasta_df_wt <- data.frame(
-       transcript = names(wt_sequences),
-       wt_seq = as.character(wt_sequences),
-       stringsAsFactors = FALSE
-     )
-
-      if (file.size(custom_genome_hm) > 0){
-        variant_proteome <- rbind(orfome_hm_orf_aa_seq_df_genome_coord,orfome_hm_ht_orf_aa_seq_df_genome_coord)
-        variant_proteome <- distinct(variant_proteome)
-        #rbind variant transcripts
-       variant_transcript_db<-rbind(orfome_hm_transcript_db,orfome_hm_ht_transcript_db)
-        fasta_df_mut <- distinct(variant_transcript_db)
-
-        # merge wild type and mutant transcript ids based on transcript ids
-        fasta_df_merged <- left_join(fasta_df_mut,fasta_df_wt,by="transcript")
-
-        # apply the function to the dataframe
-        fasta_df_merged$variable_nucleotides <- mapply(count_variable_nucleotides, fasta_df_merged$mut_seq, fasta_df_merged$wt_seq)
-        # remove sequences with no variable nucleotides
-
-        fasta_df_merged_mutant <- fasta_df_merged %>%
-          filter(variable_nucleotides != 0) %>%
-          dplyr::select(transcript,mut_seq) %>%
-          unique()
-        # subset ORFs for variant transcripts
-        orf_aa_seq_df_genome_coord_filtered_hm <- orfome_hm_orf_aa_seq_df_genome_coord %>%
-          filter(transcript %in% fasta_df_merged_mutant$transcript) %>%dplyr::mutate(mutation_type="HM")
-
-        orf_aa_seq_df_genome_coord_filtered_ht <- orfome_hm_ht_orf_aa_seq_df_genome_coord %>%
-          filter(transcript %in% fasta_df_merged_mutant$transcript) %>%dplyr::mutate(mutation_type="HT")
-
-        orf_aa_seq_df_genome_coord_variant<-rbind(orf_aa_seq_df_genome_coord_filtered_hm,orf_aa_seq_df_genome_coord_filtered_ht)%>%distinct(protein_sequence,.keep_all = TRUE)
-
-      }else{
-        variant_proteome<-distinct(orfome_hm_ht_orf_aa_seq_df_genome_coord)
-       #rbind variant transcripts
-        variant_transcript_db<-orfome_hm_ht_transcript_db
-        fasta_df_mut <- distinct(variant_transcript_db)
-
-        # merge wild type and mutant transcript ids based on transcript ids
-        fasta_df_merged <- left_join(fasta_df_mut,fasta_df_wt,by="transcript")
-
-     # apply the function to the dataframe
-     fasta_df_merged$variable_nucleotides <- mapply(count_variable_nucleotides, fasta_df_merged$mut_seq, fasta_df_merged$wt_seq)
-
-     # remove sequences with no variable nucleotides
-        fasta_df_merged_mutant <- fasta_df_merged %>%
-          filter(variable_nucleotides != 0) %>%
-          dplyr::select(transcript,mut_seq) %>%
-          unique()
-
-     # subset ORFs for variant transcripts
-     orf_aa_seq_df_genome_coord_filtered_ht <- orfome_hm_ht_orf_aa_seq_df_genome_coord %>%
-       filter(transcript %in% fasta_df_merged_mutant$transcript) %>%dplyr::mutate(mutation_type="HT")
-     orf_aa_seq_df_genome_coord_variant<-orf_aa_seq_df_genome_coord_filtered_ht%>%distinct(protein_sequence,.keep_all = TRUE)
-     }
-
-   write_tsv(fasta_df_merged, file.path(outdir, "transcriptome_merged.txt"))
-
-    # adding the transcript_id column by splitting ORF_id and taking the first part
-     orfome_wt_df <- wt_orfome %>%
-       dplyr::mutate(transcript = sapply(strsplit(ORF_id, "_"), `[`, 1)) %>%
-       dplyr::select(ORF_sequence,transcript)%>%dplyr::mutate(ORF_sequence=str_replace(ORF_sequence,"\\*", ""))
-    #remove wild type proteins
-     variant_proteome_flt <- orf_aa_seq_df_genome_coord_variant %>%
-       filter(!(protein_sequence %in% orfome_wt_df$ORF_sequence))
-
-    #format variant_proteome_flt
-     variant_protein_seqs <- variant_proteome_flt %>%
-       dplyr::mutate(orf_coodinates=paste0(chr,":",start,"-",end)) %>%
-       dplyr::select(transcript,protein_sequence,orf_coodinates,mutation_type) %>%
-       unique()
-
-    # export protein seqs for python script
-    write_tsv(variant_protein_seqs, file.path(outdir, "Mutant_ORFome_aa.txt"))
-  } else {
-    message("File does not exist")
+  if (is_homozygous_genome_nonempty) {
+    orfome_hm <- get_variant_orfome(custom_genome_hm, orf_len, txs)
+    orfome_hm_transcript_db <- orfome_hm$transcript_db
+    orfome_hm_orf_aa_seq_df_genome_coord <- orfome_hm$orf_aa_seq_df_genome_coord
   }
+
+  orfome_hm_ht <- get_variant_orfome(custom_genome_hm_ht, orf_len, txs)
+  orfome_hm_ht_transcript_db <- orfome_hm_ht$transcript_db
+  orfome_hm_ht_orf_aa_seq_df_genome_coord <- orfome_hm_ht$orf_aa_seq_df_genome_coord
+
+  # wild-type
+  wt_sequences <- GenomicFeatures::extractTranscriptSeqs(genomedb, txs)
+
+  fasta_df_wt <- data.frame(
+    transcript = names(wt_sequences),
+    wt_seq = as.character(wt_sequences),
+    stringsAsFactors = FALSE
+  )
+
+  if (is_homozygous_genome_nonempty) {
+    variant_transcript_db <- rbind(orfome_hm_transcript_db, orfome_hm_ht_transcript_db)
+  } else {
+    variant_transcript_db <- orfome_hm_ht_transcript_db
+  }
+
+  fasta_df_mut <- distinct(variant_transcript_db)
+
+  # merge wild-type and mutant transcript IDs based on transcript IDs
+  fasta_df_merged <- left_join(fasta_df_mut, fasta_df_wt, by = "transcript")
+
+  # apply the count_variable_nucleotides function to the dataframe
+  fasta_df_merged$variable_nucleotides <- mapply(count_variable_nucleotides, fasta_df_merged$mut_seq, fasta_df_merged$wt_seq)
+
+  write_tsv(fasta_df_merged, file.path(outdir, "transcriptome_merged.txt"))
+
+  # remove sequences with no variable nucleotides
+  fasta_df_merged_mutant <- fasta_df_merged %>%
+    filter(variable_nucleotides != 0) %>%
+    dplyr::select(transcript, mut_seq) %>%
+    unique()
+
+  # subset ORFs for variant transcripts
+  orf_aa_seq_df_genome_coord_filtered_ht <- orfome_hm_ht_orf_aa_seq_df_genome_coord %>%
+    filter(transcript %in% fasta_df_merged_mutant$transcript) %>%
+    dplyr::mutate(mutation_type = "HT")
+
+  if (is_homozygous_genome_nonempty) {
+    orf_aa_seq_df_genome_coord_filtered_hm <- orfome_hm_orf_aa_seq_df_genome_coord %>%
+      filter(transcript %in% fasta_df_merged_mutant$transcript) %>%
+      dplyr::mutate(mutation_type = "HM")
+
+    orf_aa_seq_df_genome_coord_variant <- rbind(orf_aa_seq_df_genome_coord_filtered_hm, orf_aa_seq_df_genome_coord_filtered_ht)
+  } else {
+    orf_aa_seq_df_genome_coord_variant <- orf_aa_seq_df_genome_coord_filtered_ht
+  }
+
+  orf_aa_seq_df_genome_coord_variant <- orf_aa_seq_df_genome_coord_variant %>%
+    distinct(protein_sequence, .keep_all = TRUE)
+
+  # add a transcript_id column by splitting ORF_id and taking the first part
+  orfome_wt_df <- wt_orfome %>%
+    dplyr::mutate(transcript = sapply(strsplit(ORF_id, "_"), `[`, 1)) %>%
+    dplyr::select(ORF_sequence, transcript) %>%
+    dplyr::mutate(ORF_sequence = str_replace(ORF_sequence, "\\*", ""))
+
+  # remove wild-type proteins
+  variant_proteome_flt <- orf_aa_seq_df_genome_coord_variant %>%
+    filter(!(protein_sequence %in% orfome_wt_df$ORF_sequence))
+
+  # export protein sequences for the proteome annotation Python script
+  variant_protein_seqs <- variant_proteome_flt %>%
+    dplyr::mutate(orf_coodinates = paste0(chr, ":", start, "-", end)) %>%
+    dplyr::select(transcript, protein_sequence, orf_coodinates, mutation_type) %>%
+    unique()
+
+  write_tsv(variant_protein_seqs, file.path(outdir, "Mutant_ORFome_aa.txt"))
 }
 
 # generate FASTA of transcript sequences
@@ -436,28 +420,28 @@ library(optparse)
 
 # define options
 option_list = list(
-  make_option(c("-g", "--gtf"), type="character", default=NULL,
-              help="custom user GTF", metavar="character"),
-  make_option(c("-r", "--reference"), type="character", default=NULL,
-              help="reference GTF", metavar="character"),
-  make_option(c("-G", "--genome"), type="character", default=NULL, # optional; only required for generating variant-aware databases
-              help="reference genome FASTA", metavar="character"),
-  make_option(c("-c", "--counts"), type="character", default=NULL,
-              help="transcript counts file", metavar="character"),
-  make_option(c("-m", "--mincount"), type="integer", default=NULL,
-              help="Minimum transcript count", metavar="integer"),
-  make_option(c("-o", "--organism"), type="character", default=NULL,
-              help="Organism", metavar="character"),
-  make_option(c("-l", "--length"), type="integer", default=NULL,
-              help="Minimum ORF length", metavar="integer"),
-  make_option(c("-u", "--uorfs"), type="logical", default=NULL,
-              help="Find uORFs", metavar="TRUE/FALSE"),
-  make_option(c("-d", "--dorfs"), type="logical", default=NULL,
-              help="Find dORFs", metavar="TRUE/FALSE"),
-  make_option(c("-v", "--vcf"), type="character", default=NULL,
-              help="VCF file", metavar="character"),
-  make_option(c("-s", "--savepath"), type="character", default=NULL,
-              help="Output directory", metavar="character")
+  make_option(c("-g", "--gtf"), type = "character", default = NULL,
+              help = "custom user GTF", metavar = "character"),
+  make_option(c("-r", "--reference"), type = "character", default = NULL,
+              help = "reference GTF", metavar = "character"),
+  make_option(c("-G", "--genome"), type = "character", default = NULL,  # optional; only required for generating variant-aware databases
+              help = "reference genome FASTA", metavar = "character"),
+  make_option(c("-c", "--counts"), type = "character", default = NULL,
+              help = "transcript counts file", metavar = "character"),
+  make_option(c("-m", "--mincount"), type = "integer", default = NULL,
+              help = "Minimum transcript count", metavar = "integer"),
+  make_option(c("-o", "--organism"), type = "character", default = NULL,
+              help = "Organism", metavar = "character"),
+  make_option(c("-l", "--length"), type = "integer", default = NULL,
+              help = "Minimum ORF length", metavar = "integer"),
+  make_option(c("-u", "--uorfs"), type = "logical", default = NULL,
+              help = "Find uORFs", metavar = "TRUE/FALSE"),
+  make_option(c("-d", "--dorfs"), type = "logical", default = NULL,
+              help = "Find dORFs", metavar = "TRUE/FALSE"),
+  make_option(c("-v", "--vcf"), type = "character", default = NULL,
+              help = "VCF file", metavar = "character"),
+  make_option(c("-s", "--savepath"), type = "character", default = NULL,
+              help = "Output directory", metavar = "character")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -579,15 +563,23 @@ if (!grepl("proteome_database_transcripts.gtf", gtf_path)) {
 wt_orfome <- get_transcript_orfs(filteredgtf = filtered_gtf, genomedb = genomedb, orf_len = min_orf_length, find_UTR_5_orfs = find_5_orfs, find_UTR_3_orfs = find_3_orfs, referencegtf = reference_gtf, outdir = output_directory)
 
 # generate custom genome
-if (!is.null(ref_genome) && !is.null(vcf_file)) { # if a genome and vcf have been uploaded
+if (!is.null(ref_genome) && !is.null(vcf_file)) { # if a genome and VCF have been uploaded
   # define bash script command to inject variants into genome
   custom_genome_command <- paste0("bash bin/database_module/generate_custom_genome.sh -g ", ref_genome, " -r ", reference_gtf, " -v ", vcf_file, " -o ", output_directory)
   system(custom_genome_command)
 
   # fetch variant protein sequences based on variants provided in VCF file
+  genome_alt_hm    <- file.path(output_directory, basename(ref_genome) %>% str_replace(., ".fa",    "_hm.fa"))
   genome_alt_hm_ht <- file.path(output_directory, basename(ref_genome) %>% str_replace(., ".fa", "_hm_ht.fa"))
-  genome_alt_hm <- file.path(output_directory, basename(ref_genome) %>% str_replace(., ".fa", "_hm.fa"))
 
-  # apply variant protein function
-  get_variant_protein_seqs(wt_orfome = wt_orfome, custom_genome_hm = genome_alt_hm, custom_genome_hm_ht = genome_alt_hm_ht, custom_gtf = file.path(output_directory, "proteome_database_transcripts.gtf"), genomedb = genomedb, outdir = output_directory, min_orf_length)
+  if (!file.exists(genome_alt_hm)) {
+    message(paste0("The homozygous consensus sequence '", genome_alt_hm, "' does not exist. Skip finding variant protein sequences..."))
+  } else if (!file.exists(genome_alt_hm_ht)) {
+    message(paste0("The heterozygous consensus sequence '", genome_alt_hm_ht, "' does not exist. Skip finding variant protein sequences..."))
+  } else if (file.size(genome_alt_hm_ht) == 0) {
+    message(paste0("The heterozygous consensus sequence '", genome_alt_hm_ht, "' is empty. Skip finding variant protein sequences..."))
+  } else {
+    # apply variant protein function
+    get_variant_protein_seqs(wt_orfome = wt_orfome, custom_genome_hm = genome_alt_hm, custom_genome_hm_ht = genome_alt_hm_ht, filteredgtf = file.path(output_directory, "proteome_database_transcripts.gtf"), genomedb = genomedb, outdir = output_directory, min_orf_length)
+  }
 }
