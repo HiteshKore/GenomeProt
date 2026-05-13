@@ -1,7 +1,3 @@
-#############GTF FILE PARSER###########################################
-# Script By: Hitesh Kore
-#######################################################################
-
 class GTFParser():
     def __init__(self, raw_line):
         line = raw_line.strip()

@@ -48,12 +48,11 @@ def UTRAnnotations(utrmap, orf, st, trcds): # utrcoord, orfcoord, strand, transc
         [utr_start, utr_end] = [int(col) for col in utr.split(':')[1].split('-')[:2]]
         if not is_forward_strand:
             utr_start, utr_end = utr_end, utr_start
-        
+
         utr_annotation = ''
         if (    is_forward_strand and utr_start < first_cds and utr_end < first_cds) or \
            (not is_forward_strand and utr_start > first_cds and utr_end > first_cds):
             utr_annotation = "5UTR"
-            
         elif (    is_forward_strand and utr_start > last_cds and utr_end > last_cds) or \
              (not is_forward_strand and utr_start < last_cds and utr_end < last_cds):
             utr_annotation = "3UTR"
@@ -111,22 +110,16 @@ def calculateHydrophobicity(peptide_obj):
 def calculateAliphatic_index(peptide_obj):
     return round(peptide_obj.aliphatic_index(), 2)
 
+matrix = MatrixInfo.blosum62
 def calculate_similarity(seq1, seq2):
-    # Use a substitution matrix like BLOSUM62
-    matrix = MatrixInfo.blosum62
-
-    # Set gap open and gap extend penalties
-    gap_open = -10  # Penalty for opening a gap
-    gap_extend = -0.5  # Penalty for extending a gap
-
-    # Perform global alignment with the matrix and gap penalties
-    alignments = pairwise2.align.globalds(seq1, seq2, matrix, gap_open, gap_extend)
+    # Perform global alignment with the BLOSUM62 matrix, -10 gap open penalty and -0.5 gap extend penalty
+    alignments = pairwise2.align.globalds(seq1, seq2, matrix, -10, -0.5)
 
     # Take the best alignment (the first one)
     best_alignment = alignments[0]
 
     # Extract aligned sequences
-    aligned_seq1, aligned_seq2, score, start, end = best_alignment
+    aligned_seq1, aligned_seq2 = best_alignment[:2]
 
     # Calculate the percentage similarity
     matches = sum(1 for a, b in zip(aligned_seq1, aligned_seq2) if a == b)

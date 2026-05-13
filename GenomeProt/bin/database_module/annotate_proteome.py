@@ -1,12 +1,12 @@
+#!/usr/bin/env python3
+
 # This script removes the redundant ORFs and considers longest ORF if ORF is part of longer ORF.
 # It annotates them based on their location on the genome/transcript
 # cd-hit (First install cd-hit commond line tool in linux (command to install:'conda install bioconda/label/cf201901::cd-hit'). Next, install py-cdhit library using  'pip install py-cdhit' command)
 # Usage:python3 annotate_proteome.py gencode.vM33.chr_patch_hapl_scaff.annotation_chrX.gtf openprot_uniprotDb_mm.txt  ORFome_aa.txt proteome_database_transcripts.gtf <outdir> <canonical/all> <orf_length> <variant_protein_db/None> <organism:HUMAN,CAEEL,MOUSE,RAT,DROME,DANRE>
 #######################################################################
 
-import sys
-import os
-import re
+import os, re, sys
 from parse_reference_gtf import *
 from annotate_proteome_functions import *
 
@@ -21,15 +21,15 @@ def remove_file_if_exists(filename):
 # function to identify amino acid residue changes in wildtype and variant protein sequence
 def variant_protein_annotations(var_ORF_anno, var_orfs, wt_protein):
     res = ""
+    highest_similarity = -1
     for var_protein in var_orfs:
         similarity, aa_change = calculate_similarity(var_protein, wt_protein)   # pairwise alignment to calculate sequence similarity
         similarity = round(similarity, 2)
-        
-        if 96 < similarity < 100:
+        if 96 < similarity < 100 and similarity > highest_similarity:
+            highest_similarity = similarity
             sq_properties = calculate_sequence_properties(var_protein)
             coordinates, var_type = var_ORF_anno[var_protein].split('|')[:2]
             res = '\t'.join(map(str, [var_protein, aa_change, coordinates, var_type, sq_properties]))
-    
     return res
 
 # function to write ORF sequences into the proteome database FASTA file
@@ -77,39 +77,36 @@ def writeORFsIntoFASTA(orf_info_map, organism_info, proteomedb_filename):
 def get_protein_annotation(transcript, gene_id, gene_name, protein_des, var_transcript_ORF_map, protein_seq, protein_accession, strand, transcript_biotype, transcript_coordinates, orf_coordinate, orf_type, localisation, openprot_annotations, longest_orf, protein_status, orf_metadata_map, reading_frame_info, var_ORF_anno):
     # get reading frame information
     matching_indices = next((i for i, protein_seq_rf in enumerate(reading_frame_info) if protein_seq in protein_seq_rf), None)
-
-    rf = reading_frame_info[matching_indices].split("|")[1]
+    rf = reading_frame_info[matching_indices].split('|')[1]
 
     if transcript in var_transcript_ORF_map:
         var_prot_attr = variant_protein_annotations(var_ORF_anno, var_transcript_ORF_map[transcript], protein_seq)  # identify variants and calculate physico-chemical properties
-        print(var_prot_attr)
-        if var_prot_attr != "":
-            var_seq = var_prot_attr.split("\t")[0]
-            variants = var_prot_attr.split("\t")[1]
-            var_seq_coordinates = var_prot_attr.split("\t")[2]
-            chr = var_seq_coordinates.strip().split(":")[0]
-            if strand == "-":
-                orf_start = int(var_seq_coordinates.strip().split(":")[1].split("-")[0]) + 3
-                orf_end = var_seq_coordinates.strip().split(":")[1].split("-")[1]
-                rf = (int(orf_end) - 1) % 3
-                var_seq_coordinates = chr + ":" + str(orf_start) + "-" + orf_end
-            elif strand == "+":
-                orf_start = var_seq_coordinates.strip().split(":")[1].split("-")[0]
-                orf_end = int(var_seq_coordinates.strip().split(":")[1].split("-")[1]) - 3  # 3 nucleiotides substracted as ORFik counts stop codon position
-                rf = (int(orf_start) - 1) % 3
-                var_seq_coordinates = chr + ":" + orf_start + "-" + str(orf_end)
+        if not var_prot_attr:
+            return
 
-            var_type = var_prot_attr.split("\t")[3]  # variants
-            var_seq_prop = var_prot_attr.split("\t")[4]  # sequence properties
-            if var_type == "HM":  # homozygous variants
-                orf_annotation = protein_accession + "_var" + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + var_seq_coordinates + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + var_seq + "\t" + longest_orf + "\t" + protein_status + "\t" + variants + "\t" + calculate_sequence_properties(var_seq) + "\n"
-                orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)
-            elif var_type == "HT":  # heterozygous variants
-                orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
-                orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)  # wildtype sequence
-                orf_annotation = protein_accession + "_var" + "\t" + gene_id + "\t" + gene_name + "\t" + protein_des + "\t" + transcript + "\t" + strand + "\t" + transcript_biotype + "\t" + transcript_coordinates + "\t" + var_seq_coordinates + "\t" + str(rf) + "\t" + orf_type + "\t" + localisation + "\t" + openprot_annotations + "\t" + var_seq + "\t" + longest_orf + "\t" + protein_status + "\t" + variants + "\t" + calculate_sequence_properties(var_seq) + "\n"
-                orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)  # variant sequence
-    else:  # if transcript not in var_transcript_ORF_map
+        [var_seq, variants, var_seq_coordinates, var_type, var_seq_prop] = var_prot_attr.split('\t')[:5]
+        if var_type != "HM" and var_type != "HT":
+            return
+
+        chrom, orf_range = var_seq_coordinates.strip().split(':')[:2]
+        if strand == '-':
+            [orf_start, orf_end] = [int(num) for num in orf_range.split('-')[:2]]
+            orf_start += 3
+            rf = (orf_end - 1) % 3
+            var_seq_coordinates = f"{chrom}:{orf_start}-{orf_end}"
+        elif strand == '+':
+            [orf_start, orf_end] = [int(num) for num in orf_range.split('-')[:2]]
+            orf_end -= 3    # 3 nucleotides subtracted as ORFik counts stop codon position
+            rf = (orf_start - 1) % 3
+            var_seq_coordinates = f"{chrom}:{orf_start}-{orf_end}"
+
+        if var_type == "HT":
+            orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
+            orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)  # wildtype sequence
+
+        orf_annotation = '\t'.join([protein_accession + "_var", gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, var_seq_coordinates, str(rf), orf_type, localisation, openprot_annotations, var_seq, longest_orf, protein_status, variants, calculate_sequence_properties(var_seq)]) + '\n'
+        orf_metadata_map.setdefault(var_seq, []).append(orf_annotation)  # variant sequence
+    else:
         orf_annotation = '\t'.join([protein_accession, gene_id, gene_name, protein_des, transcript, strand, transcript_biotype, transcript_coordinates, orf_coordinate, str(rf), orf_type, localisation, openprot_annotations, protein_seq, longest_orf, protein_status, '-', calculate_sequence_properties(protein_seq)]) + '\n'
         orf_metadata_map.setdefault(protein_seq, []).append(orf_annotation)
 
@@ -436,11 +433,11 @@ def main():
                     gene_name = '-'
 
                 if transcript_biotype == "protein_coding":  # protein-coding transcripts
-                  localisation = UTRAnnotations(utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
-                  if not ("UTR" in localisation and localisation != "CDS:3UTR"):  # ORF overlaps with UTR region
-                      continue
-                  if len(protein_seq) < arg_orf_length:   # for short uORFs, remove CDS annotation
-                      localisation = localisation.split(':')[0]
+                    localisation = UTRAnnotations(utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
+                    if not ("UTR" in localisation and localisation != "CDS:3UTR"):  # ORF overlaps with UTR region
+                        continue
+                    if len(protein_seq) < arg_orf_length:   # for short uORFs, remove CDS annotation
+                        localisation = localisation.split(':')[0]
                 elif transcript in utr_coordinates:         # transcripts with UTRs but are 'non-coding'
                     localisation = UTRAnnotations(utr_coordinates[transcript], orf_coordinate, strand, cds_coordinates[transcript])
                     if "UTR" in localisation and localisation != "CDS:3UTR":        # ORF overlaps with UTR region
