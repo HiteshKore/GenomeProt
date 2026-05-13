@@ -21,10 +21,12 @@ def remove_file_if_exists(filename):
 # function to identify amino acid residue changes in wildtype and variant protein sequence
 def variant_protein_annotations(var_ORF_anno, var_orfs, wt_protein):
     res = ""
+    highest_similarity = -1
     for var_protein in var_orfs:
         similarity, aa_change = calculate_similarity(var_protein, wt_protein)   # pairwise alignment to calculate sequence similarity
         similarity = round(similarity, 2)
-        if 96 < similarity < 100:
+        if 96 < similarity < 100 and similarity > highest_similarity:
+            highest_similarity = similarity
             sq_properties = calculate_sequence_properties(var_protein)
             coordinates, var_type = var_ORF_anno[var_protein].split('|')[:2]
             res = '\t'.join(map(str, [var_protein, aa_change, coordinates, var_type, sq_properties]))
