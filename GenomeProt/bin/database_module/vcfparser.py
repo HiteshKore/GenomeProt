@@ -16,7 +16,7 @@ def remove_file_if_exists(filename):
             pass
 
 # Convert a VCF record to a plain VCF line
-def record_to_vcf_line(record): #returns atributes for first sample in case of multiple samples
+def record_to_vcf_line(record):
     # Extract basic fields
     chrom = record.CHROM
     pos = record.POS
@@ -37,7 +37,7 @@ def getMostFrequentVariant(record, most_likely_genotype, sum_depths, sum_ref_all
 
     for call in record.calls:
         ad = call.data.get("AD", 0)
-        if isinstance(ad, int) or len(ad) == 0 or ad is None:
+        if isinstance(ad, int) or len(ad) == 0:
             continue
 
         ad.pop(0)
@@ -146,7 +146,7 @@ def main():
                 gts.append(gt)
 
             ad = call.data.get("AD", 0)
-            if not isinstance(ad, int) and len(ad) > 0 and ad[0] is not None:   # Handles format change in joint VCF produced by GATk and bcftool merge
+            if not isinstance(ad, int) and len(ad) > 0: # Handles format change in joint VCF produced by GATk and bcftool merge
                 sum_ref_allele_depths += int(ad[0])
 
         # Calculate the fraction of samples the genotype is detected in
