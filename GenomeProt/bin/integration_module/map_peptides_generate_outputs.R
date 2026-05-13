@@ -449,9 +449,16 @@ pep_in_genomic_gr_export$group_id <- "peptides"
 
 # export annotations for vis
 combined <- c(pep_in_genomic_gr_export, orf_in_genomic_gr, gtf_filtered)
-rtracklayer::export(combined, paste0(output_directory, "/combined_annotations.gtf"), format="gtf")
+
+gtf_file<-paste0(output_directory, "/combined_annotations.gtf")
+
+rtracklayer::export(combined,gtf_file , format="gtf")
+
+#read exported file
+gtf_lines<-readLines(gtf_file)
+
+custom_header<-c("##GenomeProt","##transcript,ORF and peptide annotations")
+
+writeLines(c(custom_header,gtf_lines),gtf_file)
 
 # ---------------------------------------- #
-
-
-

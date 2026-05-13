@@ -114,7 +114,6 @@ function generate_database() {
   min_tx_count=${13}
   input_type=${14}
   
-  
     if [[ "$vcf_fn" == "None" ]]; then 
         #generate proteome
     
@@ -126,7 +125,7 @@ function generate_database() {
         
          conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
         
-        else 
+        else
         
          conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
         
@@ -134,10 +133,10 @@ function generate_database() {
         
         if [[ "$input_type" == "GTF" ]];then
             echo "Annotating proteome database" | tee -a "$log_file"
-   conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $custom_gtf $output_dir $orf_input_type $orf_length None $organism
+   conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $custom_gtf $output_dir $orf_input_type $orf_length None $organism $threads 2000
         else
             echo "Annotating proteome database" | tee -a "$log_file"
-            conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length None $organism
+            conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length None $organism $threads 2000
         
         fi
 
@@ -156,7 +155,7 @@ function generate_database() {
 
       echo "Annotating proteome database" | tee -a "$log_file"
       mutant_db=$output_dir"Mutant_ORFome_aa.txt"
-      conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length $mutant_db $organism
+      conda run -n GenomeProt_env --no-capture-output python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length $mutant_db $organism $threads 2000
 
     fi
   
@@ -207,7 +206,8 @@ function fastq_bam_input() {
           
         done
         echo "Genome alignment completed" | tee -a "$log_file"
-        conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $output_dir -g $ref_gtf -s $organism -o $output_dir
+        conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $output_dir -g $ref_gtf -t $threads -s $organism -o $output_dir
+        
       fi #fastq condition close
      
     
@@ -215,7 +215,7 @@ function fastq_bam_input() {
       if [[ ${#bm_fn[@]} -gt 0 ]]; then
       
         echo "Transcript identification/quantification using bambu" | tee -a "$log_file"
-        conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $sample_dir -g $ref_gtf -s $organism -o $output_dir
+        conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $sample_dir -g $ref_gtf -t $threads -s $organism -o $output_dir
       
       fi
       
@@ -416,7 +416,7 @@ fi
 
 
 if [ "$downstream_orf" = "TRUE" ] || [ "$downstream_orf" = "FALSE" ]; then
-    echo "Upstream ORF detection: $downstream_orf" | tee -a "$log_file"
+    echo "Downstream ORF detection: $downstream_orf" | tee -a "$log_file"
 else 
     echo "Incorrect value for downstream ORF detection. Please provide either TRUE or FALSE" | tee -a "$log_file"
     exit 1

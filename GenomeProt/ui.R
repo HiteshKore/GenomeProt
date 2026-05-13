@@ -120,31 +120,27 @@ ui <- dashboardPage(
               fluidRow(
                 column(6,
                        
-                       # Choices
-                       radioButtons("sequencing_type", h5(tags$b("Select sequencing type:")),
-                                    choices = c("Long-read (ONT, PacBio)" = "long-read", 
-                                                "Short-read" = "short-read")),
-                       radioButtons("input_type", h5(tags$b("Select input type:")),
-                                    choices = c( #"FASTQs" = "fastq_input",
-                                                "BAMs" = "bam_input",
-                                                "GTF (and/or transcript counts)" = "gtf_input")),
+                       # radio buttons for various options
+                       radioButtons("sequencing_type", h5(tags$b("Select sequencing type:")),choices = c("Long-read (ONT, PacBio)" = "long-read", "Short-read" = "short-read")),
+                       
+                       radioButtons("input_type", h5(tags$b("Select input type:")),choices = c( #"FASTQs" = "fastq_input",
+                         "BAMs" = "bam_input","GTF (and/or transcript counts)" = "gtf_input")),
                        checkboxInput("vcf_option", "Incoporate SNVs into protein sequences", value = FALSE),
                        
                        # Constant options
+                       
+                       #organism
                        selectInput("organism", label = "Organism:", 
-                                   choices = list("Roundworm (C. elegans)" = "CAEEL", 
-                                                  "Fruit fly (D. melanogaster)" = "DROME", 
-                                                  "Human (H. sapiens)" = "HUMAN", 
-                                                  "Mouse (M. musculus)" = "MOUSE", 
-                                                  "Rat (R. rattus)" = "RAT", 
-                                                  "Zebrafish (D. rerio)" = "DANRE"), 
+                                   choices = list("Roundworm (C. elegans)" = "CAEEL", "Fruit fly (D. melanogaster)" = "DROME", "Human (H. sapiens)" = "HUMAN", "Mouse (M. musculus)" = "MOUSE", "Rat (R. rattus)" = "RAT", "Zebrafish (D. rerio)" = "DANRE"), 
                                    selected = "HUMAN"),
-                       selectInput("database_type", label = "ORFs to be included in proteomedb:", 
-                                   choices = list("canonical", "all"),
-                                   selected = "all"),
-                       numericInput("min_orf_length", 
-                                    label = "ORF length (amino acids):", 
-                                    value = 30),
+                       
+                       #orf type
+                       selectInput("database_type", label = "ORFs to be included in proteomedb:", choices = list("canonical", "all"), selected = "all"),
+                       
+                       #orf length cutoff
+                       numericInput("min_orf_length", label = "ORF length (amino acids):", value = 30),
+                       
+                       #short orf options
                        h5(tags$b("Find short (10 to 'ORF length' amino acids) ORFs in UTRs of reference transcripts:")),
                        checkboxInput("user_find_utr_5_orfs", label = "Upstream 5' ORFs",
                                      value = FALSE, width = NULL),
@@ -154,81 +150,75 @@ ui <- dashboardPage(
                                     label = "Minimum expression threshold (sum per transcript):", 
                                     value = 5),
                        
-                       # Optional GTF file upload to override default
-                       radioButtons("data_source","Reference annotation GTF:",
-                         choices = c(
-                           "Use preloaded GTF file" = "default",
-                           "Upload Reference GTF file" = "user"
-                         ),
-                         selected = "default"
-                       ),
-                       
-                       # File upload appears ONLY if user selects "Upload my own file"
-                       conditionalPanel(
-                         condition = "input.data_source == 'user'",
-                         fileInput(
-                           "reference_gtf_file",
-                           "Upload GENCODE GTF File",
-                           buttonLabel = "Browse...",
-                           multiple = FALSE
-                         )
-                       ),
-                       
-                       
-  
-                       # VCF file input conditionally shown
-                       conditionalPanel(
-                         condition = "input.vcf_option == true",
-                         fileInput("user_vcf_file", "Upload VCF file:", NULL, buttonLabel = "Browse...", multiple = FALSE)
-                       ),
-                       # Variable options
-                       conditionalPanel(
-                         condition = "input.input_type == 'fastq_input'",
-                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 10, step = 1),
+                      # Variable options
+                      
+                      # Optional reference GTF file upload to override default
+                      radioButtons("data_source","Reference annotation GTF:",
+                                   choices = c( "Use preloaded GTF file" = "default","Upload Reference GTF file" = "user"), selected = "default"),
+                      
+                      #GTF File upload appears only if user selects upload their own gtf file
+                      conditionalPanel(condition = "input.data_source == 'user'",fileInput("reference_gtf_file","Upload GENCODE GTF File",buttonLabel = "Browse...",multiple = FALSE)),
+                      
+                      #conditionl panel for FASTQ input 
+                       conditionalPanel(condition = "input.input_type == 'fastq_input'",numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 10, step = 1),
                          #h5("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
-                         fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                         conditionalPanel(condition = "input.sequencing_type == 'short-read'",
-                                          fileInput("transcriptome_file", "Upload reference transcriptome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)
+                         fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),conditionalPanel(condition = "input.sequencing_type == 'short-read'",
+                         fileInput("transcriptome_file", "Upload reference transcriptome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)
                          ),
                          fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
                        ),
-                       conditionalPanel(
+                      
+                      #BAM input 
+                      conditionalPanel(
                          condition = "input.input_type == 'bam_input'",
                          numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 46, step = 1),
-                         conditionalPanel(
-                                          condition="(input.sequencing_type == 'short-read') || ( input.vcf_option == true)" 
-                                          ,
+                         
+                         #short read
+                         conditionalPanel(condition="(input.sequencing_type == 'short-read') & ( input.vcf_option == true)",
                                           fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)),
+                         conditionalPanel(condition="(input.sequencing_type == 'short-read')",
+                                          fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
+                                          fileInput("user_bam_files","Upload BAM Files", buttonLabel = "Browse...",multiple = TRUE)
+                                          
+                                          ),
                          
-                        # fileInput("user_bam_files", "Upload BAM file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
+                         #radio button to load subsetted fasta file by default.
+                        conditionalPanel(
+                        condition = "(input.sequencing_type == 'long-read') & (input.vcf_option == true)",
+                         
+                        radioButtons("user_reference_genome_bam","Reference genome:",choices = c("Use preloaded reference genome file" = "default","Upload reference genome  FASTA" = "user"),selected = "default"),
+                        #upload user specified genome fasta 
+                        conditionalPanel(condition = "(input.sequencing_type == 'long-read') & (input.user_reference_genome_bam == 'user')",fileInput("user_reference_genome_bam","Upload reference genome  FASTA",buttonLabel = "Browse...",multiple = FALSE)),
+                        
+                        # VCF file input conditionally shown
+                        radioButtons("vcf_option","VCF file:",choices = c("Use preloaded VCF file" = "default","Upload VCF file" = "user"),selected = "default"),
+                        
+                         # VCF File upload appears only if user selects upload  their own vcf file"
+                        conditionalPanel(condition = "input.vcf_option == 'user'",fileInput("user_vcf_file","Upload VCF File",buttonLabel = "Browse...", multiple = FALSE)),  
+
+                        ),
+                         
+                         #radio button to load subsetted bam file by default
+                         conditionalPanel(condition = "(input.sequencing_type == 'long-read')",
+                                          
+                        radioButtons("bam_data","BAM Files:",choices = c("Use preloaded BAM file" = "default","Upload BAM files" = "user"),selected = "default"),
+                        
+                        # File upload appears only if user selects "Upload my own file"
+                        conditionalPanel(condition = "input.bam_data == 'user'",fileInput("user_bam_files","Upload BAM Files", buttonLabel = "Browse...",multiple = TRUE))
+                        
+                        ),
+                         
+                        
+                         
+                         ),
+                         
+                      
+                        
+                
                        
-                         ###
-                         radioButtons("bam_data","BAM Files:",
-                                      choices = c(
-                                        "Use preloaded BAM file" = "default",
-                                        "Upload BAM files" = "user"
-                                      ),
-                                      selected = "default"
-                         ),
-                         
-                         # File upload appears ONLY if user selects "Upload my own file"
-                         conditionalPanel(
-                           condition = "input.bam_data == 'user'",
-                           fileInput(
-                             "user_bam_files",
-                             "Upload BAM Files",
-                             buttonLabel = "Browse...",
-                             multiple = TRUE
-                           )
-                         ),
-                         
-                         
-                         
-                         ####
-                         
-                         
-                         
-                         ),
+                      
+                      
+                      #Custom GTF input (user generated GTF)
                        conditionalPanel(
                          condition = "input.input_type == 'gtf_input' & input.sequencing_type == 'long-read'",
                          fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
@@ -242,8 +232,10 @@ ui <- dashboardPage(
                          condition = "input.input_type == 'gtf_input' & input.vcf_option == true",
                          fileInput("user_genome_gtf", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)
                        ),
+                      
                        actionButton("db_submit_button", "Submit", class = "btn btn-primary")
                 ),
+                
                 column(6,
                        HTML("<h3>Download your results:</h3>"),
                        downloadButton("db_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled

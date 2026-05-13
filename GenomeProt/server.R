@@ -168,7 +168,7 @@ database_server <- function(input, output, session) {
   # store session ID
   session_id <- session$token
   # set output dir
-  outdir_db <- paste0(session_id, "/database_output")
+  outdir_db <- paste0(session_id, "/database_output/")
   # create output dir
   system(paste0("mkdir ", outdir_db))
   
@@ -195,10 +195,11 @@ database_server <- function(input, output, session) {
   }
   
   # conditionally add genome input argument
-  genome_arg <- if (!is.null(input$user_reference_genome$datapath)) {
-    paste0(" -G ", input$user_reference_genome$datapath)
+  genome_arg <- if (!is.null(input$user_reference_genome_bam$datapath)) {
+    paste0(" -G ", input$user_reference_genome_bam$datapath)
   } else {
-    ""
+    ref_genome <-"./testdata/GRCh38_chr1_6_7.fa"
+    paste0(" -G ", ref_genome)
   }
   
   if (!is.null(input$reference_gtf_file$datapath) && nzchar(input$reference_gtf_file$datapath)) {
@@ -219,12 +220,22 @@ database_server <- function(input, output, session) {
     " -l ", input$min_orf_length,
     " -u ", input$user_find_utr_5_orfs,
     " -d ", input$user_find_utr_3_orfs,
-    if (!is.null(input$user_vcf_file)) paste0(" -v ", input$user_vcf_file$datapath) else "",
-    genome_arg, # include genome file only if provided
+    
+    if (input$vcf_option == TRUE && !is.null(input$user_vcf_file) && !is.null(genome_arg)) {
+      vcf_file=input$user_vcf_file
+      paste0(" -v ", vcf_file,genome_arg)
+    }else if (input$vcf_option == TRUE && is.null(input$user_vcf_file))  {
+      vcf_file="./testdata/BRAF_mutation.vcf"
+      paste0(" -v ", vcf_file,genome_arg)
+     
+    }else if (input$vcf_option == FALSE){
+      vcf_file<-NULL
+    },
     " -s ", outdir_db
   )
   
-  # print command
+  print(genome_arg)
+  print(input$vcf_option)
   print(command_generate_proteome)
   
   # run command
@@ -249,11 +260,11 @@ database_server <- function(input, output, session) {
   
   # run python script using conda env
    
-  if (!is.null(input$user_vcf_file)) { # if there is a VCF file uploaded
-    command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", ref_gtf, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "/Mutant_ORFome_aa.txt "),input$organism )
+  if (!is.null(vcf_file)) { # if there is a VCF file uploaded
+    command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", ref_gtf, " ", ref_proteome, " ", outdir_db, "ORFome_aa.txt ", outdir_db, "proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", paste0(outdir_db, "Mutant_ORFome_aa.txt "),input$organism ," ",input$user_threads," 2000")
     print(command_annotate_proteome)
   } else { # if no VCF file uploaded
-    command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", ref_gtf, " ", ref_proteome, " ", outdir_db, "/ORFome_aa.txt ", outdir_db, "/proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None ", input$organism)
+    command_annotate_proteome <- paste0(conda_path," run -n GenomeProt_env --no-capture-output python bin/database_module/annotate_proteome.py ", ref_gtf, " ", ref_proteome, " ", outdir_db, "ORFome_aa.txt ", outdir_db, "proteome_database_transcripts.gtf ", outdir_db, " ", input$database_type, " ", input$min_orf_length, " None ", input$organism," ",input$user_threads," 2000")
     print(command_annotate_proteome)
   }
   

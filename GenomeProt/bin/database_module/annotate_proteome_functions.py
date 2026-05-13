@@ -1,210 +1,141 @@
-from pycdhit import cd_hit, read_clstr
+from pycdhit import cd_hit
 import peptides as pep
 from Bio import pairwise2
-#from Bio.pairwise2 import format_alignment
-from Bio.SubsMat import MatrixInfo as matlist
-from Bio.pairwise2 import format_alignment
+from Bio.SubsMat import MatrixInfo
 
+def SeqClust(fasta, out, num_threads, memory_limit):
+    cd_hit(i = fasta, o = out, c = 1.0, d = 0, sc = 1, n = 3, G = 0, aS = 1, aL = 0, A = 0, T = num_threads, M = memory_limit)
 
+def getDbAnnotations(db_filename, openprot_map, ref_prot_map, uniprot_map):  # Reference protein sequence database
+    with open(db_filename, 'r') as f:
+        for raw_line in f:
+            line = raw_line.strip()
+            if '#' in line:
+                continue
 
+            columns = [col.strip() for col in line.split('\t')]
+            [protein_id, seq, uniprot_header] = columns[:3]
+            protein_id = protein_id.split('|')[0].replace('>', '')
 
-class clusterSequences():
-    def SeqClust(self,fasta,out):
-      res = cd_hit(i=fasta,o=out,c=1.0,d=0,sc=1,n=3,G=0,aS=1,aL=0,A=0)
-      return res
-class refDb():
-    def getDbAnnotations(self,db,openprot_map,ref_prot_map,uniprot_map): #Reference protein sequence database
-      fh=open(db)
-      for i in fh:
-        if "#" not in i.strip():
-          id=i.strip().split("\t")[0].split("|")[0].replace(">",'')
-          seq=i.strip().split("\t")[1].strip()
-          uniprot_header=i.strip().split("\t")[2].strip()
-          
-          openprot_map[seq]=id
-          if '>IP_' not in i.strip()  and '>II_' not in i.strip():
-            ref_prot_map[seq]=id
-          if uniprot_header !="-":
-            uniprot_accession=i.strip().split("\t")[2].split("|")[0].replace(">","")+"|"+i.strip().split("\t")[2].split("|")[1] #trEMBL or Reviewed| Accession
-            uniprot_gene_description=i.strip().split("\t")[3].strip()
-            uniprot_map[seq]=uniprot_accession+"|"+uniprot_gene_description
-      fh.close()
+            openprot_map[seq] = protein_id
+            if ">IP_" not in line and ">II_" not in line:
+                ref_prot_map[seq] = protein_id
+            if uniprot_header != '-':
+                uniprot_accession = uniprot_header.split('|')[0].replace('>', '') + '|' + uniprot_header.split('|')[1]  # trEMBL or Reviewed| Accession
+                uniprot_gene_description = columns[3]
+                uniprot_map[seq] = f"{uniprot_accession}|{uniprot_gene_description}"
 
-            
-    def seqRefAnnotations(self,orfmap,seq):
-        if seq in orfmap.keys():
-            return orfmap[seq]
+def UTRAnnotations(utrmap, orf, st, trcds): # utrcoord, orfcoord, strand, transcript coordinates
+    if not (':' in orf and '-' in orf and (st == '+' or st == '-')):
+        return ''
 
-class Annotations():
-    def UTRAnnotations(self,tr,utrmap,orf,st,trcds): #transcript,utrcord, orfcoord,strand,transcript coordinates
-        if ":" in orf and "-" in orf:
-          orfBT=""
-          ochr=orf.split(':')[0]
-          utr_anno={} #annotates 5' and 3' UTR coordinates: k: UTR coordinates v:3UTR/5UTR 
-          utr_orf_pos=[]
-          #segreagate 3UTR and 5UTR coordinates and determine postion of ORFs in UTR exons
-          if st=="+":
-            ostart=int(orf.split(":")[1].split('-')[0])
-            oend=int(orf.split(":")[1].split('-')[1])
-            first_cds=int(trcds[0].split(':')[1].split("-")[0]) #start position of first CDs of transcript
-            last_cds=int(trcds[-1].split(":")[1].split("-")[1]) # end position of last CDS of transcript
-            for utr in utrmap:  #Identifying 5' UTR and 3'UTR exons among UTR cooordinates of transcript
-              uchr=utr.split(':')[0].strip()
-              if uchr==ochr:
-                u_start=int(utr.split(':')[1].split('-')[0])
-                u_end=int(utr.split(':')[1].split('-')[1])
-                #marking 5UTR and 3UTR 
-                if u_start < first_cds and u_end < first_cds:#if UTR start and end is lesser than first cds start then it is 5UTR
-                  utr_anno[utr]='5UTR'
-                elif u_start > last_cds and u_end>last_cds: #if UTR start and end is greater than first cds then it is 5UTR
-                  utr_anno[utr]='3UTR'
-            
-            for utrs in utrmap:
-              uchr=utrs.split(':')[0].strip()
-              u_start=int(utrs.split(':')[1].split('-')[0])
-              u_end=int(utrs.split(':')[1].split('-')[1])
-              if uchr==ochr:
-                if ostart >=u_start and ostart < u_end: #if ORF start is greater than UTR start and less than than UTR end
-                  utr_orf_pos.append("*"+utr_anno[utrs]) # * indicates if ORF starts in 5' or 3' UTR
-                elif ostart >u_start and ostart <= u_end: 
-                  utr_orf_pos.append("*"+utr_anno[utrs]) 
-                  
-                  
-                if oend >= u_start and oend< u_end: #if ORF start is greater than UTR start and less than than UTR end
-                  utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
-                elif oend > u_start and oend<= u_end: #if ORF start is greater than UTR start and less than than UTR end
-                  utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
-          
-          if st=="-":
-            ostart=int(orf.split(":")[1].split('-')[1])
-            oend=int(orf.split(":")[1].split('-')[0])
-            first_cds=int(trcds[0].split(':')[1].split("-")[1])
-            last_cds=int(trcds[-1].split(":")[1].split("-")[0])
-            for utr in utrmap:
-              uchr=utr.split(':')[0].strip()
-              if uchr==ochr:
-                u_start=int(utr.split(':')[1].split('-')[1])
-                u_end=int(utr.split(':')[1].split('-')[0])
-                if u_start > first_cds and u_end > first_cds :
-                  utr_anno[utr]='5UTR'
-                elif u_start < last_cds and u_end<last_cds:
-                  utr_anno[utr]='3UTR'
-                
+    is_forward_strand = (st == '+')
+    [ochr, orf_info] = [col.strip() for col in orf.split(':')[:2]]
+    [orf_start, orf_end] = [int(col) for col in orf_info.split('-')[:2]]
+    if not is_forward_strand:
+        orf_start, orf_end = orf_end, orf_start
 
-            for utrs in utrmap:
-              uchr=utrs.split(':')[0].strip()
-              if uchr==ochr:
-                u_start=int(utrs.split(':')[1].split('-')[1])
-                u_end=int(utrs.split(':')[1].split('-')[0])
-                #print(ostart,oend,"***",u_start,u_end)
-                #start
-                if ostart <= u_start and ostart > u_end: #if ORF start is lesser than UTR start and greater than than UTR end
-                  utr_orf_pos.append("*"+utr_anno[utrs]) # * indicates if ORF starts in 5' or 3' UTR
-                elif ostart < u_start and ostart >= u_end: 
-                  utr_orf_pos.append("*"+utr_anno[utrs])
-                  #print(ostart,oend,"<==>",u_start,u_end)
-                #end
-                if oend<= u_start and oend > u_end: #if ORF end is lesser than UTR start and greater than than UTR end
-                    utr_orf_pos.append("**"+utr_anno[utrs]) # ** indicates if ORF ends in 5' or 3' UTR
-                    #print(ostart,oend,"<==>",u_start,u_end)
-                elif oend< u_start and oend >= u_end:
-                  utr_orf_pos.append("**"+utr_anno[utrs])
-                
-          ######Determining ORF type based on utr_orf_pos
-          #print(tr,utr_orf_pos,orf)
-          #print(tr, utr_anno.items(),"cds",trcds)
+    first_cds = int(trcds[0].split(':')[1].split('-')[0 if is_forward_strand else 1])  # start position of first CDS of transcript
+    last_cds = int(trcds[-1].split(':')[1].split('-')[1 if is_forward_strand else 0])  # end position of last CDS of transcript
 
-          if len(utr_orf_pos)==1:
-            if utr_orf_pos[0]=='*5UTR':
-              orfBT="5UTR:CDS"
-            elif utr_orf_pos[0]=='*3UTR':
-              orfBT="3UTR"
-            elif utr_orf_pos[0]=='**3UTR':
-              orfBT="CDS:3UTR" #Alt-CDS:3UTR
-            elif utr_orf_pos[0]=='**5UTR': #handeling ambiguity due to ORFs locations predicted by ORFik are off by certain nucleiotide differences
-              orfBT="5UTR"
-            
-              
-              
-          elif len(utr_orf_pos)==2:
-            if utr_orf_pos[0]=='*3UTR' and utr_orf_pos[1]=='**3UTR':
-              orfBT="3UTR"
-            elif utr_orf_pos[0]=='*5UTR' and utr_orf_pos[1]=='**5UTR':
-              orfBT="5UTR"
-            elif utr_orf_pos[0]=='*5UTR' and utr_orf_pos[1]=='**3UTR':
-              orfBT="5UTR:3UTR"
-            elif utr_orf_pos[0]=='**3UTR' and utr_orf_pos[1]=='*5UTR':
-              orfBT="5UTR:3UTR"
-          return orfBT
+    # segreagate 3UTR and 5UTR coordinates and determine postion of ORFs in UTR exons
+    utr_orf_pos = []
+    for utr in utrmap:  # Identifying 5' UTR and 3'UTR exons among UTR cooordinates of transcript
+        uchr = utr.split(':')[0].strip()
+        if uchr != ochr:
+            continue
+
+        [utr_start, utr_end] = [int(col) for col in utr.split(':')[1].split('-')[:2]]
+        if not is_forward_strand:
+            utr_start, utr_end = utr_end, utr_start
         
-    def isIntergenic(self,orf_cord,gene_cord_map):
-      #ORF
-      if ":" in orf_cord and "-" in orf_cord:
-        ochr=orf_cord.split(":")[0]
-        ostart=int(orf_cord.split(":")[1].split("-")[0])
-        oend=int(orf_cord.split(":")[1].split("-")[1])
-        orf_overlap=""
-        for gnpost in gene_cord_map.values():
-          #gene
-          genchr=gnpost.split(":")[0]
-          gnstart=int(gnpost.split(":")[1].split('-')[0])
-          gnend=int(gnpost.split(":")[1].split('-')[1])
-          if ochr==genchr:
-            if ostart >= gnstart and oend <= gnend:
-              orf_overlap="gene_overlap"
-              break
-        return orf_overlap
-      
-class SequenceProperties():
-  def calculateMolWt(self,seq):
-    peptide = pep.Peptide(seq)
-    mol_weight=round(float(peptide.molecular_weight())/1000,2) #Molecular weight in KDa
-    return mol_weight
-  def calculateIsoElectricPoint(self,seq):
-    peptide = pep.Peptide(seq)
-    Iso_ele_point=round(peptide.isoelectric_point(),2) #Isoelectric point
-    return Iso_ele_point
-  def calculateHydrophobicity(self,seq):
-    peptide = pep.Peptide(seq)
-    hydrophobicity=round(peptide.hydrophobicity(),2) #hydrophobicity
-    return hydrophobicity
-  def calculateAliphatic_index(self,seq):
-    peptide = pep.Peptide(seq)
-    aliphatic_index=round(peptide.aliphatic_index(),2) #hydrophobicity
-    return aliphatic_index
+        utr_annotation = ''
+        if (    is_forward_strand and utr_start < first_cds and utr_end < first_cds) or \
+           (not is_forward_strand and utr_start > first_cds and utr_end > first_cds):
+            utr_annotation = "5UTR"
+            
+        elif (    is_forward_strand and utr_start > last_cds and utr_end > last_cds) or \
+             (not is_forward_strand and utr_start < last_cds and utr_end < last_cds):
+            utr_annotation = "3UTR"
+        if utr_annotation == '':
+            continue
 
-class SequenceSimilarity():
-  def calculate_similarity(self,seq1, seq2):
+        if (    is_forward_strand and ((utr_start <= orf_start < utr_end) or (utr_start < orf_start <= utr_end))) or \
+           (not is_forward_strand and ((orf_start <= utr_start and orf_start > utr_end) or (orf_start < utr_start and orf_start >= utr_end))):
+            utr_orf_pos.append('*' + utr_annotation)
+        if (    is_forward_strand and ((utr_start <= orf_end < utr_end) or (utr_start < orf_end <= utr_end))) or \
+           (not is_forward_strand and ((orf_end <= utr_start and orf_end > utr_end) or (orf_end < utr_start and orf_end >= utr_end))):
+            utr_orf_pos.append("**" + utr_annotation)
+    
+    # Determine the ORF type
+    orfBT = ""
+    if utr_orf_pos == ["*5UTR"]:
+        orfBT = "5UTR:CDS"
+    elif utr_orf_pos == ["**3UTR"]:
+        orfBT = "CDS:3UTR"  # Alt-CDS:3UTR
+    elif utr_orf_pos == ["**5UTR"] or utr_orf_pos == ["*5UTR", "**5UTR"] or utr_orf_pos == ["**5UTR","*5UTR"]:   # handling ambiguity due to ORF locations predicted by ORFik being off by certain nucleotide differences
+        orfBT = "5UTR"
+    elif utr_orf_pos == ["*3UTR"] or utr_orf_pos == ["*3UTR", "**3UTR"] or utr_orf_pos == ["**3UTR","*3UTR"]:
+        orfBT = "3UTR"
+    elif utr_orf_pos == ["*5UTR", "**3UTR"] or utr_orf_pos == ["**3UTR", "*5UTR"]:
+        orfBT = "5UTR:3UTR"
+    return orfBT
+
+def isIntergenic(orf_coord, gene_coord_map):
+    [orf_chrom, orf_range] = orf_coord.split(':')[:2]
+    [orf_start, orf_end] = [int(num) for num in orf_range.split('-')]
+    for (gene_start, gene_end) in gene_coord_map.get(orf_chrom, []):
+        if gene_start <= orf_start and orf_end <= gene_end:
+            return True
+    return False
+
+# function to calculate protein sequence physico-chemical properties
+def calculate_sequence_properties(protein_seq):
+    peptide_obj = pep.Peptide(protein_seq)
+    Mol_wt = calculateMolWt(peptide_obj)
+    IsoPt = calculateIsoElectricPoint(peptide_obj)
+    HydroP_ind = calculateHydrophobicity(peptide_obj)
+    Aliphatic_ind = calculateAliphatic_index(peptide_obj)
+    seq_properties = '\t'.join(map(str, [Mol_wt, IsoPt, HydroP_ind, Aliphatic_ind]))
+    return seq_properties
+
+def calculateMolWt(peptide_obj):
+    return round(float(peptide_obj.molecular_weight()) / 1000, 2)   # in KDa
+
+def calculateIsoElectricPoint(peptide_obj):
+    return round(peptide_obj.isoelectric_point(), 2)
+
+def calculateHydrophobicity(peptide_obj):
+    return round(peptide_obj.hydrophobicity(), 2)
+
+def calculateAliphatic_index(peptide_obj):
+    return round(peptide_obj.aliphatic_index(), 2)
+
+def calculate_similarity(seq1, seq2):
     # Use a substitution matrix like BLOSUM62
-    matrix = matlist.blosum62
+    matrix = MatrixInfo.blosum62
+
     # Set gap open and gap extend penalties
     gap_open = -10  # Penalty for opening a gap
     gap_extend = -0.5  # Penalty for extending a gap
-     # Perform global alignment with the matrix and gap penalties
+
+    # Perform global alignment with the matrix and gap penalties
     alignments = pairwise2.align.globalds(seq1, seq2, matrix, gap_open, gap_extend)
-    
+
     # Take the best alignment (the first one)
     best_alignment = alignments[0]
-    
-    
-    #print(format_alignment(*best_alignment))
 
     # Extract aligned sequences
     aligned_seq1, aligned_seq2, score, start, end = best_alignment
-    
+
     # Calculate the percentage similarity
     matches = sum(1 for a, b in zip(aligned_seq1, aligned_seq2) if a == b)
     similarity_percentage = matches / len(aligned_seq1) * 100
-    
+
     # Find changed amino acids
-    changed_positions = [
-        (i + 1, a, b) for i, (a, b) in enumerate(zip(aligned_seq1, aligned_seq2)) #first mutant and second wild type
-        if a != b and a != '-' and b != '-'
-    ]
+    changed_positions = [(i + 1, a, b) for i, (a, b) in enumerate(zip(aligned_seq1, aligned_seq2)) if a != b and a != "-" and b != "-"]  # first mutant and second wild type
+
     # convert into standard format to denote mutation
     aa_changes = ",".join([f"{b}{pos}{a}" for pos, a, b in changed_positions])
-    
 
-    return similarity_percentage,aa_changes
-
-  
+    return similarity_percentage, aa_changes
