@@ -26,9 +26,18 @@ def record_to_vcf_line(record):
     qual = record.QUAL if record.QUAL is not None else '.'      # Handle missing quality
     filters = ','.join(record.FILTER) if record.FILTER else '.'
     info = '.'                                                  # INFO field (empty in this case)
-
+    # overall GT, AD and DP
+    consensus_gt=record.calls[0].data["GT"]
+    overall_ad=record.calls[0].data["AD"]
+    overall_dp=sum(overall_ad)
+    metadata = ":".join([
+    consensus_gt,
+    ",".join(map(str, overall_ad)),
+    str(overall_dp)
+    ])
+    
     # Join all parts to form the VCF line
-    vcf_line = '\t'.join([chrom, str(pos), '.', ref, alts, qual, filters, info, "GT", "0/1"])   # Simplified VCF compatible with vcftools consensus
+    vcf_line = '\t'.join([chrom, str(pos), '.', ref, alts, qual, filters, info, "GT:AD:DP",metadata])  # Simplified VCF compatible with vcftools consensus
     return vcf_line
 
 # Get the variant with maximum depth in case there are multiple variants at a genomic locus
@@ -64,7 +73,6 @@ def getMostFrequentVariant(record, most_likely_genotype, sum_depths, sum_ref_all
         call.data["AD"] = alt_allele_depth_new  # Update alternate depth
         call.data["DP"] = sum_depths            # Update total depth
         call.data["GT"] = most_likely_genotype  # Update overall genotype
-
     return record_to_vcf_line(record)
 
 def main():
@@ -112,7 +120,9 @@ def main():
                 cols = line.split('\t')
                 if "FORMAT" not in cols:
                     continue
-                modified_header = '\t'.join(cols[:cols.index("FORMAT") + 2])
+                header_cols=cols[:cols.index("FORMAT") + 1]
+                header_cols.append("all_samples")
+                modified_header = '\t'.join(header_cols)
                 line_to_write = modified_header + '\n'
             lines_to_write += line_to_write
         with open(vcf_homo_output, 'a') as g:
