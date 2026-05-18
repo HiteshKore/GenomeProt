@@ -191,10 +191,10 @@ ui <- dashboardPage(
                         conditionalPanel(condition = "(input.sequencing_type == 'long-read') & (input.user_reference_genome_bam == 'user')",fileInput("user_reference_genome_bam","Upload reference genome  FASTA",buttonLabel = "Browse...",multiple = FALSE)),
                         
                         # VCF file input conditionally shown
-                        radioButtons("vcf_option","VCF file:",choices = c("Use preloaded VCF file" = "default","Upload VCF file" = "user"),selected = "default"),
+                        radioButtons("vcf_data","VCF file:",choices = c("Use preloaded VCF file" = "default","Upload VCF file" = "user"),selected = "default"),
                         
                          # VCF File upload appears only if user selects upload  their own vcf file"
-                        conditionalPanel(condition = "input.vcf_option == 'user'",fileInput("user_vcf_file","Upload VCF File",buttonLabel = "Browse...", multiple = FALSE)),  
+                        conditionalPanel(condition = "input.vcf_data == 'user'",fileInput("user_vcf_file","Upload VCF File",buttonLabel = "Browse...", multiple = FALSE)),
 
                         ),
                          

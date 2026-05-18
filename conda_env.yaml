@@ -17,7 +17,7 @@ dependencies:
   - python=3.9
   - pip
   - r-base
-  - zlib=1.2.13
+  - zlib
   - r-biocmanager
   - r-optparse
   - r-dplyr

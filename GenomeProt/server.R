@@ -119,7 +119,7 @@ bambu_server <- function(input, output, session) {
          # Rename the files
          file.rename(input$user_bam_files$datapath, new_names)
          #print(input$user_bam_files)
-         command_bambu= paste0(conda_path," run -n GenomeProt_env && Rscript bin/database_module/run_bambu.R -b ", bamdir[1],
+         command_bambu= paste0(conda_path," run -n GenomeProt_env Rscript bin/database_module/run_bambu.R -b ", bamdir[1],
          "/ -g ",input$reference_gtf_file$datapath," -o ", outdir_bambu," -t ",input$user_threads," -s ", input$organism)
          
         
@@ -128,7 +128,7 @@ bambu_server <- function(input, output, session) {
          default_bam_path <- "./testdata/long_read_bam/"
          
          
-         command_bambu= paste0(conda_path," run -n GenomeProt_env && Rscript bin/database_module/run_bambu.R -b ", default_bam_path,
+         command_bambu= paste0(conda_path," run -n GenomeProt_env Rscript bin/database_module/run_bambu.R -b ", default_bam_path,
                                "/ -g ",default_gtf_path," -o ", outdir_bambu," -t ",input$user_threads, " -s ", input$organism)
          
         
@@ -211,7 +211,7 @@ database_server <- function(input, output, session) {
   
   # construct the command
   command_generate_proteome <- paste0(
-    conda_path," run -n GenomeProt_env && Rscript bin/database_module/generate_proteome.R",
+    conda_path," run -n GenomeProt_env Rscript bin/database_module/generate_proteome.R",
     " -g ", db_gtf_file,
     " -r ", ref_gtf,
     counts_arg, # include counts file only if provided
@@ -351,7 +351,7 @@ integration_server <- function(input, output, session) {
   system(paste0("mkdir ", outdir_integ))
   
   # run Rscript
-  system(paste0( conda_path," run -n GenomeProt_env && Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -m ", input$user_metadata_file$datapath, " -g ", input$user_post_gtf_file$datapath, " -s ", outdir_integ))
+  system(paste0( conda_path," run -n GenomeProt_env Rscript bin/integration_module/map_peptides_generate_outputs.R -p ", input$user_proteomics_file$datapath, " -m ", input$user_metadata_file$datapath, " -g ", input$user_post_gtf_file$datapath, " -s ", outdir_integ))
   
   # get the top level dir
   top_level_dir <- getwd()
