@@ -56,9 +56,6 @@ RUN R -e 'BiocManager::install(ask = F)' && R -e 'BiocManager::install(c("rtrack
               "tximport", \
               "patchwork", ask = F))'
 
-# install ggtranscript from github with devtools
-RUN R -e "devtools::install_github('dzhang32/ggtranscript')"
-
 RUN wget https://github.com/lh3/minimap2/releases/download/v2.27/minimap2-2.27.tar.bz2 && \
     tar -xvjf minimap2-2.27.tar.bz2 && \
     cd minimap2-2.27 && \

@@ -21,7 +21,6 @@ suppressPackageStartupMessages({
   library(markdown)
   library(devtools)
   library(vsn)
-  library(ggtranscript)
   library(patchwork)
   library(ggrepel)
   library(optparse)
@@ -33,12 +32,12 @@ suppressPackageStartupMessages({
   library(Rsamtools)
   library(RColorBrewer)
   library(scales)
-  library(BiocParallel) #
+  library(BiocParallel)
 })
 
-options(shiny.maxRequestSize = 21474836480) # 20GB
+options(shiny.maxRequestSize = 21474836480) # 20 GB
 
-options(scipen=999)
+options(scipen = 999)
 
 source("R/integration_functions.R")
 source("R/visualisation_function.R")
