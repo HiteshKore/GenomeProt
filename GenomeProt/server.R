@@ -123,7 +123,7 @@ bambu_server <- function(input, output, session) {
 
   # rename bambu output files
   renamed_gtf <- file.path(outdir_bambu, "bambu_transcript_annotations.gtf")
-  file.rename(file.path(outdir_bambu,    "counts_transcript.txt"), file.path(outdir_bambu,      "bambu_transcript_counts.txt"))
+  file.rename(file.path(outdir_bambu,    "counts_transcript.txt"), file.path(outdir_bambu, "bambu_transcript_counts.txt"))
   file.rename(file.path(outdir_bambu, "extended_annotations.gtf"), renamed_gtf)
 
   if (!is.null(input$bam_data) && input$bam_data == "user" && !is.null(input$user_bam_files)) {
@@ -138,7 +138,7 @@ bambu_server <- function(input, output, session) {
 
   # rename gffcompare output files
   file.rename(file.path(outdir_bambu, "gffcmp.bambu_transcript_annotations.gtf.tmap"), file.path(outdir_bambu, "gffcompare.tmap.txt"))
-  system("rm gffcmp*")
+  file.remove(Sys.glob("gffcmp*"))
 }
 
 database_server <- function(input, output, session) {
