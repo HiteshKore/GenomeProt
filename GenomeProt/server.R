@@ -288,39 +288,6 @@ database_server <- function(input, output, session) {
   }
 }
 
-# proteomics_server <- function(input, output, session) {
-  # req(input$user_mm_data, input$user_mm_fasta)
-  # 
-  # # get directory path
-  # dir_path <- dirname(input$user_mm_data$datapath[1])
-  # print(dir_path)
-  # 
-  # mass_spec_names <- c(input$user_mm_data$name)
-  # print(mass_spec_names)
-  # 
-  # # new file paths
-  # new_file_paths <- file.path(dir_path, mass_spec_names)
-  # 
-  # # rename files
-  # file.rename(input$user_mm_data$datapath, new_file_paths)
-  # 
-  # # copy config files
-  # # replace all lines:
-  # # 'MaxThreadsToUsePerFile = 3'
-  # # with user set threads
-  # 
-  # #system(paste0("source activate mm_env; metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
-  # system(paste0("metamorpheus -t data/mm_configs/Task2-CalibrateTaskconfig.toml data/mm_configs/Task4-GPTMDTaskconfig.toml data/mm_configs/Task5-SearchTaskconfig.toml -s ", dir_path, " -v 'minimal' -d ", input$user_mm_fasta$datapath, " -o proteomics_output"))
-  # 
-  # # check files exist
-  # if (file.exists("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv") && file.exists("proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")) {
-  #   # create a zip file with results
-  #   files_to_zip <- c("proteomics_output/Task3SearchTask/AllQuantifiedPeptides.tsv", "proteomics_output/Task3SearchTask/AllQuantifiedProteinGroups.tsv")
-  #   zipfile_path <- "proteomics_output/proteomics_results.zip"
-  #   zip(zipfile = zipfile_path, files = files_to_zip)
-  # }
-# }
-
 integration_server <- function(input, output, session) {
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_metadata_file)  # GTF is required
 
@@ -439,44 +406,6 @@ server <- function(input, output, session) {
   )
 
   # END DATABASE MODULE
-
-  # PROTEOMICS MODULE
-
-  # # create reactive value for the database zip
-  # file_available_mm <- reactiveVal(FALSE)
-  # 
-  # 
-  # # run database function when submit is pressed
-  # observeEvent(input$proteomics_submit_button, { 
-  #   session$sendCustomMessage("disableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # disable submit button
-  #   proteomics_server(input, output, session)
-  #   
-  #   # check if the zip file is created
-  #   if (file.exists("proteomics_output/proteomics_results.zip")) {
-  #     file_available_mm(TRUE)
-  #   }
-  # })
-  # 
-  # # enable download once files are available
-  # observe({
-  #   if (file_available_mm()) {
-  #     shinyjs::enable("proteomics_download_button")
-  #     shinyjs::runjs("document.getElementById('proteomics_download_button').style.backgroundColor = '#4CAF50';")
-  #     session$sendCustomMessage("enableButton", list(id = "proteomics_submit_button", spinnerId = "proteomics-loading-container")) # re-enable submit button
-  #   }
-  # })
-  # 
-  # # download handler for the database results.zip file
-  # output$proteomics_download_button <- downloadHandler(
-  #   filename = function() {
-  #     paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_proteomics_results.zip")
-  #   },
-  #   content = function(file) {
-  #     file.copy("proteomics_output/proteomics_results.zip", file)
-  #   }
-  # )
-
-  # END PROTEOMICS MODULE
 
   # INTEGRATION MODULE
 

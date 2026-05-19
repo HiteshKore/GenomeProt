@@ -3,7 +3,8 @@ library(shinydashboard)
 library(shinyjs)
 
 ui <- dashboardPage(
-  dashboardHeader(title = tags$img( ##title = "GenomeProt"
+  title = "GenomeProt",
+  dashboardHeader(title = tags$img(
                     src = "images/GenomeProt_logo_Thach.png",
                     height = "40px",
                     style = "margin-left:1px",
@@ -18,8 +19,6 @@ ui <- dashboardPage(
   dashboardSidebar(width=200,
     sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
                 menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
-                # commenting out proteomics for now
-                #menuItem("Analyse MS proteomics", tabName = "analyse_proteomics", icon = icon("gear")),
                 menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
                 menuItem("visualise results", tabName = "visualisation", icon = icon("eye")),
                 menuItem("Quick help", tabName = "help", icon = icon("circle-question"))
@@ -222,28 +221,6 @@ ui <- dashboardPage(
                 )
               )
       ),
-      # tabItem(tabName = "analyse_proteomics",
-      #         h2("Run MetaMorpheus with your custom proteogenomics database to analyse MS proteomics data"),
-      #         h5("NOTE: this step requires significant computation and time (>8 CPUs and high memory requirements)"),
-      #         fluidRow(
-      #           column(4,
-      #                  selectInput("protease", label = "Protease:",
-      #                              choices = list("trypsin" = "trypsin"),
-      #                              selected = "trypsin"),
-      #                  numericInput("mm_cpu",
-      #                               label = "CPUs",
-      #                               value = 1),
-      #                  fileInput("user_mm_fasta", "Upload 'proteome_database.fasta'", NULL, buttonLabel = "Browse...", multiple = FALSE),
-      #                  fileInput("user_mm_data", "Upload mzML/raw file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE),
-      #                  actionButton("proteomics_submit_button", "Submit", class = "btn btn-primary")
-      #           ),
-      #           column(6,
-      #                  HTML("<h3>Download your results:</h3>"),
-      #                  downloadButton("proteomics_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
-      #                  div(id = "proteomics-loading-container", class = "loading-container", div(class = "spinner"))
-      #           )
-      #         )
-      # ),
       tabItem(tabName = "integration",
               h2("Integrate proteomics results with transcriptomics"),
               h5("Creates BED12s and GTFs of peptides, ORFs and transcripts for visualisation and produces summary data"),
@@ -290,12 +267,10 @@ ui <- dashboardPage(
               width = 20,
               status = "primary",
               solidHeader = TRUE,
-              includeHTML("GenomeProt_help.html")
-              #tags$iframe(src="GenomeProt_help.html",
-              #width= "100%",
-              #height="750px",
-              #style="border:none;"
-              #)
+              tags$iframe(src = "GenomeProt_help.html",
+                          width = "100%",
+                          height = "950px",
+                          style = "border:none;")
             )
           )
         )
