@@ -292,17 +292,11 @@ integration_server <- function(input, output, session) {
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_metadata_file)  # GTF is required
 
   session_id <- session$token   # session ID
-  outdir_integ <- file.path(session_id, "integ_output")     # output directory
-  outdir_image <- file.path(outdir_integ, "report_images")  # image directory for integration module outputs
+  outdir_integ <- file.path(session_id, "integ_output") # output directory
 
   # create the output directory
   if (!dir.exists(outdir_integ)) {
     dir.create(outdir_integ)
-  }
-
-  # create the image directory for integration module outputs
-  if (!dir.exists(outdir_image)) {
-    dir.create(outdir_image)
   }
 
   # run Rscript
@@ -312,13 +306,9 @@ integration_server <- function(input, output, session) {
   top_level_dir <- getwd()
 
   # create report
-  rmarkdown::render(input = file.path(top_level_dir, "bin", "integration_module", "integration_summary_report.Rmd"),
-                    output_file = file.path(top_level_dir, outdir_integ, "summary_report.html"),
-                    output_format = "html_document",
-                    params = list(
-                      directory = file.path(top_level_dir, outdir_integ),
-                      file = "peptide_info.tsv"
-                    ))
+  report_rmd_file <- file.path(top_level_dir, "bin", "integration_module", "integration_summary_report.Rmd")
+  report_outdir <- file.path(top_level_dir, outdir_integ)
+  system(paste0(conda_command, "Rscript bin/integration_module/generate_integration_summary_report.R -i ", report_rmd_file, " -o ", report_outdir))
 
   # zip all results files
   if (file.exists(file.path(outdir_integ, "peptide_info.tsv")) && file.exists(file.path(outdir_integ, "summary_report.html"))) {
