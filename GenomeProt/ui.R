@@ -118,8 +118,7 @@ ui <- dashboardPage(
                 column(6,
                        # radio buttons for various options
                        radioButtons("sequencing_type", h5(tags$b("Select sequencing type:")),choices = c("Long-read (ONT, PacBio)" = "long-read", "Short-read" = "short-read")),
-                       radioButtons("input_type", h5(tags$b("Select input type:")),choices = c( #"FASTQs" = "fastq_input",
-                         "BAMs" = "bam_input","GTF (and/or transcript counts)" = "gtf_input")),
+                       radioButtons("input_type", h5(tags$b("Select input type:")),choices = c("BAMs" = "bam_input","GTF (and/or transcript counts)" = "gtf_input")),
                        checkboxInput("vcf_option", "Incoporate SNVs into protein sequences", value = FALSE),
 
                        # organism
@@ -148,21 +147,10 @@ ui <- dashboardPage(
                        # GTF file upload appears only if user chooses to upload their own GTF file
                        conditionalPanel(condition = "input.data_source == 'user'",fileInput("reference_gtf_file","Upload GENCODE GTF File",buttonLabel = "Browse...",multiple = FALSE)),
 
-                       # conditionl panel for FASTQ input
-                       conditionalPanel(condition = "input.input_type == 'fastq_input'",
-                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 10, step = 1),
-                         #h5("Map FASTQs, identify (in long-reads) and quantify isoforms, and generate the database"),
-                         fileInput("user_reference_genome", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                         conditionalPanel(condition = "input.sequencing_type == 'short-read'",
-                           fileInput("transcriptome_file", "Upload reference transcriptome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)
-                         ),
-                         fileInput("user_fastq_files", "Upload FASTQ file(s):", NULL, buttonLabel = "Browse...", multiple = TRUE)
-                       ),
-
                        # BAM input
                        conditionalPanel(
                          condition = "input.input_type == 'bam_input'",
-                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 46, step = 1),
+                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 10, step = 1),
 
                          # short read
                          conditionalPanel(condition="(input.sequencing_type == 'short-read') & (input.vcf_option == true)",
@@ -244,11 +232,11 @@ ui <- dashboardPage(
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
               conditionalPanel(
                 condition = "input.show_isovis_steps % 2 == 1",
-                p("Step 1: Click 'Upload data'. For the 'Stack data' upload 'transcripts_and_ORFs_for_isovis.gtf'. For the 'Heatmap data' upload 'bambu_transcript_counts.txt'."),
+                p("Step 1: Click 'Upload data'. For the 'Stack data' file, upload 'combined_annotations.gtf'. For the 'Heatmap data' file, upload 'bambu_transcript_counts.txt'."),
                 p("Step 2: Check the box 'Show peptide data upload options'."),
-                p("Step 3: For the 'Peptide sites data' upload 'peptides.bed12'. For the 'Peptide intensities data' upload the intensities file. Then click 'Apply'."),
-                p("Step 4: Type a gene to view and press enter."),
-                p("Step 5: Click 'Stack options' and select 'Peptide sites' from the drop-down menu.")
+                p("Step 3: For the 'Peptide counts data' file, upload the peptide intensities file, then click 'Apply'."),
+                p("Step 4: Type the symbol or ID of a gene to view and either press enter or click '>'."),
+                p("Step 5: To see the mappings of peptides to open reading frames, click on the 'Stack options' dropdown menu and select 'Peptide mapping'.")
               ),
               fluidRow(
                 column(12,

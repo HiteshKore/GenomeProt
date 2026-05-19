@@ -259,10 +259,7 @@ database_server <- function(input, output, session) {
   proteome_database_fasta_file <- file.path(outdir_db, "proteome_database.fasta")
   orf_temp_file <- file.path(outdir_db, "orf_temp.txt")
   if (file.exists(proteome_database_fasta_file) && file.exists(proteome_database_transcripts_gtf_file) && !file.exists(orf_temp_file)) {
-    if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
-      bam_files <- list.files(path = file.path(session_id, "mapping_output"), "\\.bam$", full.names = TRUE)
-      files_to_zip_db <- c(bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
-    } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
+    if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
       files_to_zip_db <- c("../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     } else if (input$sequencing_type == "short-read") {
       files_to_zip_db <- c("../mapping_output/bambu_transcript_counts.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
