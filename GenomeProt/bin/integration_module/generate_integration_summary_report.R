@@ -16,6 +16,13 @@ opt <- parse_args(opt_parser)
 report_rmd_file <- opt$input
 report_outdir <- opt$outdir
 
+# check if any input arguments are missing
+if (is.null(report_rmd_file)) {
+  stop("Please provide an Rmd file to generate the integration summary report from.")
+} else if (is.null(report_outdir)) {
+  stop("Please specify an output directory.")
+}
+
 # check the input arguments
 if (!file.exists(report_rmd_file)) {
   stop(paste0("The integration summary report Rmd file '", report_rmd_file, "' does not exist."))
