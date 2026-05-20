@@ -287,23 +287,12 @@ The output file generated is typically `peptides.txt` or `report.pr_matrix.tsv`.
 
 ### 4. Visualisation
 
-#### 4a. Visualisation: ggtranscript
+#### Peptides Visualisation using IsoVis
 
 | Input  | File Type | Required? | Description   |
 |--------------------------------|-----------|-----------|---------------------------------------------------------|
-| Combined annotations (combined_annotations.gtf)  | GTF  | Yes  | Generated in Module 3, annotations of peptides, ORFs, and transcripts    |
-| Transcript counts (transcript_counts.txt)   | TXT/CSV  | No  | Generated in Module 1, transcript counts per sample    |
-| Peptide intensities  | TXT  | No  | Peptide intensity data ‘report.pr_matrix.tsv’  |
+| Transcript annotations (combined_annotations.gtf)  | GTF  | Yes  | Generated in Step 3, annotations of ORFs, peptides and transcripts    |
+| Transcript counts (bambu_transcript_counts.txt)   | TXT/CSV  | No  | Generated in Step 1, transcript counts per sample    |
+| Peptide intensities  | TXT  | No  | Generated in Step 2 (external),Peptide intensity data ‘report.pr_matrix.tsv’  |
 
-**Note:** There is an option to download plots as a PDF.
-
-#### 4b. Visualisation: IsoVis
-
-| Input  | File Type | Required? | Description   |
-|--------------------------------|-----------|-----------|---------------------------------------------------------|
-| Transcript annotations (transcripts_and_ORFs_for_isovis.gtf)  | GTF  | Yes  | Generated in Module 3, annotations of ORFs, and transcripts    |
-| Peptide track (peptides.bed12)  | BED12  | Yes  | Generated in Module 3, coordinates of each peptide    |
-| Transcript counts (transcript_counts.txt)   | TXT/CSV  | No  | Generated in Module 1, transcript counts per sample    |
-| Peptide intensities  | TXT  | No  | Peptide intensity data ‘report.pr_matrix.tsv’  |
-
-**Note:** This tool is interactive and there is an option to download plots as a PDF.
+**Note:** This tool is interactive and there is an option to download plots as PNG, JPEG, SVG and PDF.
