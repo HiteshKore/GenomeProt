@@ -117,13 +117,13 @@ This module integrates proteomics and transcriptomics data. Peptides are associa
 
 ### 4. Visualisation
 
-There are currently two visualisation options included. The first (4a) is a custom tool using ggtranscript that generates peptide mapping plots along transcript isoforms with quantitative peptide intensities and transcript expression data. This allows users to visualise transcript and peptide abundance across different experimental conditions. This module requires the combined GTF file generated in the integration step, and optionally inputs transcript counts from Module 1 and peptide intensities from external proteomics analysis. The advantage of this tool is the included gene filtering options to quickly search for features of interest. The other tool (4b) included is IsoVis, a webserver that can be accessed within the app or externally. This is a more comprehensive tool that requires the `transcripts_and_ORFs_for_isovis.gtf` file and optionally the peptide intensities and transcript expression data.
+This module uses [IsoVis](https://isomix.org/isovis/) to create an interactive visualisation that shows peptide mapping plots along transcript isoforms with quantitative peptide intensities and transcript expression data. This allows users to visualise transcript and peptide abundance across different experimental conditions. To visualise their data in IsoVis, users need to select the `combined_annotations.gtf` file generated in the integration module, and optionally transcript counts from Module 1 and peptide intensities from external proteomics analyses. Once the selected data files are processed by IsoVis, users can apply the gene filtering options provided by the webserver to quickly search for features of interest. IsoVis is highly configurable and can be used within GenomeProt or externally.
 
 #### Features:
 
 - Requires `combined_annotations.gtf` or `transcripts_and_ORFs_for_isovis.gtf` (from Module 3).
 - Optionally input transcript isoform counts and peptide intensities.
-- Allows export of plots as PDFs. 
+- Allows export of plots as PDFs, SVGs, PNGs and JPEGs.
 
 ## Detailed input and output descriptions
 
@@ -284,7 +284,6 @@ The output file generated is typically `peptides.txt` or `report.pr_matrix.tsv`.
 | gene_identified | Is gene identified with unique peptide evidence?  | true/false  |
 | transcript_identified   | Is transcript identified with unique peptide evidence?    | true/false  |
 
-
 ### 4. Visualisation
 
 #### Peptides Visualisation using IsoVis
@@ -293,6 +292,6 @@ The output file generated is typically `peptides.txt` or `report.pr_matrix.tsv`.
 |--------------------------------|-----------|-----------|---------------------------------------------------------|
 | Transcript annotations (combined_annotations.gtf)  | GTF  | Yes  | Generated in Step 3, annotations of ORFs, peptides and transcripts    |
 | Transcript counts (bambu_transcript_counts.txt)   | TXT/CSV  | No  | Generated in Step 1, transcript counts per sample    |
-| Peptide intensities  | TXT  | No  | Generated in Step 2 (external),Peptide intensity data ‘report.pr_matrix.tsv’  |
+| Peptide intensities  | TXT  | No  | Generated in Step 2 (external), Peptide intensity data ‘report.pr_matrix.tsv’  |
 
 **Note:** This tool is interactive and there is an option to download plots as PNG, JPEG, SVG and PDF.
