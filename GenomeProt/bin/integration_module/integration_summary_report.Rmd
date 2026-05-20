@@ -31,7 +31,6 @@ df_var_peptides=df%>%filter(grepl("_var",accession))
 
 
 
-#df <- read_tsv("/home/ubuntu/data_transfer/peptide_info.tsv")
 wb<-createWorkbook()
 addWorksheet(wb,"ORF_by_location")
 addWorksheet(wb,"ORF_by_tx_biotype")
@@ -500,8 +499,3 @@ suppressWarnings(print(plot_orf_lengths))
 invisible(dev.off())
 
 ```
-
-
-
-
-
