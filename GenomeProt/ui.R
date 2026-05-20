@@ -98,6 +98,46 @@ ui <- dashboardPage(
           button.style.borderColor = '';
           document.getElementById(params.spinnerId).style.display = 'none';
         });
+
+        var is_first_resize_ignored = false;
+        window.addEventListener('message', handleMessage, false);
+
+        function handleMessage(event)
+        {
+          let event_data = event.data;
+
+          if (typeof(event_data) === 'string')
+          {
+            // tell IsoVis what tool it's embedded in
+            if (event_data === 'Give tool name')
+            {
+              let isovis_window = document.getElementById('isovis_window');
+              if (isovis_window && isovis_window.contentWindow)
+                isovis_window.contentWindow.postMessage('Tool: GenomeProt', '*');
+            }
+            // set the height of the IsoVis iframe
+            else if (event_data.startsWith('To resize: '))
+            {
+              if (!is_first_resize_ignored)
+              {
+                is_first_resize_ignored = true;
+                return;
+              }
+              let new_window_height = Number.parseInt(event_data.substring('To resize: '.length));
+              if (!Number.isNaN(new_window_height) && (new_window_height > 0))
+              {
+                if (new_window_height > window.innerHeight - 4)
+                  new_window_height = window.innerHeight;
+                else
+                  new_window_height += 4;
+
+                let isovis_window = document.getElementById('isovis_window');
+                if (isovis_window)
+                    isovis_window.style.height = `${new_window_height}px`;
+              }
+            }
+          }
+        }
       "))
     ),
     tabItems(
@@ -232,15 +272,16 @@ ui <- dashboardPage(
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
               conditionalPanel(
                 condition = "input.show_isovis_steps % 2 == 1",
-                p("Step 1: Click 'Upload data'. For the 'Stack data' file, upload 'combined_annotations.gtf'. For the 'Heatmap data' file, upload 'bambu_transcript_counts.txt'."),
-                p("Step 2: Check the box 'Show peptide data upload options'."),
-                p("Step 3: For the 'Peptide counts data' file, upload the peptide intensities file, then click 'Apply'."),
-                p("Step 4: Type the symbol or ID of a gene to view and either press enter or click '>'."),
+                p("Step 1: Click 'Upload data'."),
+                p("Step 2: For the 'Transcript data' file, upload 'combined_annotations.gtf'. For the 'Transcript counts' file, upload 'bambu_transcript_counts.txt'."),
+                p("Step 3: For the 'Peptide intensities' file, upload the peptide intensities file from the proteomics pipeline you used (e.g. 'report.pr_matrix.tsv'), then click 'Apply'."),
+                p("Step 4: Type the symbol or ID of a gene to view, select it from the list of results displayed, then either press enter or click '>'."),
                 p("Step 5: To see the mappings of peptides to open reading frames, click on the 'Stack options' dropdown menu and select 'Peptide mapping'.")
               ),
               fluidRow(
                 column(12,
-                    tags$iframe(src = "https://isomix.org/isovis/",
+                    tags$iframe(id = "isovis_window",
+                                src = "https://isomix.org/isovis/",
                                 width = "100%",
                                 height = "950px",
                                 style = "border:none;"))

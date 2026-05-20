@@ -153,7 +153,7 @@
 
           <p>
             <strong>Note:</strong> To generate a database directly from FASTQ files, or BAM files
-            larger than <strong>30 GB</strong>, use the command-line version.
+            larger than <strong>20 GB</strong>, use the command-line version.
           </p>
 
           <p>
@@ -216,11 +216,11 @@
           <p>This step visualises peptides on transcript and gene coordinates using <strong>IsoVis</strong>.</p>
 
           <ul class="bullet_points">
-            <li>Click <strong>Upload Data</strong> and select <code>combined_annotations.gtf</code> as the <strong>stack data</strong> file (max. 3 GB).</li>
-            <li>Optional: select <strong>raw transcript counts</strong> as the <strong>heatmap data</strong> file.</li>
-            <li>Optional: toggle the 'Show peptide data upload options (beta)' checkbox, then select the <strong>peptide intensities</strong> file from MS analysis as the <strong>peptide counts data</strong> file.</li>
+            <li>Click '<strong>Upload data</strong>' and select <code>combined_annotations.gtf</code> as the '<strong>transcript data</strong>' file (max. 3 GB).</li>
+            <li>Optional: select <strong>raw transcript counts</strong> as the '<strong>transcript counts</strong>' file.</li>
+            <li>Optional: select the <strong>peptide intensities</strong> file from MS analysis as the '<strong>peptide intensities</strong>' file.</li>
             <li>Click <strong>Apply</strong>.</li>
-            <li>Select your gene of interest. Start typing either its gene name or Ensembl ID into the search box, select it, then hit Enter.</li>
+            <li>Select your gene of interest. Start typing either its gene name or Ensembl ID into the search box, select it from the list of results displayed, then either press enter or click '>'.</li>
             <li>Use the different visualization options provided in IsoVis. For example, parts of the visualization can be toggled, including protein domain labels in the protein diagram.</li>
             <li>The entire visualization can be exported as a PNG, JPEG, PDF or SVG, and individual visualization components can be exported as SVGs.</li>
           </ul>
@@ -234,7 +234,7 @@
             The IsoVis visualisation displays separate tracks for peptides, ORFs and transcripts.
             Users can limit their analysis to specific peptides, ORFs or transcripts of interest
             by hiding irrelevant parts of the visualization and
-            highlighting peptides and ORFs.
+            using the peptide and ORF stacks to highlight specific features.
             <br><br>
             Overlapping ORFs are shown using a hatching pattern. Coding regions are represented
             as thick dark grey boxes. Peptides uniquely mapped to ORFs, transcripts, and genes
