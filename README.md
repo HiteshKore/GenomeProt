@@ -20,6 +20,8 @@
 ### Option 1 (recommended): Access GenomeProt online
 https://genomeprot.researchsoftware.unimelb.edu.au/
 
+Note: To ensure fair use of the resources available to the public GenomeProt server, it has been modified to not do any read mapping, and users must perform the proteomics step externally.
+
 ### Option 2: Run the shiny application with Docker
 Make sure you have [Docker](https://docs.docker.com/engine/install/) installed and the application running in the background before you begin.
 
