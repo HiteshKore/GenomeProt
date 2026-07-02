@@ -53,11 +53,10 @@ cd GenomeProt
 Rscript install.R conda_env.yaml
 ```
 
-Unzip the uniprot+openprot reference file in the GenomeProt/data directory.
+Unzip the uniprot+openprot reference files in the GenomeProt/data directory.
 ```
 cd GenomeProt/GenomeProt/data
-unzip openprot_uniprotDb_hs.txt.zip
-unzip *
+ls | xargs -n1 unzip
 ```
 
 Activate the environment and then run the app from the command line:
