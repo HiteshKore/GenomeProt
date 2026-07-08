@@ -65,6 +65,12 @@ dependencies:
   - bioconductor-bsgenome.drerio.ucsc.danrer11
   - bioconductor-sparsearray
   - bioconductor-summarizedexperiment
+  - cairo
+  - curl
+  - libcurl
+  - libkrb5
+  - libnghttp2
+  - zip
 
   - pip:
     - biopython==1.77

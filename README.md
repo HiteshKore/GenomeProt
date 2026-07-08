@@ -47,24 +47,45 @@ Clone this repository:
 git clone https://github.com/josiegleeson/GenomeProt.git
 ```
 
-Build the conda environment:
+If your system does not have conda installed, install it by following [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
+
+Activate conda and build the conda environment GenomeProt uses:
 ```
 cd GenomeProt
-Rscript install.R conda_env.yaml
+conda env create -f conda_env.yaml
 ```
 
-Unzip the uniprot+openprot reference files in the GenomeProt/data directory.
+Unzip the uniprot+openprot reference files in the GenomeProt/data directory:
 ```
 cd GenomeProt/GenomeProt/data
 ls | xargs -n1 unzip
+rm *.zip
 ```
 
-Activate the environment and then run the app from the command line:
+Download the test data for the database generation module to preload:
+```
+cd GenomeProt/GenomeProt
+mkdir testdata
+cd testdata
+
+mkdir long_read_bam
+cd long_read_bam
+curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/long_read_bam/Melanoma_data_subset.bam
+cd ..
+
+curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/gencode_v47_sorted.gtf
+curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/BRAF_mutation.vcf
+curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/GRCh38_chr1_6_7.fa.gz
+gunzip GRCh38_chr1_6_7.fa.gz
+```
+
+Activate the conda environment and run the GenomeProt Shiny app from the command line:
 ```
 conda activate GenomeProt_env
 Rscript -e "shiny::runApp('path/to/app/GenomeProt/', host='0.0.0.0', port=3838)"
 ```
 
+The GenomeProt website should then be hosted locally on http://0.0.0.0:3838/ and accessible with a web browser.
 
 ## General usage 
 

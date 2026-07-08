@@ -5,6 +5,11 @@ library(reticulate)
 conda_path <- conda_binary()
 conda_command <- paste0(conda_path, " run -n GenomeProt_env ")
 
+# TODO: R_ZIPCMD might be defined but empty sometimes, which causes zip() to fail
+if (nchar(Sys.getenv("R_ZIPCMD", "zip")) == 0) {
+  Sys.setenv("R_ZIPCMD" = "zip")
+}
+
 # internal server functions
 bam_server <- function(input, output, session) {
   req(input$user_reference_genome_bam$datapath,input$reference_gtf_file$datapath)   # BAMs and ref GTF required
