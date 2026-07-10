@@ -71,9 +71,6 @@ dependencies:
   - libkrb5
   - libnghttp2
   - zip
-  - dotnet-runtime=6.*
-  - openjdk=17.*
-  - mono
 
   - pip:
     - biopython==1.77
@@ -81,10 +78,3 @@ dependencies:
     - peptides
     - pysam
     - vcfpy
-    - easypqp
-    - lxml
-    - plotly
-    - kaleido
-    - narwhals
-    - pyarrow
-    - pypdf2

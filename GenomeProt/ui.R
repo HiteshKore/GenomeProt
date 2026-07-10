@@ -19,6 +19,7 @@ ui <- dashboardPage(
   dashboardSidebar(width=200,
     sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
                 menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
+                menuItem("Run proteomics analysis", tabName = "analyse_proteomics", icon = icon("search")),
                 menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
                 menuItem("visualise results", tabName = "visualisation", icon = icon("eye")),
                 menuItem("Quick help", tabName = "help", icon = icon("circle-question"))
@@ -83,6 +84,13 @@ ui <- dashboardPage(
         }
       ")),
       tags$script(HTML("
+        Shiny.addCustomMessageHandler('disableButtonOnly', function(params) {
+          var button = document.getElementById(params.id);
+          button.disabled = true;
+          button.style.backgroundColor = 'grey';
+          button.style.borderColor = 'grey';
+        });
+
         Shiny.addCustomMessageHandler('disableButton', function(params) {
           var button = document.getElementById(params.id);
           button.disabled = true;
@@ -91,12 +99,33 @@ ui <- dashboardPage(
           document.getElementById(params.spinnerId).style.display = 'block';
         });
 
+        Shiny.addCustomMessageHandler('enableButtonOnly', function(params) {
+          var button = document.getElementById(params.id);
+          button.disabled = false;
+          button.style.backgroundColor = '';
+          button.style.borderColor = '';
+        });
+
         Shiny.addCustomMessageHandler('enableButton', function(params) {
           var button = document.getElementById(params.id);
           button.disabled = false;
           button.style.backgroundColor = '';
           button.style.borderColor = '';
           document.getElementById(params.spinnerId).style.display = 'none';
+        });
+
+        Shiny.addCustomMessageHandler('showStatusMessage', function(params) {
+          var message = params.message;
+          var color = params.color;
+          var container = params.container;
+          document.getElementById(container).innerText = message;
+          document.getElementById(container).style.color = color;
+        });
+
+        Shiny.addCustomMessageHandler('clearStatusMessage', function(params) {
+          var container = params.container;
+          document.getElementById(container).innerText = '';
+          document.getElementById(container).style.color = '';
         });
 
         var is_first_resize_ignored = false;
@@ -246,6 +275,55 @@ ui <- dashboardPage(
                        HTML("<h3>Download your results:</h3>"),
                        downloadButton("db_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
                        div(id = "db-loading-container", class = "loading-container", div(class = "spinner"))
+                )
+              )
+      ),
+      tabItem(tabName = "analyse_proteomics",
+              h2("Perform proteomics searches using your custom database"),
+              h5("Outputs: A zip file including 'peptide.tsv' (peptide search results), and if peptide quantification was enabled, 'report.pr_matrix.tsv' (peptide quantification results)."),
+              h5("Note: This module only provides basic FragPipe settings. Users wishing to configure FragPipe beyond the level offered here or to use a proteomics pipeline other than FragPipe can perform their proteomics searches externally."),
+              fluidRow(
+                column(6,
+                       h3("Perform a peptide search with FragPipe:"),
+                       fileInput("fragpipe_prot_db_fasta_file", label = "Upload a proteome database FASTA file (e.g. 'proteome_database.fasta'):", buttonLabel = "Browse...", multiple = FALSE, accept = c(".fasta")),
+                       checkboxInput("user_add_contaminants", label = "Add contaminants into the proteome database?",
+                                     value = FALSE, width = NULL),
+                       checkboxInput("user_perform_quantification", label = "Perform peptide quantification after the peptide search?",
+                                     value = FALSE, width = NULL),
+                       h5(tags$b("Upload mass spectrometry data files and select their data types:")),
+                       actionButton("add_mass_spec_file_button", "+ Add mass spectrometry data file", class = "btn btn-warning"),
+                       actionButton("remove_mass_spec_file_button", "- Remove mass spectrometry data file", class = "btn"),
+                       div(id = "mass_spec_file_list"),
+                       selectInput("protease1", label = "Protease 1:",
+                                   choices = list("stricttrypsin (cuts KR, sense C)" = "stricttrypsin",
+                                                  "trypsin (cuts KR, no cuts P, sense C)" = "trypsin",
+                                                  "trypsin_gluc (cuts DEKR, no cuts P, sense C)" = "trypsin_gluc",
+                                                  "gluc (cuts DE, no cuts P, sense C)" = "gluc",
+                                                  "lysc (cuts K, no cuts P, sense C)" = "lysc",
+                                                  "lysn (cuts K, sense N)" = "lysn",
+                                                  "argc (cuts R, no cuts P, sense C)" = "argc",
+                                                  "aspn (cuts D, sense N)" = "aspn"),
+                                   selected = "stricttrypsin (cuts KR, sense C)"),
+                       selectInput("protease2", label = "Protease 2 (optional; must be different from protease 1):",
+                                   choices = list("none" = "none",
+                                                  "stricttrypsin (cuts KR, sense C)" = "stricttrypsin",
+                                                  "trypsin (cuts KR, no cuts P, sense C)" = "trypsin",
+                                                  "trypsin_gluc (cuts DEKR, no cuts P, sense C)" = "trypsin_gluc",
+                                                  "gluc (cuts DE, no cuts P, sense C)" = "gluc",
+                                                  "lysc (cuts K, no cuts P, sense C)" = "lysc",
+                                                  "lysn (cuts K, sense N)" = "lysn",
+                                                  "argc (cuts R, no cuts P, sense C)" = "argc",
+                                                  "aspn (cuts D, sense N)" = "aspn"),
+                                   selected = "none"),
+                       numericInput("fragpipe_cpu_threads", label = "Number of CPU threads to use (specify '0' for FragPipe to use <number of cores in system - 1> threads)", value = 1, step = 1),
+                       numericInput("fragpipe_memory_limit", label = "Memory limit in GB to use (specify '0' to let FragPipe decide)", value = 15, step = 1),
+                       actionButton("fragpipe_submit_button", "Run FragPipe", class = "btn btn-info")
+                ),
+                column(6,
+                       h3("Download FragPipe results:"),
+                       downloadButton("fragpipe_download_button", "Download FragPipe results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
+                       div(id = "fragpipe-loading-container", class = "loading-container", div(class = "spinner")),
+                       div(id = "fragpipe-status-msg-container")
                 )
               )
       ),

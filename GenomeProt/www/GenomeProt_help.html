@@ -80,7 +80,10 @@
             <ul>
               <li><a href="#generate-database-demo">Steps to generate a database using the demo dataset</a></li>
             </ul>
-            <li><a href="#analyse-ms-proteomics">Analyse MS Proteomics (External Step)</a></li>
+            <li><a href="#analyse-ms-proteomics">Analyse MS Proteomics</a></li>
+            <ul>
+              <li><a href="#proteomics-search">Steps to perform a proteomics search</a></li>
+            </ul>
             <li><a href="#integrate-data">Integrate Data</a></li>
             <ul>
               <li><a href="#map-peptides">Steps to map peptides</a></li>
@@ -131,11 +134,7 @@
             <li>The app processes the BAM file.</li>
           </ol>
 
-          <img
-            src="images/quick_help_images/help_database_generation.jpg"
-            style="width: 900px; margin-top: 15px;"
-            alt="Database Generation screenshot"
-          >
+          <img src="images/quick_help_images/help_database_generation.jpg" style="width: 1150px; margin-top: 10px;" alt="Database Generation screenshot">
 
           <h3><strong>Output files:</strong></h3>
 
@@ -162,13 +161,34 @@
           </p>
 
           <a name="analyse-ms-proteomics"></a>
-          <h1>2. Analyse MS Proteomics (External Step)</h1>
+          <h1>2. Analyse MS Proteomics</h1>
 
           <p>
-            This step must be completed outside the Shiny application.
-            Using the database file (.fasta) generated in Step 1, analyse the proteomics data
-            with your preferred search algorithm to identify proteins and peptides in your dataset.
+            Step 2 accepts the protein database file (.fasta) generated in Step 1 and your mass spectrometry data files
+            to call FragPipe for identifying proteins and peptides in your dataset.
           </p>
+
+          <a name="proteomics-search"></a>
+          <h2>Steps to perform a proteomics search</h2>
+
+          <ol class="bullet_points">
+            <li>Navigate to the <strong>Run proteomics analysis</strong> tab.</li>
+            <li>Upload the protein database FASTA file from Step 1.</li>
+            <li>Click on 'Add a mass spectrometry data file' to create a file input for one mass spectrometry data file. Click on 'Add another mass spectrometry data file' to add more file inputs, and click on 'Remove mass spectrometry data file' to remove the file input at the bottom.</li>
+            <li>Upload your mass spectrometry data files and set their corresponding data types.</li>
+            <li>Specify the proteases used for your mass spectrometry data files.</li>
+            <li>After setting other relevant options (whether to add contaminants into the database and to perform peptide quantification; the number of CPU threads to use and the memory limit for FragPipe), click on <strong>Run FragPipe</strong>.</li>
+            <li>The app calls FragPipe to perform a peptide search (and optionally, peptide quantification) on the mass spectrometry data files using the protein database provided.</li>
+          </ol>
+
+          <img src="images/quick_help_images/proteomics_search.png" style="width: 1150px; margin-top: 10px;" alt="MS proteomics analysis screenshot">
+
+          <h3><strong>Output files:</strong></h3>
+
+          <ul class="bullet_points">
+            <li><code>peptides.tsv</code>: Peptide search results</li>
+            <li><code>report.pr_matrix.tsv</code>: Peptide counts (only output if peptide quantification was performed)</li>
+          </ul>
 
           <a name="integrate-data"></a>
           <h1>3. Integrate Data</h1>
@@ -194,8 +214,8 @@
             <li>Click to download output zip file.</li>
           </ol>
 
-          <img src="images/quick_help_images/integrate_data.jpg" style="width: 900px; margin-top: 10px;" alt="Integrate Data screenshot">
-          <br><br>
+          <img src="images/quick_help_images/integrate_data.jpg" style="width: 1150px; margin-top: 10px;" alt="Integrate Data screenshot">
+          <br>
           <p><strong>Output directory contents:</strong></p>
 
           <ul class="bullet_points">
@@ -225,9 +245,9 @@
             <li>The entire visualization can be exported as a PNG, JPEG, PDF or SVG, and individual visualization components can be exported as SVGs.</li>
           </ul>
 
-          <img src="images/quick_help_images/isovis_1.jpg" style="width: 900px;" alt="IsoVis screenshot 1">
+          <img src="images/quick_help_images/isovis_1.jpg" style="width: 1150px;" alt="IsoVis screenshot 1">
           <br><br>
-          <img src="images/quick_help_images/isovis_2.jpg" style="width: 900px;" alt="IsoVis screenshot 2">
+          <img src="images/quick_help_images/isovis_2.jpg" style="width: 1150px;" alt="IsoVis screenshot 2">
           <br><br>
           <p><strong>Visualisation output:</strong></p>
           <p>

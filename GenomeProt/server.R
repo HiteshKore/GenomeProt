@@ -290,6 +290,190 @@ database_server <- function(input, output, session) {
   }
 }
 
+# Proteomics module
+is_fragpipe_input_valid <- function(input, mass_spec_file_num) {
+  error_msg <- ""
+
+  # Check if the user has uploaded a proteome database
+  fragpipe_prot_db_file <- input$fragpipe_prot_db_fasta_file
+  if (is.null(fragpipe_prot_db_file)) {
+    error_msg <- "Error: Please upload a proteome database FASTA file to perform a proteomics search."
+    return(error_msg)
+  }
+
+  # The proteome database must have a file extension of '.fasta'
+  filename <- fragpipe_prot_db_file$name
+  if (!endsWith(filename, ".fasta")) {
+    error_msg <- "Error: The proteome database file must have a file extension of '.fasta'."
+    return(error_msg)
+  }
+
+  # Check if the user has uploaded at least one mass spectrometry data file
+  if (mass_spec_file_num == 1) {
+    error_msg <- "Error: Please upload at least one mass spectrometry data file to perform a proteomics search."
+    return(error_msg)
+  }
+
+  # Check if the user uploaded exactly (mass_spec_file_num - 1) mass spectrometry data files and selected that number of data types
+  for (i in 1:(mass_spec_file_num - 1)) {
+    mass_spec_file <- input[[paste0("mass_spec_file_input_", i)]]
+    if (is.null(mass_spec_file)) {
+      error_msg <- "Error: Please ensure all mass spectrometry data file inputs have an uploaded file."
+      return(error_msg)
+    }
+
+    # Mass spectrometry data files must have a file extension of '.mzML', '.mzXML', '.mgf', '.mzBIN', '.raw', or '.d'
+    filename <- mass_spec_file$name
+    if (!base::any(endsWith(filename, c(".mzML", ".mzXML", ".mgf", ".mzBIN", ".raw", ".d")))) {
+      error_msg <- "Error: All mass spectrometry data files must have a file extension of '.mzML', '.mzXML', '.mgf', '.mzBIN', '.raw' or '.d'."
+      return(error_msg)
+    }
+
+    # Mass spectrometry data files must have a data type of 'DDA', 'DDA+', 'DIA', 'DIA-Quant', 'DIA-Lib', or 'GPF-DIA'
+    mass_spec_data_type <- input[[paste0("mass_spec_file_data_type_input_", i)]]
+    if (is.null(mass_spec_data_type) || !(mass_spec_data_type %in% c("DDA", "DDA+", "DIA", "DIA-Quant", "DIA-Lib", "GPF-DIA"))) {
+      error_msg <- "Error: All mass spectrometry data files must have a data type of 'DDA', 'DDA+', 'DIA', 'DIA-Quant', 'DIA-Lib' or 'GPF-DIA'."
+      return(error_msg)
+    }
+  }
+
+  # The first protease used must be 'stricttrypsin', 'trypsin', 'trypsin_gluc', 'gluc', 'lysc', 'lysn', 'argc', or 'aspn'
+  protease1 <- input$protease1
+  if (is.null(protease1) || !(protease1 %in% c("stricttrypsin", "trypsin", "trypsin_gluc", "gluc", "lysc", "lysn", "argc", "aspn"))) {
+    error_msg <- "Error: The first protease used must be 'stricttrypsin', 'trypsin', 'trypsin_gluc', 'gluc', 'lysc', 'lysn', 'argc', or 'aspn'."
+    return(error_msg)
+  }
+
+  # If the second protease were specified, it must be 'stricttrypsin', 'trypsin', 'trypsin_gluc', 'gluc', 'lysc', 'lysn', 'argc', or 'aspn'
+  protease2 <- input$protease2
+  if (!(is.null(protease2) || (protease2 == "none")) && !(protease2 %in% c("stricttrypsin", "trypsin", "trypsin_gluc", "gluc", "lysc", "lysn", "argc", "aspn"))) {
+    error_msg <- "Error: The second protease used must be 'stricttrypsin', 'trypsin', 'trypsin_gluc', 'gluc', 'lysc', 'lysn', 'argc', or 'aspn'."
+    return(error_msg)
+  }
+
+  # The first protease must be different from the second protease
+  if (protease1 == protease2) {
+    error_msg <- "Error: The first protease must be different from the second protease."
+    return(error_msg)
+  }
+
+  # Number of CPU threads: Integer >= 0
+  fragpipe_cpu_threads <- floor(input$fragpipe_cpu_threads)
+  if (!(is.finite(fragpipe_cpu_threads) && (fragpipe_cpu_threads >= 0))) {
+    error_msg <- paste0("Error: The number of CPU threads must be a non-negative integer. Entered value: ", fragpipe_cpu_threads)
+    return(error_msg)
+  }
+
+  # Memory limit: Integer >= 0
+  fragpipe_memory_limit <- floor(input$fragpipe_memory_limit)
+  if (!(is.finite(fragpipe_memory_limit) && (fragpipe_memory_limit >= 0))) {
+    error_msg <- paste0("Error: The memory limit in GB must be a non-negative integer. Entered value: ", fragpipe_memory_limit)
+    return(error_msg)
+  }
+
+  # All checks pass, so the user input is valid
+  return(error_msg)
+}
+
+fragpipe_server <- function(input, output, session_id, mass_spec_file_num) {
+  fragpipe_prot_db_file <- input$fragpipe_prot_db_fasta_file
+  renamed_fragpipe_prot_db_file <- file.path(dirname(fragpipe_prot_db_file$datapath), fragpipe_prot_db_file$name)
+  if (file.exists(fragpipe_prot_db_file$datapath)) {
+    file.rename(from = fragpipe_prot_db_file$datapath, to = renamed_fragpipe_prot_db_file)
+  }
+
+  mass_spec_info_file_contents <- ''
+  for (i in 1:(mass_spec_file_num - 1)) {
+    mass_spec_file <- input[[paste0("mass_spec_file_input_", i)]]
+    mass_spec_data_type <- input[[paste0("mass_spec_file_data_type_input_", i)]]
+
+    renamed_file <- file.path(dirname(mass_spec_file$datapath), mass_spec_file$name)
+    if (file.exists(mass_spec_file$datapath)) {
+      file.rename(from = mass_spec_file$datapath, to = renamed_file)
+    }
+
+    mass_spec_info_file_contents <- paste0(mass_spec_info_file_contents, renamed_file, "\t", mass_spec_data_type, "\n")
+  }
+
+  # Remove the last newline from the mass spectrometry file list contents
+  mass_spec_info_file_contents <- substr(mass_spec_info_file_contents, 1, nchar(mass_spec_info_file_contents) - 1)
+
+  # Go into the session directory
+  old_wd <- getwd()
+  setwd(session_id)
+
+  protease1 <- input$protease1
+  protease2 <- input$protease2
+  if (is.null(protease2)) {
+    protease2 <- "none"
+  }
+
+  fragpipe_cpu_threads <- floor(input$fragpipe_cpu_threads)
+  fragpipe_memory_limit <- floor(input$fragpipe_memory_limit)
+  output_dir <- "fragpipe_output"
+
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir)
+  }
+
+  # Go into the output directory so that the FragPipe log file will be output there
+  output_dir <- normalizePath(output_dir)
+  setwd(output_dir)
+
+  # Write the mass spectrometry file list
+  mass_spec_info_file <- "mass_spec_info_list.txt"
+  writeLines(mass_spec_info_file_contents, mass_spec_info_file)
+
+  command_run_fragpipe <- paste0(
+    conda_command, "--no-capture-output python ../../bin/proteomics_module/fragpipe-run.py",
+    " --db_path ", shQuote(renamed_fragpipe_prot_db_file),
+    " --mass_spec_info_path ", shQuote(mass_spec_info_file),
+    " --output_dir ", shQuote(output_dir),
+    " --protease1 ", shQuote(protease1)
+  )
+
+  if (protease2 != "none") {
+    command_run_fragpipe <- paste0(command_run_fragpipe, " --protease2 ", shQuote(protease2))
+  }
+
+  if (input$user_add_contaminants) {
+    command_run_fragpipe <- paste0(command_run_fragpipe, " --add_contaminants")
+  }
+
+  if (input$user_perform_quantification) {
+    command_run_fragpipe <- paste0(command_run_fragpipe, " --perform_quantification")
+  }
+
+  command_run_fragpipe <- paste0(
+    command_run_fragpipe,
+    " --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
+    " --num_threads ", shQuote(fragpipe_cpu_threads),
+    " --memory_limit ", shQuote(fragpipe_memory_limit)
+  )
+  message(command_run_fragpipe)
+  system(command_run_fragpipe)
+
+  # Find files to zip
+  error_msg <- ''
+
+  files_to_zip_fragpipe <- c("peptide.tsv")
+  if (input$user_perform_quantification) {
+    files_to_zip_fragpipe <- c(files_to_zip_fragpipe, file.path("dia-quant-output", "report.pr_matrix.tsv"))
+  }
+
+  if (base::all(file.exists(files_to_zip_fragpipe))) {
+    zipfile_path_fragpipe <- file.path("..", "fragpipe_results.zip")
+    zip(zipfile = zipfile_path_fragpipe, files = files_to_zip_fragpipe)
+  } else {
+    error_msg <- "MISSING_RESULTS"
+  }
+
+  # Go back to the old directory
+  setwd(old_wd)
+
+  return(error_msg)
+}
+
 integration_server <- function(input, output, session) {
   req(input$user_proteomics_file, input$user_post_gtf_file, input$user_metadata_file)  # GTF is required
 
@@ -398,6 +582,112 @@ server <- function(input, output, session) {
   )
 
   # END DATABASE MODULE
+
+  # PROTEOMICS MODULE
+
+  # create reactive value for the FragPipe results zip file
+  file_available_fragpipe <- reactiveVal(FALSE)
+
+  # add a counter for the mass spectrometry files
+  mass_spec_file_num <- 1
+
+  hide("remove_mass_spec_file_button")
+
+  # add a mass spectrometry file upload button and its corresponding data type dropdown menu when
+  # the '+ Add mass spectrometry data file' button is pressed
+  observeEvent(input$add_mass_spec_file_button, {
+    insertUI(
+      selector = "#mass_spec_file_list",
+      ui = fluidRow(id = paste0("mass_spec_row_", mass_spec_file_num),
+              column(8,
+                     fileInput(paste0("mass_spec_file_input_", mass_spec_file_num),
+                               label = paste0("Upload mass spectrometry file #", mass_spec_file_num, ":"),
+                               buttonLabel = "Browse...", multiple = FALSE, accept = c(".mzML", ".mzXML", ".mgf", ".mzBIN", ".raw", ".d"))
+              ),
+              column(4,
+                     selectInput(paste0("mass_spec_file_data_type_input_", mass_spec_file_num),
+                                 label = "Data type:",
+                                 choices = list("DDA" = "DDA",
+                                                "DDA+" = "DDA+",
+                                                "DIA" = "DIA",
+                                                "DIA-Quant" = "DIA-Quant",
+                                                "DIA-Lib" = "DIA-Lib",
+                                                "GPF-DIA" = "GPF-DIA"),
+                                 selected = "DDA")
+              )
+           )
+    )
+    shinyjs::runjs("document.getElementById('mass_spec_file_list').style = 'border: 2px solid; padding: 5px;';")
+    shinyjs::runjs("document.getElementById('add_mass_spec_file_button').children[0].innerText = '+ Add another mass spectrometry data file'")
+    mass_spec_file_num <<- mass_spec_file_num + 1
+    showElement("remove_mass_spec_file_button")
+  })
+
+  # add a mass spectrometry file upload button and its corresponding data type dropdown menu when
+  # the '+ Add mass spectrometry data file' button is pressed
+  observeEvent(input$remove_mass_spec_file_button, {
+    mass_spec_file_num <<- mass_spec_file_num - 1
+    removeUI(selector = paste0("#mass_spec_row_", mass_spec_file_num))
+    if (mass_spec_file_num == 1) {
+      shinyjs::runjs("document.getElementById('mass_spec_file_list').style = '';")
+      shinyjs::runjs("document.getElementById('add_mass_spec_file_button').children[0].innerText = '+ Add mass spectrometry data file'")
+      hide("remove_mass_spec_file_button")
+    }
+  })
+
+  # run FragPipe when the 'Run FragPipe' button is pressed
+  observeEvent(input$fragpipe_submit_button, {
+    file_available_fragpipe(FALSE)
+
+    message("Validating FragPipe input...")
+    error_msg <- is_fragpipe_input_valid(input, mass_spec_file_num)
+    if (error_msg != "") {
+      message(error_msg)
+      session$sendCustomMessage("showStatusMessage", list(message = error_msg, container = "fragpipe-status-msg-container", color = "red"))
+      return()
+    }
+    session$sendCustomMessage("clearStatusMessage", list(container = "fragpipe-status-msg-container"))
+    message("Validated!")
+
+    session$sendCustomMessage("disableButton", list(id = "fragpipe_submit_button", spinnerId = "fragpipe-loading-container")) # disable submit button
+
+    # run the FragPipe server
+    if (file.exists(file.path(session_id, "fragpipe_results.zip"))) {
+      file.remove(file.path(session_id, "fragpipe_results.zip"))
+    }
+    error_msg <- fragpipe_server(input, output, session_id, mass_spec_file_num)
+
+    session$sendCustomMessage("enableButton", list(id = "fragpipe_submit_button", spinnerId = "fragpipe-loading-container"))
+
+    # check if the zip file is created
+    if ((error_msg != '') || (!file.exists(file.path(session_id, "fragpipe_results.zip")))) {
+      error_msg <- "Error: Proteomics search failed. Please check the proteomics module log file generated in the output directory for details."
+      session$sendCustomMessage("showStatusMessage", list(message = error_msg, container = "fragpipe-status-msg-container", color = "red"))
+    } else {
+      file_available_fragpipe(TRUE)
+    }
+  })
+
+  # enable download once files are available
+  observe({
+    if (file_available_fragpipe()) {
+      shinyjs::enable("fragpipe_download_button")
+      shinyjs::runjs("document.getElementById('fragpipe_download_button').style.backgroundColor = '#4CAF50';")
+      session$sendCustomMessage("enableButton", list(id = "fragpipe_submit_button", spinnerId = "fragpipe-loading-container")) # re-enable submit button
+    }
+  })
+
+  # download handler for the FragPipe results zip
+  output$fragpipe_download_button <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_fragpipe_results.zip")
+    },
+    content = function(file) {
+      file.copy(file.path(session_id, "fragpipe_results.zip"), file)
+    }
+  )
+
+  # END PROTEOMICS MODULE
 
   # INTEGRATION MODULE
 
