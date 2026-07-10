@@ -287,7 +287,7 @@ ui <- dashboardPage(
                        h3("Perform a peptide search with FragPipe:"),
                        fileInput("fragpipe_prot_db_fasta_file", label = "Upload a proteome database FASTA file (e.g. 'proteome_database.fasta'):", buttonLabel = "Browse...", multiple = FALSE, accept = c(".fasta")),
                        checkboxInput("user_add_contaminants", label = "Add contaminants into the proteome database?",
-                                     value = FALSE, width = NULL),
+                                     value = TRUE, width = NULL),
                        checkboxInput("user_perform_quantification", label = "Perform peptide quantification after the peptide search?",
                                      value = FALSE, width = NULL),
                        h5(tags$b("Upload mass spectrometry data files and select their data types:")),
