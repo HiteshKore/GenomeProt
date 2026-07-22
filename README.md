@@ -141,7 +141,7 @@ cd ../..
 
 When a user selects a file through the GenomeProt website, the file is copied into a folder reserved for temporary files (usually `/tmp`). If the filesystem storing this folder is too small, selected files cannot be fully copied into the folder, which causes errors during data processing. This problem can be encountered when uploading large files, including mass spectrometry data files for FragPipe to process.
 
-To resolve this issue, the filesystem the folder is in can be resized to contain more space. For example, if `/tmp` were its own temoporary filesystem (i.e. when running `df` in the terminal, there is a `tmpfs` mounted on `/tmp`), running the following command for a user with `sudo` privileges will resize it to 10 GB (minimum size depends on the sizes of files you wish to process):
+To resolve this issue, the filesystem the folder is in can be resized to contain more space. For example, if `/tmp` were its own temporary filesystem (i.e. when running `df` in the terminal, there is a `tmpfs` mounted on `/tmp`), running the following command for a user with `sudo` privileges will resize it to 10 GB (minimum size depends on the sizes of files you wish to process):
 
 ```bash
 sudo mount -o remount,size=10G /tmp
