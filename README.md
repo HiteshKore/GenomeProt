@@ -1,26 +1,39 @@
-# GenomeProt: an integrated proteogenomics analysis platform for long-read RNA-Seq datasets
+<img src="https://github.com/HiteshKore/GenomeProt/blob/main_beta/logo.png"/>
 
+# GenomeProt: an integrated proteogenomics analysis platform for long-read RNA-Seq datasets
 
 ## Contents
 
+- [Overview](#overview)
 - [Installation](#installation)
+  - [Option 1 (recommended): Access GenomeProt online](#option-1-recommended-access-genomeprot-online)
+  - [Option 2: Run the shiny application with Docker](#option-2-run-the-shiny-application-with-docker-work-in-progress)
+  - [Option 3: Locally install the shiny application](#option-3-locally-install-the-shiny-application)
 - [General usage](#general-usage)
   - [Database generation](#1-database-generation)
-  - [Proteomics](#2-proteomics)
+  - [Analyse MS proteomics](#2-analyse-ms-proteomics)
   - [Integration](#3-integration)
   - [Visualisation](#4-visualisation)
 - [Detailed input and output descriptions](#detailed-input-and-output-descriptions)
   - [Database generation](#1-database-generation-1)
-  - [Proteomics](#2-proteomics-1)
+  - [Analyse MS proteomics](#2-analyse-ms-proteomics-1)
   - [Integration](#3-integration-1)
   - [Visualisation](#4-visualisation-1)
 
+## Overview
+
+GenomeProt is a tool providing a web-based graphical user interface for integrative proteogenomics analyses. It generates a variant-aware, sample-specific proteome database from bulk RNA-Seq data and a VCF file, then uses it to search mass spectrometry data and identify peptides. Next, it integrates transcriptomics and proteomics results, where the identified peptides are mapped to spliced transcript coordinates. The proteogenomics integration outputs an HTML summary report on the transcripts, peptides and proteins identified, as well as BED12 files for visualisation in the UCSC Genome Browser and a combined GTF file for interactive visualisation within the GenomeProt application.
+
 ## Installation
 
-### Option 1 (recommended): Access GenomeProt online
-https://genomeprot.researchsoftware.unimelb.edu.au/
+To use GenomeProt now, follow [Option 1](#option-1-recommended-access-genomeprot-online).
 
-Note: To ensure fair use of the resources available to the public GenomeProt server, it has been modified to not do any read mapping, and users must perform the proteomics step externally.
+To install GenomeProt locally or on an HPC (high-performance computing) system, and run it as an interactive web application or run its command-line scripts, follow [Option 2 (run with Docker)](#option-2-run-the-shiny-application-with-docker-work-in-progress) or [Option 3](#option-3-locally-install-the-shiny-application).
+
+### Option 1 (recommended): Access GenomeProt online
+Click on the following link to access GenomeProt in your current browser tab: https://genomeprot.researchsoftware.unimelb.edu.au/
+
+Note: To ensure fair use of the resources, the public GenomeProt server does not perform read mapping from FASTQs (BAM or GTF input only) and excludes the "Analyse MS proteomics" step. Users wishing to perform these steps should utilise a local version of GenomeProt or perform these steps externally.
 
 ### Option 2: Run the shiny application with Docker (work in progress)
 Make sure you have [Docker](https://docs.docker.com/engine/install/) installed and the application running in the background before you begin.
@@ -44,112 +57,105 @@ The application has substantial dependencies that we have provided as a conda en
 
 #### Clone the GenomeProt GitHub repository
 
-Clone this repository:
 ```bash
 git clone https://github.com/HiteshKore/GenomeProt.git
 ```
 
 #### Set up the GenomeProt conda environment
 
-If your system does not have conda installed, install it by following [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
+Install conda by following [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-Activate conda and build the conda environment GenomeProt uses. There are two conda environments that can be built, with one containing the dependencies for running FragPipe (`conda_env.yaml`) and the other lacking them (`conda_env_no_fragpipe.yaml`). Building the conda environment with such dependencies allows the proteomics module in GenomeProt to function. Alternatively, if the user does not wish to use the proteomics module or prefers to perform proteomics searches externally, they can choose to build the conda environment without these dependencies.
+Two conda environments are provided: one contains the dependencies for running FragPipe and the GenomeProt proteomics module, while the other lacks them. Build the conda environment that suits your needs best:
 ```bash
 cd GenomeProt
 conda env create -f conda_env.yaml             # Run this line if you wish to use the proteomics module
-conda env create -f conda_env_no_fragpipe.yaml # Run this line if you do not wish to use the proteomics module
+conda env create -f conda_env_no_fragpipe.yaml # Run this line if you DO NOT wish to use the proteomics module
 ```
 
-#### Optional: Install FragPipe automatically and configure the proteomics module
+If you choose NOT to use the proteomics module, skip the step below and head to [the next step](#prepare-the-reference-and-test-datasets).
 
-If the user wishes to use the proteomics module, they will need to install FragPipe on their system. An interactive Python script has been provided that lets users install FragPipe v23.1 and its tools easily. When run without any arguments, the script installs FragPipe on the current directory the user is in. The user can change where FragPipe is installed by providing an argument containing the desired path.
+#### Install FragPipe and configure the proteomics module
+
+The proteomics module requires a complete FragPipe v23.1 installation, which can be done by running an interactive Python script provided in this repository. Running the script without arguments installs FragPipe in the current working directory. To install FragPipe in a specific folder, run the script with an argument containing the desired path.
 
 ```bash
-python3 fragpipe_installer.py                       # Run this line if you wish to install FragPipe in the current directory you are in
-python3 fragpipe_installer.py fragpipe_installation # Run this line if you wish to install FragPipe into a different directory (in this case, into a folder called 'fragpipe_installation')
+python3 fragpipe_installer.py                       # Run this line if you wish to install FragPipe in the current working directory
+python3 fragpipe_installer.py fragpipe_installation # Run this line if you wish to install FragPipe in a specific folder (e.g. into a folder called 'fragpipe_installation')
 ```
 
-When running the script, prompts will be printed to the terminal asking whether the user wishes to install FragPipe, whether to install additional necessary tools to run the FragPipe analysis, and a 6-digit token the user will receive via email that the script uses for downloading those tools. An example run of the installation script looks like this:
+When running the script, answer the prompts on installing FragPipe and additional necessary tools, and provide a 6-digit token for downloading those tools. An example run of the script looks like this:
 
-```
-Extraction directory: /home/user/Desktop/GenomeProt
-Would you like to install FragPipe ([Y]/n)? Y
-# snip #
-Downloading FragPipe v23.1 from https://github.com/Nesvilab/FragPipe/releases/download/23.1/FragPipe-23.1-linux.zip...
-# snip #
-Done!
-Would you like to install MSFragger, IonQuant and diaTracer (required additional tools to run the FragPipe analysis) ([Y]/n)? Y
-# snip #
-Fetching the latest versions of the FragPipe tools...
-# snip #
-To install the FragPipe tools, first head to https://msfragger-upgrader.nesvilab.org/upgrader/.
-Then, enter your first name, last name, academic email address and academic institution, check all tickboxes for the academic license, license agreement and SDK library distribution conditions, and click on the 'Download' button.
-Next, wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link that has the following format:
-https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip
-The 6-digit token can be used to download MSFragger, IonQuant and diaTracer.
-Please enter your token (6 digits): 123456
-Using token '123456'...
-# snip #
-MSFragger downloaded!
-# snip #
-IonQuant downloaded!
-# snip #
-diaTracer downloaded!
-# snip #
-FragPipe installation complete.
-FragPipe extracted into /home/user/Desktop/GenomeProt.
-FragPipe tools extracted into /home/user/Desktop/GenomeProt/fragpipe-23.1/tools.
-```
+<details>
+    <summary>Example run of the FragPipe installation script (click to expand)</summary>
 
-Use the log messages printed by the script to take note of where FragPipe is installed. The `server.R` script contains the following line:
+    Extraction directory: /home/user/Desktop/GenomeProt
+    Would you like to install FragPipe ([Y]/n)? Y
+    ...
+    Downloading FragPipe v23.1 from https://github.com/Nesvilab/FragPipe/releases/download/23.1/FragPipe-23.1-linux.zip...
+    ...
+    Done!
+    Would you like to install MSFragger, IonQuant and diaTracer (required additional tools to run the FragPipe analysis) ([Y]/n)? Y
+    ...
+    To install the FragPipe tools, first head to https://msfragger-upgrader.nesvilab.org/upgrader/.
+    Then, enter your first name, last name, academic email address and academic institution, check all tickboxes for the academic license, license agreement and SDK library distribution conditions, and click on the 'Download' button.
+    Next, wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link that has the following format:
+    https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip
+    The 6-digit token can be used to download MSFragger, IonQuant and diaTracer.
+    Please enter your token (6 digits): 123456
+    Using token '123456'...
+    ...
+    MSFragger downloaded!
+    ...
+    IonQuant downloaded!
+    ...
+    diaTracer downloaded!
+    ...
+    FragPipe installation complete.
+    FragPipe extracted into /home/user/Desktop/GenomeProt.
+    FragPipe tools extracted into /home/user/Desktop/GenomeProt/fragpipe-23.1/tools.
+</details>
+
+After the installation is complete, the following line in the `server.R` script needs to be modified if FragPipe was not extracted into `/home/user/Desktop/GenomeProt`:
 
 ```R
     " --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
 ```
 
-The path `/home/user/Desktop/GenomeProt/fragpipe-23.1/` will need to be modified if FragPipe was installed in a different location. For example, if FragPipe was extracted into `/home/user/a/b/c/d/`, the path in `server.R` must be changed to `/home/user/a/b/c/d/fragpipe-23.1/` for the proteomics module in the GenomeProt website to function.
+For example, if FragPipe was extracted into `/home/user/a/b/c/d/`, change `/home/user/Desktop/GenomeProt/fragpipe-23.1/` to `/home/user/a/b/c/d/fragpipe-23.1/`.
 
 #### Prepare the reference and test datasets
 
-Unzip the uniprot+openprot reference files in the `GenomeProt/data` directory:
+Unzip the combined UniProt and OpenProt reference files in the `GenomeProt/data` directory:
 ```bash
 cd GenomeProt/data
 ls | xargs -n1 unzip
-rm *.zip
-cd ..
+rm *.zip && cd ..
 ```
 
 Download the test data for the database generation module to preload:
 ```bash
-mkdir testdata
+mkdir testdata && mkdir testdata/long_read_bam
+
 cd testdata
-
-mkdir long_read_bam
-cd long_read_bam
-curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/long_read_bam/Melanoma_data_subset.bam
-cd ..
-
-curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/gencode_v47_sorted.gtf
-curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/BRAF_mutation.vcf
-curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/GRCh38_chr1_6_7.fa.gz
-gunzip GRCh38_chr1_6_7.fa.gz
-
-cd ../..
+curl -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/gencode_v47_sorted.gtf -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/BRAF_mutation.vcf -O https://genomeprot.researchsoftware.unimelb.edu.au/testdata/GRCh38_chr1_6_7.fa.gz -o long_read_bam/Melanoma_data_subset.bam https://genomeprot.researchsoftware.unimelb.edu.au/testdata/long_read_bam/Melanoma_data_subset.bam
+gunzip GRCh38_chr1_6_7.fa.gz && cd ../..
 ```
 
-#### Optional: Add more space for storing temporary files
+#### Add sufficient space for storing temporary files
 
-When a user selects a file through the GenomeProt website, the file is copied into a folder reserved for temporary files (usually `/tmp`). If the filesystem storing this folder is too small, selected files cannot be fully copied into the folder, which causes errors during data processing. This problem can be encountered when uploading large files, including mass spectrometry data files for FragPipe to process.
+Files selected through the GenomeProt website are copied into a folder reserved for temporary files (usually `/tmp`). If the filesystem storing this folder is too small, selected files cannot be fully copied into the folder, which causes errors during data processing. This problem can be encountered when uploading large files, including mass spectrometry data files for FragPipe to process.
 
-To resolve this issue, the filesystem the folder is in can be resized to contain more space. For example, if `/tmp` were its own temporary filesystem (i.e. when running `df` in the terminal, there is a `tmpfs` mounted on `/tmp`), running the following command for a user with `sudo` privileges will resize it to 10 GB (minimum size depends on the sizes of files you wish to process):
+To resolve this issue, resize the filesystem the folder is in to contain more space. For example, if `/tmp` were its own temporary filesystem (i.e. when running `df` in the terminal, there is a `tmpfs` mounted on `/tmp`), run the following command for a user with `sudo` privileges to resize it to 10 GB:
 
 ```bash
 sudo mount -o remount,size=10G /tmp
 ```
 
+The recommended size of the filesystem depends on the sizes of files you wish to process through the GenomeProt website.
+
 #### Running GenomeProt
 
-Activate the conda environment and run the GenomeProt Shiny app from the command line:
+Activate the conda environment and run the GenomeProt shiny app from the command line:
 ```bash
 conda activate GenomeProt_env
 Rscript -e "shiny::runApp('path/to/app/GenomeProt/', host='0.0.0.0', port=3838)"
@@ -160,6 +166,8 @@ The GenomeProt website should then be hosted locally on http://0.0.0.0:3838/ and
 ## General usage 
 
 GenomeProt is an integrated proteogenomics platform with four modules: 1) database generation, 2) proteomics, 3) integration, and 4) visualisation.
+
+<img src="https://github.com/HiteshKore/GenomeProt/blob/main_beta/GenomeProt/www/images/workflow.png"/>
 
 ### 1. Database generation
 
@@ -193,7 +201,7 @@ Optional input:
 - Supports ORF identification for six model organisms: fruit fly, roundworm, zebrafish, rat, mouse, and human 
 - Includes optional uORF and dORF protein sequences
 
-### 2. Proteomics
+### 2. Analyse MS proteomics
 
 The proteomics module uses FragPipe to perform a proteomics search with the custom database generated from the previous module. A simple interface is provided for the user to upload the custom database and mass spectrometry data files, and to configure basic FragPipe settings, which includes the proteases used, whether to add contaminants into the database and to perform peptide quantification, the number of CPU threads and the maximum amount of memory to use. Once FragPipe has finished running, the module outputs the peptide search results and peptide counts (if peptide quantification were done). Users wishing to configure FragPipe beyond the level offered by GenomeProt or to use a proteomics pipeline other than FragPipe can perform their proteomics searches externally.
 
@@ -204,12 +212,13 @@ The proteomics module uses FragPipe to perform a proteomics search with the cust
 
 ### 3. Integration
 
-This module integrates proteomics and transcriptomics data. Peptides are associated back to transcript isoforms and mapped to spliced genomic coordinates for downstream visualisation. This generates BED12 file of transcripts, ORFs  and peptides for visualisation in the UCSC genome browser and a combined GTF file for visualisation within the app. An html report is also created that provides a summary of identified known and novel transcripts, uniquely mapping peptides, and known and novel ORFs.
+This module integrates proteomics and transcriptomics data. Peptides are associated back to transcript isoforms and mapped to spliced genomic coordinates for downstream visualisation. This generates BED12 file of transcripts, ORFs  and peptides for visualisation in the UCSC Genome Browser and a combined GTF file for visualisation within the app. An HTML report is also created that provides a summary of identified known and novel transcripts, uniquely mapping peptides, and known and novel ORFs.
 
 #### Key outputs:
 
 - Peptide-to-transcript mappings with spliced genomic coordinates. 
-- BED12 files for visualisation in UCSC genome browser. 
+- BED12 files for visualisation in the UCSC Genome Browser.
+- Combined GTF file for visualisation within GenomeProt.
 - HTML report summarising identified transcripts, peptides and ORFs. 
 
 ### 4. Visualisation
@@ -314,7 +323,7 @@ MQATPSEAGGESPQSCLSVSRSDWTVGKPVSLLAPLIPPRSSGQPLPFGPGGRQPLRSLLVGMCSGSGRRRSSLSPTMRP
 | intergenic | Encoded by a transcript that does not overlap a region with annotated protein-coding genes   |
 
 
-### 2. Proteomics
+### 2. Analyse MS proteomics
 
 We recommend installing and running [FragPipe](https://github.com/Nesvilab/FragPipe) for analysing mass spectrometry-based proteomics data.
 
