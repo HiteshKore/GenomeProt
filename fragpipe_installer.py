@@ -176,8 +176,8 @@ def main():
             continue
 
     logging.info("To install the FragPipe tools, first head to https://msfragger-upgrader.nesvilab.org/upgrader/.")
-    logging.info("Then, enter your first name, last name, academic email address and academic institution, check all tickboxes for the academic license, license agreement and SDK library distribution conditions, and click on the 'Download' button.")
-    logging.info("Next, wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link that has the following format:")
+    logging.info("Then, enter your first name, last name, academic email address and academic institution, and check all tickboxes for the academic license, license agreement and SDK library distribution conditions.")
+    logging.info("Next, click on the 'Download' button (NOT the 'Get a license key...' button), and wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:")
     logging.info("https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip")
     logging.info("The 6-digit token can be used to download MSFragger, IonQuant and diaTracer.")
 
