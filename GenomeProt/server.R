@@ -103,6 +103,7 @@ bambu_server <- function(input, output, session) {
     # if provided, use user-uploaded files instead of the default files
     default_gtf_path <- "./testdata/gencode_v47_sorted.gtf"
     default_bam_path <- "./testdata/long_read_bam/"
+    logfile_path <- file.path(outdir_bambu, "logfile.txt")
 
     if ( !is.null(input$bam_data) && input$bam_data == "user" && !is.null(input$user_bam_files)) {
       bam_df <- as.data.frame(input$user_bam_files)
@@ -115,10 +116,10 @@ bambu_server <- function(input, output, session) {
       file.rename(input$user_bam_files$datapath, new_names)
 
       command_bambu <- paste0(conda_command, "Rscript bin/database_module/run_bambu.R -b ", bamdir[1],
-                             "/ -g ", input$reference_gtf_file$datapath, " -o ", outdir_bambu, " -t ", input$user_threads, " -s ", input$organism)
+                              " -g ", input$reference_gtf_file$datapath, " -o ", outdir_bambu, " -t ", input$user_threads, " -s ", input$organism, " > ", logfile_path, " 2>&1")
     } else {
       command_bambu <- paste0(conda_command, "Rscript bin/database_module/run_bambu.R -b ", default_bam_path,
-                             "/ -g ",                  default_gtf_path, " -o ", outdir_bambu, " -t ", input$user_threads, " -s ", input$organism)
+                              " -g ",                  default_gtf_path, " -o ", outdir_bambu, " -t ", input$user_threads, " -s ", input$organism, " > ", logfile_path, " 2>&1")
     }
   }
 
@@ -265,7 +266,7 @@ database_server <- function(input, output, session) {
   orf_temp_file <- file.path(outdir_db, "orf_temp.txt")
   if (file.exists(proteome_database_fasta_file) && file.exists(proteome_database_transcripts_gtf_file) && !file.exists(orf_temp_file)) {
     if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-      files_to_zip_db <- c("../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+      files_to_zip_db <- c("../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     } else if (input$sequencing_type == "short-read") {
       files_to_zip_db <- c("../mapping_output/bambu_transcript_counts.txt", "proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
     } else if (input$input_type == "gtf_input") {

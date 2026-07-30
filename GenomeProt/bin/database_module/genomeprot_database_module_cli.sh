@@ -206,7 +206,7 @@ function fastq_bam_input() {
           
         done
         echo "Genome alignment completed" | tee -a "$log_file"
-        conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $output_dir -g $ref_gtf -t $threads -s $organism -o $output_dir
+        conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $output_dir -g $ref_gtf -t $threads -s $organism -o $output_dir 2>&1 | tee -a "$log_file"
         
       fi #fastq condition close
      
@@ -215,7 +215,7 @@ function fastq_bam_input() {
       if [[ ${#bm_fn[@]} -gt 0 ]]; then
       
         echo "Transcript identification/quantification using bambu" | tee -a "$log_file"
-        conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $sample_dir -g $ref_gtf -t $threads -s $organism -o $output_dir
+        conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $sample_dir -g $ref_gtf -t $threads -s $organism -o $output_dir 2>&1 | tee -a "$log_file"
       
       fi
       
