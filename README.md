@@ -7,7 +7,7 @@
 - [Overview](#overview)
 - [Installation](#installation)
   - [Option 1 (recommended): Access GenomeProt online](#option-1-recommended-access-genomeprot-online)
-  - [Option 2: Run the shiny application with Docker](#option-2-run-the-shiny-application-with-docker-work-in-progress)
+  - [Option 2: Run the shiny application with Docker](#option-2-run-the-shiny-application-with-docker-in-development-not-ready-for-use)
   - [Option 3: Locally install the shiny application](#option-3-locally-install-the-shiny-application)
 - [General usage](#general-usage)
   - [Database generation](#1-database-generation)
@@ -22,22 +22,22 @@
 
 ## Overview
 
-GenomeProt is a tool providing a web-based graphical user interface for integrative proteogenomics analyses. It generates a variant-aware, sample-specific proteome database from bulk RNA-Seq data and a VCF file, then uses it to search mass spectrometry data and identify peptides. Next, it integrates transcriptomics and proteomics results, where the identified peptides are mapped to spliced transcript coordinates. The proteogenomics integration outputs an HTML summary report on the transcripts, peptides and proteins identified, as well as BED12 files for visualisation in the UCSC Genome Browser and a combined GTF file for interactive visualisation within the GenomeProt application.
+Quantifying the diversity of RNAs and proteins produced by cells is fundamental to the biological and clinical sciences. However, many proteins remain uncharacterized due to the limitations of standard proteomics techniques. GenomeProt is a tool to enable user-friendly proteogenomics and identify both known and novel translated open reading frames. GenomeProt integrates RNA-seq and mass-spectrometry data and outputs the RNAs, peptides and proteins present in each sample in a HTML summary report, BED12 and GTF files. GenomeProt also provides a visualisation module to analyse the results and can optionally accept a VCF file of DNA variants to identify variant proteins. GenomeProt can be accessed via a public website, by installing a local version that runs through your web browser, or via the command line.
 
 ## Installation
 
-GenomeProt can both be run as an interactive web application and run entirely from the command-line. This is because the web application is essentially a graphical wrapper around command-line scripts that perform integrative proteogenomics analyses.
+GenomeProt can both be run as an interactive web application and run entirely from the command-line.
 
 To use GenomeProt now, follow [Option 1](#option-1-recommended-access-genomeprot-online).
 
-To install GenomeProt locally or on an HPC (high-performance computing) system, follow [Option 2 (run with Docker)](#option-2-run-the-shiny-application-with-docker-work-in-progress) or [Option 3](#option-3-locally-install-the-shiny-application).
+To install GenomeProt locally or on an HPC (high-performance computing) system, follow [Option 2 (run with Docker)](#option-2-run-the-shiny-application-with-docker-in-development-not-ready-for-use) or [Option 3](#option-3-locally-install-the-shiny-application).
 
 ### Option 1 (recommended): Access GenomeProt online
 Click on the following link to access GenomeProt in your current browser tab: https://genomeprot.researchsoftware.unimelb.edu.au/
 
 Note: To ensure fair use of the resources, the public GenomeProt server does not perform read mapping from FASTQs (BAM or GTF input only) and excludes the "Analyse MS proteomics" step. Users wishing to perform these steps should utilise a local version of GenomeProt or perform these steps externally.
 
-### Option 2: Run the shiny application with Docker (work in progress)
+### Option 2: Run the shiny application with Docker (in development, not ready for use)
 Make sure you have [Docker](https://docs.docker.com/engine/install/) installed and the application running in the background before you begin.
 
 Open your terminal application and run:
