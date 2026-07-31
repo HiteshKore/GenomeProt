@@ -179,7 +179,7 @@ def main():
     logging.info("Then, enter your first name, last name, academic email address and academic institution, and check all tickboxes for the academic license, license agreement and SDK library distribution conditions.")
     logging.info("Next, click on the 'Download' button (NOT the 'Get a license key...' button), and wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:")
     logging.info("https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip")
-    logging.info("The 6-digit token can be used to download MSFragger, IonQuant and diaTracer.")
+    logging.info("The 6-digit token can be used to download MSFragger, IonQuant and diaTracer. Note that the token expires 20 minutes after you have clicked on the 'Download' button.")
 
     while True:
         try:

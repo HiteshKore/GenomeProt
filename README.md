@@ -96,7 +96,7 @@ When running the script, type 'Y' and press enter to answer yes to prompts on in
 4. Click on the 'Download' button (NOT the 'Get a license key...' button).
 5. Wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
   - `https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip`
-6. Copy the `<6-digit token>` from the download link and paste it into the terminal.
+6. Copy the `<6-digit token>` from the download link and paste it into the terminal. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
 </details>
 
 After the installation is complete, the following line in the `server.R` script needs to be modified if FragPipe was not extracted into `/home/user/Desktop/GenomeProt`:
@@ -122,7 +122,7 @@ For instance, if FragPipe was extracted into `/home/user/a/b/c/d/`, change `/hom
     Then, enter your first name, last name, academic email address and academic institution, and check all tickboxes for the academic license, license agreement and SDK library distribution conditions.
     Next, click on the 'Download' button (NOT the 'Get a license key...' button), and wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
     https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip
-    The 6-digit token can be used to download MSFragger, IonQuant and diaTracer.
+    The 6-digit token can be used to download MSFragger, IonQuant and diaTracer. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
     Please enter your token (6 digits): 123456
     Using token '123456'...
     ...
