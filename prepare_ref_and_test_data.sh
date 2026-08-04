@@ -24,6 +24,8 @@ for filepath in gencode_v47_sorted.gtf BRAF_mutation.vcf GRCh38_chr1_6_7.fa.gz; 
     fi
 done
 
+gunzip GRCh38_chr1_6_7.fa.gz
+
 if ! [ -f long_read_bam/Melanoma_data_subset.bam ]; then
     curl -o long_read_bam/Melanoma_data_subset.bam https://genomeprot.researchsoftware.unimelb.edu.au/testdata/long_read_bam/Melanoma_data_subset.bam
 fi
