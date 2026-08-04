@@ -1,106 +1,63 @@
-FROM ubuntu:latest
+# syntax=docker/dockerfile:1
+# check=skip=SecretsUsedInArgOrEnv,JSONArgsRecommended
 
-FROM python:3.9
+FROM anaconda/miniconda:latest
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    wget \
-    zlib1g-dev \
-    libncurses5-dev \
-    libbz2-dev \
-    liblzma-dev \
-    git 
+# is_install_fragpipe: to install FragPipe, set this to "true"; any other value means FragPipe will not be installed
+ARG is_install_fragpipe=true
 
-FROM rocker/r-ver:4.3.2
-FROM bioconductor/bioconductor_docker:devel
+# fragpipe_token: the 6-digit token used to install FragPipe tools
+ARG fragpipe_token=123456
 
-# install R packages required 
-RUN R -e 'install.packages(c(\
-              "shiny", \
-              "shinyjs", \
-              "shinythemes", \
-              "shinydashboard", \
-              "data.table", \ 
-              "dplyr", \
-              "magrittr", \
-              "ggplot2", \
-              "tidyr", \
-              "readr", \
-              "tibble", \
-              "purrr", \
-              "stringr", \
-              "forcats", \
-              "markdown", \
-              "devtools", \
-              "ggrepel", \
-              "reshape2", \
-              "phylotools", \
-              "gplots", \
-              "optparse"), \
-              repos="https://packagemanager.rstudio.com/cran/__linux__/focal/2021-04-23")'
+ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=true
 
-# Bioconductor
-RUN R -e 'BiocManager::install(ask = F)' && R -e 'BiocManager::install(c("rtracklayer", \
-              "ORFik", \
-              "bambu", \
-              "GenomicFeatures", \
-              "GenomicRanges", \
-              "GenomicAlignments",\
-              "BSgenome.Mmusculus.UCSC.mm39", \
-              "BSgenome.Hsapiens.UCSC.hg38", \
-              "Biostrings", \
-              "SummarizedExperiment", \
-              "Rsamtools", \
-              "mygene", \
-              "vsn", \
-              "tximport", \
-              "patchwork", ask = F))'
+# Install gcc because it's necessary for building biopython
+# Install unzip for unpacking the reference datasets
+# Install curl for downloading the test datasets
 
-RUN wget https://github.com/lh3/minimap2/releases/download/v2.27/minimap2-2.27.tar.bz2 && \
-    tar -xvjf minimap2-2.27.tar.bz2 && \
-    cd minimap2-2.27 && \
-    make && \
-    cp minimap2 /usr/bin/
+RUN apt update && \
+    apt upgrade && \
+    apt install --yes gcc unzip curl && \
+    useradd --create-home --shell /bin/bash user
 
-# download and install samtools version 1.19.2
-RUN wget https://github.com/samtools/samtools/releases/download/1.19.2/samtools-1.19.2.tar.bz2 && \
-    tar -xvjf samtools-1.19.2.tar.bz2 && \
-    cd samtools-1.19.2 && \
-    ./configure && \
-    make && \
-	  make install
+# Set up the user directory
 
-# install miniconda (adjust the version as needed)
-ENV MINICONDA_VERSION py39_24.5.0-0
-ENV CONDA_DIR /miniconda3
+RUN mkdir -p /home/user/Desktop/GenomeProt
+WORKDIR /home/user/Desktop/GenomeProt
+COPY . .
+RUN chown -R user:user GenomeProt
 
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-$MINICONDA_VERSION-Linux-x86_64.sh -O ~/miniconda.sh && \
-    chmod +x ~/miniconda.sh && \
-    ~/miniconda.sh -b -p $CONDA_DIR && \
-    rm ~/miniconda.sh
+# Use the new user account from here onwards
 
-# make non-activate conda commands available
-ENV PATH $CONDA_DIR/bin:$PATH
-    
-# make conda activate command available from /bin/bash --login shells
-RUN echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.profile
-    
-# make conda activate command available from /bin/bash --interative shells
-RUN conda init bash
+USER user
 
-RUN conda install -c "bioconda/label/cf201901" cd-hit
-RUN conda install -c bioconda gffread
-RUN conda install -c bioconda gffcompare
+# Install FragPipe if necessary
 
-RUN pip install biopython==1.77
-RUN pip install py-cdhit
-RUN pip install peptides
+RUN if [ "$is_install_fragpipe" = "true" ]; then \
+        printf "Y\nY\n$fragpipe_token\n" | python3 fragpipe_installer.py /home/user/Desktop/GenomeProt; \
+    fi
 
-# copy the shiny app directory into the image
-COPY ./GenomeProt /srv/shiny-server/
+# Build the conda environment
 
-# expose local port
+RUN if [ "$is_install_fragpipe" = "true" ]; then \
+        conda env create -f conda_env.yaml; \
+    else \
+        conda env create -f conda_env_no_fragpipe.yaml; \
+    fi
+
+# Initialize the conda environment and activate it in the user's shell
+
+RUN conda init && \
+    echo 'conda activate GenomeProt_env' >> ~/.bashrc
+
+# Prepare the reference and test datasets
+
+RUN bash prepare_ref_and_test_data.sh
+
+# Expose the port GenomeProt will run on to the host system
+
 EXPOSE 3838
 
-# run shiny app 
-CMD Rscript -e "shiny::runApp('/srv/shiny-server/', host='0.0.0.0', port=3838)"
+# Run GenomeProt
+
+CMD /bin/bash -c 'conda run -n GenomeProt_env Rscript -e "shiny::runApp('"'"'GenomeProt/'"'"', host='"'"'0.0.0.0'"'"', port=3838)"'

@@ -7,7 +7,7 @@
 - [Overview](#overview)
 - [Installation](#installation)
   - [Option 1 (recommended): Access GenomeProt online](#option-1-recommended-access-genomeprot-online)
-  - [Option 2: Run the shiny application with Docker](#option-2-run-the-shiny-application-with-docker-in-development-not-ready-for-use)
+  - [Option 2: Run the shiny application with Docker](#option-2-run-the-shiny-application-with-docker)
   - [Option 3: Locally install the shiny application](#option-3-locally-install-the-shiny-application)
 - [General usage](#general-usage)
   - [Database generation](#1-database-generation)
@@ -30,28 +30,101 @@ GenomeProt can both be run as an interactive web application and run entirely fr
 
 To use GenomeProt now, follow [Option 1](#option-1-recommended-access-genomeprot-online).
 
-To install GenomeProt locally or on an HPC (high-performance computing) system, follow [Option 2 (run with Docker)](#option-2-run-the-shiny-application-with-docker-in-development-not-ready-for-use) or [Option 3](#option-3-locally-install-the-shiny-application).
+To install GenomeProt locally or on an HPC (high-performance computing) system, follow [Option 2 (run with Docker)](#option-2-run-the-shiny-application-with-docker) or [Option 3](#option-3-locally-install-the-shiny-application).
 
 ### Option 1 (recommended): Access GenomeProt online
 Click on the following link to access GenomeProt in your current browser tab: https://genomeprot.researchsoftware.unimelb.edu.au/
 
 Note: To ensure fair use of the resources, the public GenomeProt server does not perform read mapping from FASTQs (BAM or GTF input only) and excludes the "Analyse MS proteomics" step. Users wishing to perform these steps should utilise a local version of GenomeProt or perform these steps externally.
 
-### Option 2: Run the shiny application with Docker (in development, not ready for use)
-Make sure you have [Docker](https://docs.docker.com/engine/install/) installed and the application running in the background before you begin.
+### Option 2: Run the shiny application with Docker
 
-Open your terminal application and run:
+Make sure you have [Docker](https://docs.docker.com/engine/install/) installed before you begin.
+
+#### Clone the GenomeProt GitHub repository
+
 ```bash
-docker run --rm -p 3838:3838 josieg/genomeprot:v1
+git clone https://github.com/HiteshKore/GenomeProt.git
 ```
-This will take approximately 10-20 minutes to download the Docker image the first time the app is run.
-The --rm removes the container after it's stopped and the -p 3838:3838 maps your local port 3838 to the same port inside the container.
 
-To **access the local shiny application**, navigate to this link on your web browser http://0.0.0.0:3838.
+#### Build the Docker image
 
-You can now upload all files and run the steps in your web browser. Although the app is running through a web browser, no files are being uploaded to the internet and everything will be run locally.
+Navigate into the directory containing the Dockerfile:
 
-To stop the container, close the web browser tab and head back to the terminal where Docker is running and press ctrl+c.
+```bash
+cd GenomeProt
+```
+
+The Dockerfile accepts two build arguments:
+- `is_install_fragpipe` (default: `true`): Whether to install FragPipe. FragPipe will be installed if this argument is set to `true`.
+- `fragpipe_token` (default: `123456`): The 6-digit token used for installing necessary FragPipe tools. This argument will only be considered if `is_install_fragpipe` is set to `true`.
+
+If you wish to use the proteomics module and install FragPipe, follow these instructions on obtaining a 6-digit token for installing the tools:
+
+<details>
+<summary>How to obtain a 6-digit token for installing FragPipe tools <b><u>(click to expand)</u></b></summary>
+
+1. Head to https://msfragger-upgrader.nesvilab.org/upgrader/.
+2. Enter your first name, last name, academic email address and academic institution.
+3. Check all tickboxes for the academic license, license agreement and SDK library distribution conditions.
+4. Click on the 'Download' button (NOT the 'Get a license key...' button).
+5. Wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
+  - `https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip`
+6. Copy the `<6-digit token>` from the download link. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
+</details>
+
+Then, run the following command, replacing `<6-digit token>` with the token you have copied:
+
+```bash
+docker build --tag genomeprot --network host --build-arg is_install_fragpipe=true --build-arg fragpipe_token=<6-digit token> .
+```
+
+If you do not wish to use the proteomics module or do not want to install FragPipe, run the following command instead:
+
+```bash
+docker build --tag genomeprot --network host --build-arg is_install_fragpipe=false .
+```
+
+In either case, the Docker image will take roughly 10 - 30 minutes to build due to the substantial dependencies GenomeProt uses.
+
+#### Running the Docker container
+
+After building the Docker image, use the following command to run the Docker container:
+
+```bash
+docker run --rm -p 3838:3838 genomeprot
+```
+
+The `--rm` flag removes the container after it is stopped and the `-p 3838:3838` argument maps your local port 3838 to the same port inside the container.
+
+The GenomeProt website should now be running on http://0.0.0.0:3838/ and accessible with a web browser, where you can upload files and run GenomeProt modules.
+
+Although the app is running through a web browser, no files will be uploaded to the internet and everything will be run locally.
+
+#### Stopping the Docker container
+
+To stop the Docker container, close the GenomeProt web browser tab, head back to the terminal where the Docker container is running, and press Ctrl+C.
+
+If the container fails to stop, keep pressing Ctrl+C until you see a message saying the command forcefully exited. Then, run the following command:
+
+```bash
+docker ps
+```
+
+You should see output that looks like the following:
+
+```
+CONTAINER ID   IMAGE          COMMAND                    ...
+abcdef012345   genomeprot     "/bin/sh -c '/bin/ba..."   ...
+```
+
+Copy the container ID and run the following command to stop the container (replace `abcdef012345` with the actual ID):
+
+```bash
+docker stop abcdef012345
+```
+
+The container should be stopped when its ID is printed after running the command.
 
 ### Option 3: Locally install the shiny application
 
