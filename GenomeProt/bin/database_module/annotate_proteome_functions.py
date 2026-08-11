@@ -10,20 +10,18 @@ def getDbAnnotations(db_filename, openprot_map, ref_prot_map, uniprot_map):  # R
     with open(db_filename, 'r') as f:
         for raw_line in f:
             line = raw_line.strip()
-            if '#' in line:
+            if 'sequence' in line:
                 continue
-
             columns = [col.strip() for col in line.split('\t')]
-            [protein_id, seq, uniprot_header] = columns[:3]
-            protein_id = protein_id.split('|')[0].replace('>', '')
+            
+            [seq,uniprot_accession,uniprot_gene_description,uniprot_reviewed_status,protein_id] = columns[0],columns[2],columns[3],columns[4], columns[5]
 
             openprot_map[seq] = protein_id
-            if ">IP_" not in line and ">II_" not in line:
+            if "IP_" not in line and "II_" not in line:
                 ref_prot_map[seq] = protein_id
-            if uniprot_header != '-':
-                uniprot_accession = uniprot_header.split('|')[0].replace('>', '') + '|' + uniprot_header.split('|')[1]  # trEMBL or Reviewed| Accession
+            if uniprot_accession != '-':
                 uniprot_gene_description = columns[3]
-                uniprot_map[seq] = f"{uniprot_accession}|{uniprot_gene_description}"
+                uniprot_map[seq] = f"{uniprot_accession}|{uniprot_reviewed_status}|{uniprot_gene_description}"
 
 def UTRAnnotations(utrmap, orf, st, trcds): # utrcoord, orfcoord, strand, transcript coordinates
     if not (':' in orf and '-' in orf and (st == '+' or st == '-')):

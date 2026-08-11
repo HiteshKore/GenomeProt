@@ -190,9 +190,11 @@ ui <- dashboardPage(
                        radioButtons("input_type", h5(tags$b("Select input type:")),choices = c("BAMs" = "bam_input","GTF (and/or transcript counts)" = "gtf_input")),
                        checkboxInput("vcf_option", "Incoporate SNVs into protein sequences", value = FALSE),
 
-                       # organism
+
                        selectInput("organism", label = "Organism:",
-                                   choices = list("Roundworm (C. elegans)" = "CAEEL", "Fruit fly (D. melanogaster)" = "DROME", "Human (H. sapiens)" = "HUMAN", "Mouse (M. musculus)" = "MOUSE", "Rat (R. rattus)" = "RAT", "Zebrafish (D. rerio)" = "DANRE"),
+                                   choices = list("Roundworm (C. elegans)" = "CAEEL", "Fruit fly (D. melanogaster)" = "DROME", "Human (H. sapiens)" = "HUMAN", 
+                                                  "Mouse (M. musculus)" = "MOUSE", "Rat (R. rattus)" = "RAT", "Zebrafish (D. rerio)" = "DANRE", "Chimpanzee (P. troglodytes)"= "PANTR",
+                                                  "Cow (B. taurus)"="BOVIN","Clawed frog (X. tropicalis )"="XENTR","Baker's Yeast (S. cerevisiae)"="YEAST"),
                                    selected = "HUMAN"),
                        # ORF type
                        selectInput("database_type", label = "ORFs to be included in proteomedb:", choices = list("canonical", "all"), selected = "all"),

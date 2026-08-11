@@ -25,7 +25,8 @@ def variant_protein_annotations(var_ORF_anno, var_orfs, wt_protein):
     for var_protein in var_orfs:
         similarity, aa_change = calculate_similarity(var_protein, wt_protein)   # pairwise alignment to calculate sequence similarity
         similarity = round(similarity, 2)
-        if 96 < similarity < 100 and similarity > highest_similarity:
+        
+        if 96 < similarity < 100 and similarity > highest_similarity and len(var_protein)==len(wt_protein):
             highest_similarity = similarity
             sq_properties = calculate_sequence_properties(var_protein)
             coordinates, var_type = var_ORF_anno[var_protein].split('|')[:2]
@@ -189,6 +190,7 @@ def main():
     refprot = {}    # reference proteins annotated in uniprot/refseq/ensembl. k:seq v:protein id
     uniprot = {}    # UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
     getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)
+    
 
     # Protein-coding genes
     protein_coding_gene_coordinates = {}    # k:chrom,v:set((gene start, gene end))
@@ -302,7 +304,7 @@ def main():
 
             # separate annnotated and unannotated proteins
             if protein_seq in uniprot:
-                uniprot_accession = uniprot[protein_seq].split('|')[1]
+                uniprot_accession = uniprot[protein_seq].split('|')[0]
                 annotated_proteins.setdefault(protein_seq, []).append(f"{uniprot_accession}|{orf_id}|{orf_coordinate}")
             elif protein_seq in refprot:
                 uniprot_ids = uniprot.values()
@@ -364,7 +366,7 @@ def main():
             protein_status = '-'
             protein_description = '-'
             if is_protein_seq_in_uniprot:   # UniProt proteins
-                [database, protein_accession, protein_description] = uniprot[protein_seq].split('|')[:3]
+                [protein_accession, database, protein_description] = uniprot[protein_seq].split('|')[:3] #{uniprot_accession}|{uniprot_reviewed_status}|{uniprot_gene_description}
                 protein_status = "reviewed(Swiss-Prot)" if database == "sp" else "unreviewed(TrEMBL)"
             else:                           # RefProt proteins
                 protein_accession = refprot[protein_seq]

@@ -2,7 +2,7 @@ library(shiny)
 library(shinyjs)
 library(reticulate)
 
-conda_path <- conda_binary()
+conda_path <-conda_binary()
 conda_command <- paste0(conda_path, " run -n GenomeProt_env ")
 
 # TODO: R_ZIPCMD might be defined but empty sometimes, which causes zip() to fail
@@ -29,7 +29,7 @@ bam_server <- function(input, output, session) {
     command_decompress <- paste0(conda_command, "gzip -c -d ", input$user_reference_genome_bam$datapath, " >", genome_fasta_file)
     print(command_decompress)
     system(command_decompress)
-    command_gffread <- paste0(conda_command, "gffread -w ", transcript_fasta_file, " -g ",                        genome_fasta_file, " ", input$reference_gtf_file$datapath)
+    command_gffread <- paste0(conda_command, "gffread -w ", transcript_fasta_file, " -g ", genome_fasta_file, " ", input$reference_gtf_file$datapath)
   } else {
     command_gffread <- paste0(conda_command, "gffread -w ", transcript_fasta_file, " -g ", input$user_reference_genome_bam$datapath, " ", input$reference_gtf_file$datapath)
   }
@@ -158,7 +158,7 @@ database_server <- function(input, output, session) {
 
   # set input file type
   if (input$input_type == "gtf_input") {
-    req(input$user_gtf_file, input$reference_gtf_file) # GTFs required
+    req(input$user_gtf_file) # GTFs required
     db_gtf_file <- input$user_gtf_file$datapath
     db_counts_file <- input$user_tx_count_file$datapath
   } else if (input$input_type == "bam_input") {
@@ -228,9 +228,9 @@ database_server <- function(input, output, session) {
 
   # set reference protein database per organism
   if (input$organism == "HUMAN") {
-    ref_proteome <- "data/openprot_uniprotDb_hs.txt"
+    ref_proteome <- "data/openprot_uniprotDb_human.txt"
   } else if (input$organism == "MOUSE") {
-    ref_proteome <- "data/openprot_uniprotDb_mm.txt"
+    ref_proteome <- "data/openprot_uniprotDb_mouse.txt"
   } else if (input$organism == "CAEEL") {
     ref_proteome <- "data/openprot_uniprotDb_c_elegans.txt"
   } else if (input$organism == "DROME") {
@@ -239,12 +239,23 @@ database_server <- function(input, output, session) {
     ref_proteome <- "data/openprot_uniprotDb_rat.txt"
   } else if (input$organism == "DANRE") {
     ref_proteome <- "data/openprot_uniprotDb_zebrafish.txt"
+  }else if (input$organism == "PANTR") {
+    ref_proteome <- "data/openprot_uniprotDb_chimp.txt"
+  }else if (input$organism == "BOVIN") {
+    ref_proteome <- "data/openprot_uniprotDb_cow.txt"
+  }else if (input$organism == "XENTR") {
+    ref_proteome <- "data/openprot_uniprotDb_clawed_frog.txt"
+  }else if (input$organism == "YEAST") {
+    ref_proteome <- "data/openprot_uniprotDb_yeast.txt"
   }
+  
+  
 
   # run python script using conda env
   orfome_file <- file.path(outdir_db, "ORFome_aa.txt")
   proteome_database_transcripts_gtf_file <- file.path(outdir_db, "proteome_database_transcripts.gtf")
   mutant_orfome_file <- file.path(outdir_db, "Mutant_ORFome_aa.txt")
+
   if (!is.null(vcf_file)) { # if there is a VCF file uploaded
     command_annotate_proteome <- paste0(conda_command, "--no-capture-output python bin/database_module/annotate_proteome.py ", ref_gtf, " ", ref_proteome, " ", orfome_file, " ", proteome_database_transcripts_gtf_file, " ",
                                         outdir_db, " ", input$database_type, " ", input$min_orf_length, " ", mutant_orfome_file, " ", input$organism, " ", input$user_threads, " 2000")
