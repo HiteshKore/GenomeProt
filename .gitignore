@@ -5,7 +5,6 @@
 GenomeProt.Rproj
 GenomeProt/bin/__pycache__/
 GenomeProt/execute_commands_with_bash_env.sh
-GenomeProt/testdata/
 GenomeProt/testdata_output/
 GenomeProt/data/openprot_uniprotDb_*.txt
 GenomeProt/data/openprot_uniprotDb_*.txt
