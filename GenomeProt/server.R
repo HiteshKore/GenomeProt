@@ -188,7 +188,7 @@ database_server <- function(input, output, session) {
   genome_arg <- if (!is.null(input$user_reference_genome_bam$datapath)) {
     paste0(" -G ", input$user_reference_genome_bam$datapath)
   } else {
-    ref_genome <- "./testdata/GRCh38_chr1_6_7.fa"
+    ref_genome <- "./testdata/GRCh38_chr1_6_7_masked.fa.gz"
     paste0(" -G ", ref_genome)
   }
   

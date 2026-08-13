@@ -569,8 +569,11 @@ if (!is.null(ref_genome) && !is.null(vcf_file)) { # if a genome and VCF have bee
   system(custom_genome_command)
 
   # fetch variant protein sequences based on variants provided in VCF file
-  genome_alt_hm    <- file.path(output_directory, basename(ref_genome) %>% str_replace(., ".fa",    "_hm.fa"))
-  genome_alt_hm_ht <- file.path(output_directory, basename(ref_genome) %>% str_replace(., ".fa", "_hm_ht.fa"))
+  genomefile_prefix=prefix <- sub("\\.fa", "", basename(ref_genome))
+  genome_alt_hm<- paste0(output_directory,"/", genomefile_prefix,"_hm.fa")
+  genome_alt_hm_ht <- paste0(output_directory,"/",genomefile_prefix,"_hm_ht.fa")
+  print(genome_alt_hm)
+  print(genome_alt_hm_ht)
 
   if (!file.exists(genome_alt_hm)) {
     message(paste0("The homozygous consensus sequence '", genome_alt_hm, "' does not exist. Skip finding variant protein sequences..."))
