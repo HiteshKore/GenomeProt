@@ -9,6 +9,8 @@ GenomeProt/testdata_output/
 GenomeProt/data/openprot_uniprotDb_*.txt
 GenomeProt/data/openprot_uniprotDb_*.txt
 testdata/*
+!testdata/
 !testdata/*.zip
+testdata/long_read_bam/*
+!testdata/long_read_bam.zip
 *.pyc
-
