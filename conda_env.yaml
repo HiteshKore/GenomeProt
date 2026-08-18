@@ -58,16 +58,14 @@ dependencies:
   - bioconductor-tximport
   - bioconductor-variantannotation
   - bioconductor-bsgenome.hsapiens.ucsc.hg38
-  - bioconductor-bsgenome.mmusculus.ucsc.mm39
   - bioconductor-bsgenome.celegans.ucsc.ce11
   - bioconductor-bsgenome.dmelanogaster.ucsc.dm6
+  - bioconductor-bsgenome.mmusculus.ucsc.mm39
   - bioconductor-bsgenome.rnorvegicus.ucsc.rn7
   - bioconductor-bsgenome.drerio.ucsc.danrer11
   - bioconductor-sparsearray
   - bioconductor-summarizedexperiment
   - cairo
-  - curl
-  - libcurl
   - libkrb5
   - libnghttp2
   - zip

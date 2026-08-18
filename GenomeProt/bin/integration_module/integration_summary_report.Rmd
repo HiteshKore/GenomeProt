@@ -12,15 +12,17 @@ params:
 
 
 ```{r setup, include=FALSE, warning=FALSE}
-library(ggplot2)
-library(DESeq2)
-library(gplots)
-library(dplyr)
-library(readr)
-library(RColorBrewer)
-library(data.table)
-library(scales)
-library(openxlsx)
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(DESeq2)
+  library(gplots)
+  library(dplyr)
+  library(readr)
+  library(RColorBrewer)
+  library(data.table)
+  library(scales)
+  library(openxlsx)
+})
 
 options(scipen=999)
 

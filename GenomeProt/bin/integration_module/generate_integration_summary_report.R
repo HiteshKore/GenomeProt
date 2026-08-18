@@ -1,7 +1,10 @@
 # usage: Rscript generate_integration_summary_report.R -i <integration summary report Rmd file> -o <output directory>
 
 # define options
-library(optparse)
+suppressPackageStartupMessages({
+  library(optparse)
+})
+
 option_list = list(
   make_option(c("-i", "--input"), type = "character", default = NULL,
               help = "integration summary report Rmd file", metavar = "character"),
@@ -41,7 +44,9 @@ if (!dir.exists(report_outdir_image)) {
 }
 
 # generate the report
-library(rmarkdown)
+suppressPackageStartupMessages({
+  library(rmarkdown)
+})
 rmarkdown::render(input = report_rmd_file,
                   output_file = file.path(report_outdir, "summary_report.html"),
                   output_format = "html_document",

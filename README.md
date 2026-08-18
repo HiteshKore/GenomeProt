@@ -175,7 +175,7 @@ When running the script, type 'Y' and press enter to answer yes to prompts on in
 After the installation is complete, the following line in the `server.R` script needs to be modified if FragPipe was not extracted into `/home/user/Desktop/GenomeProt`:
 
 ```R
-    " --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
+" --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
 ```
 
 For instance, if FragPipe was extracted into `/home/user/a/b/c/d/`, change `/home/user/Desktop/GenomeProt/fragpipe-23.1/` to `/home/user/a/b/c/d/fragpipe-23.1/`.
@@ -287,7 +287,7 @@ GenomeProt is an integrated proteogenomics platform with four modules: 1) databa
 
 The first module generates a custom proteome database to perform proteomics searches. The module accepts RNA sequencing FASTQ files, BAM files or GTF annotation files from both short-read and long-read sequencing platforms (Illumina, Oxford Nanopore and PacBio). The main output from this module is a FASTA file with candidate protein sequences and a metadata file with details of each candidate protein.
 
-For long-read data, transcript discovery is performed with Bambu. For short-read data, no discovery steps are performed, transcripts are instead directly quantified based on the reference transcriptome using Salmon. GenomeProt currently supports open reading frame (ORF) identification and database generation for six model organisms: fruit fly, roundworm, zebrafish, rat, mouse, and human. Users can specify an option to include short upstream ORF (uORF) and downstream ORF (dORF) protein sequences >10 amino acids (AA). Protein sequences are generated based on a user defined minimum length set to >30 AA by default. Users can also optionally provide a VCF file to incorporate single nucleotide variants (SNVs) into the genome to generate variant protein sequences.
+For long-read data, transcript discovery is performed with Bambu. For short-read data, no discovery steps are performed, transcripts are instead directly quantified based on the reference transcriptome using Salmon. GenomeProt currently supports open reading frame (ORF) identification and database generation for 6 model organisms: human, roundworm, fruit fly, mouse, rat and zebrafish. Users can specify an option to include short upstream ORF (uORF) and downstream ORF (dORF) protein sequences >10 amino acids (AA). Protein sequences are generated based on a user defined minimum length set to >30 AA by default. Users can also optionally provide a VCF file to incorporate single nucleotide variants (SNVs) into the genome to generate variant protein sequences.
 
 #### Inputs:
 
@@ -312,7 +312,7 @@ Optional input:
 
 - Long-read transcript discovery with Bambu
 - Short-read transcript quantification with Salmon
-- Supports ORF identification for six model organisms: fruit fly, roundworm, zebrafish, rat, mouse, and human
+- Supports ORF identification for 6 model organisms: human, roundworm, fruit fly, mouse, rat and zebrafish
 - Includes optional uORF and dORF protein sequences
 
 ### 2. Analyse MS proteomics

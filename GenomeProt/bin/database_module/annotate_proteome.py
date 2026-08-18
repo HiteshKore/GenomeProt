@@ -23,10 +23,11 @@ def variant_protein_annotations(var_ORF_anno, var_orfs, wt_protein):
     res = ""
     highest_similarity = -1
     for var_protein in var_orfs:
+        if len(var_protein) != len(wt_protein):
+            continue
         similarity, aa_change = calculate_similarity(var_protein, wt_protein)   # pairwise alignment to calculate sequence similarity
         similarity = round(similarity, 2)
-        
-        if 96 < similarity < 100 and similarity > highest_similarity and len(var_protein)==len(wt_protein):
+        if 96 < similarity < 100 and similarity > highest_similarity:
             highest_similarity = similarity
             sq_properties = calculate_sequence_properties(var_protein)
             coordinates, var_type = var_ORF_anno[var_protein].split('|')[:2]
@@ -160,9 +161,10 @@ def main():
         sys.exit(1)
 
     # Check if the organism is supported
-    org_map = {"HUMAN": "Homo sapiens", "CAEEL": "Caenorhabditis elegans", "MOUSE": "Mus musculus", "RAT": "Rattus norvegicus", "DROME": "Drosophila melanogaster", "DANRE": "Danio rerio"}
+    org_map = {"HUMAN": "Homo sapiens", "CAEEL": "Caenorhabditis elegans", "DROME": "Drosophila melanogaster", "MOUSE": "Mus musculus", "RAT": "Rattus norvegicus", "DANRE": "Danio rerio",
+               "PANTR": "Pan troglodytes", "BOVIN": "Bos taurus", "XENTR": "Xenopus tropicalis", "YEAST": "Saccharomyces cerevisiae"}
     if arg_organism.upper().strip() not in org_map:
-        print(f"The organism name '{arg_organism}' must be 'HUMAN', 'CAEEL', 'MOUSE', 'RAT', 'DROME' or 'DANRE' (case-insensitive).")
+        print(f"The organism name '{arg_organism}' must be 'HUMAN', 'CAEEL', 'DROME', 'MOUSE', 'RAT', 'DANRE', 'PANTR', 'BOVIN', 'XENTR' or 'YEAST' (case-insensitive).")
         sys.exit(1)
     organism_latin_name = org_map[arg_organism.upper().strip()]
     organism_info = (arg_organism.upper().strip(), organism_latin_name)
@@ -190,7 +192,6 @@ def main():
     refprot = {}    # reference proteins annotated in uniprot/refseq/ensembl. k:seq v:protein id
     uniprot = {}    # UniProt annotations: k:seq v: trEMBL/reviewed|protein_id| gene description
     getDbAnnotations(arg_combined_protein_db_filename, openprot, refprot, uniprot)
-    
 
     # Protein-coding genes
     protein_coding_gene_coordinates = {}    # k:chrom,v:set((gene start, gene end))
@@ -366,7 +367,7 @@ def main():
             protein_status = '-'
             protein_description = '-'
             if is_protein_seq_in_uniprot:   # UniProt proteins
-                [protein_accession, database, protein_description] = uniprot[protein_seq].split('|')[:3] #{uniprot_accession}|{uniprot_reviewed_status}|{uniprot_gene_description}
+                [protein_accession, database, protein_description] = uniprot[protein_seq].split('|')[:3]
                 protein_status = "reviewed(Swiss-Prot)" if database == "sp" else "unreviewed(TrEMBL)"
             else:                           # RefProt proteins
                 protein_accession = refprot[protein_seq]

@@ -13,11 +13,10 @@ ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=true
 
 # Install gcc because it's necessary for building biopython
 # Install unzip for unpacking the reference datasets
-# Install curl for downloading the test datasets
 
 RUN apt update && \
     apt upgrade && \
-    apt install --yes gcc unzip curl && \
+    apt install --yes gcc unzip && \
     useradd --create-home --shell /bin/bash user
 
 # Set up the user directory

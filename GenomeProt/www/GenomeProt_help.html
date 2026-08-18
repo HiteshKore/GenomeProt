@@ -73,12 +73,46 @@
             <li>Variant peptides and proteoforms</li>
           </ul>
 
+          <h2>Validating the GenomeProt installation with test data</h2>
+
+          <p>
+            The welcome page of the local GenomeProt server contains a button for running the test data through GenomeProt and
+            validating that the installation is set up correctly.
+          </p>
+          <p>There are five test data files that come with the local GenomeProt installation, all located within the <code>testdata/</code> directory:</p>
+          <ol>
+            <li>A long-read RNA-seq BAM file (<code>long_read_bam/Melanoma_data_subset.bam</code>)</li>
+            <li>A masked human reference genome FASTA file for chromosomes 1, 6 and 7 (<code>GRCh38_chr1_6_7_masked.fa</code>)</li>
+            <li>A partial human reference transcriptome GTF file (<code>gencode_v47_sorted.gtf</code>)</li>
+            <li>A VCF file (<code>BRAF_mutation.vcf</code>)</li>
+            <li>A reformatted proteomics results TSV file (<code>peptide_data.tsv</code>)</li>
+          </ol>
+          <p>
+            The first 4 test data files listed above will be run through the database generation module to create a variant-aware proteome database.
+          </p>
+          <p>
+            Next, the fifth test data file and the generated proteome database will be run through the proteogenomics integration module to
+            create an integration summary report and files for visualising the ORFs, transcripts and genes identified.
+          </p>
+          <p>
+            As the test data is running through GenomeProt, a loading icon will be shown.
+          </p>
+          <p>
+            If the test data has finished running and no errors have occurred, the 'Download results (zip)' button will be enabled and turn green.
+            Clicking on the button will download a zip archive containing the integration summary report and visualisation files.
+          </p>
+          <p>
+            Otherwise, an error message will be displayed and the 'Download results (zip)' button remains disabled.
+          </p>
+
+          <h2>The GenomeProt workflow</h2>
+
           <p><b>The workflow consists of four steps:</b></p>
 
           <ol class="bullet_points">
             <li><a href="#database-generation">Database Generation</a></li>
             <ul>
-              <li><a href="#generate-database-demo">Steps to generate a database using the demo dataset</a></li>
+              <li><a href="#generate-database-demo">Steps to generate a database using the test data</a></li>
             </ul>
             <li><a href="#analyse-ms-proteomics">Analyse MS Proteomics</a></li>
             <ul>
@@ -95,15 +129,15 @@
           <h1>1. Database Generation</h1>
 
           <p>
-            Users can choose between <strong>short-read</strong> and
-            <strong>long-read</strong> options depending on their data type.
+            Users can choose between <strong>short-read</strong> and <strong>long-read</strong> options depending on their data type.
           </p>
 
-          <p>The Shiny web server supports database generation using:</p>
+          <p>The local GenomeProt server supports database generation using:</p>
 
           <ul class="bullet_points">
-            <li>Pre-aligned BAM files</li>
-            <li>GTF file of assembled transcripts from the dataset</li>
+            <li><strong>FASTQ</strong> files (this option is absent from the public GenomeProt server)</li>
+            <li>Pre-aligned <strong>BAM</strong> files</li>
+            <li><strong>GTF</strong> file of assembled transcripts from the dataset</li>
           </ul>
 
           <p>
@@ -111,30 +145,27 @@
             multisample VCF file generated from variant calls derived from the same samples.
           </p>
 
-          <p>
-            By default, the app loads a demo dataset (BAM file input) to demonstrate
-            processing and output files.
-          </p>
-
-          <p>Files used to run the demo dataset can be downloaded below:</p>
-          <ul class="bullet_points">
-            <li><a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata/long_read_bam/Melanoma_data_subset.bam" download>BAM file</a></li>
-            <li><a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata/gencode_v47_sorted.gtf" download>GTF file</a></li>
-            <li><a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata/BRAF_mutation.vcf" download>VCF file</a></li>
-            <li><a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata/GRCh38_chr1_6_7.fa" download>Reference genome file</a></li>
-          </ul>
-
           <a name="generate-database-demo"></a>
-          <h2>Steps to generate a database using the demo dataset</h2>
+          <h2>Steps to generate a database using the test data</h2>
 
           <ol class="bullet_points">
-            <li>Navigate to the <strong>Generate Database</strong> tab.</li>
-            <li>Select a checkbox <strong>Incoporate SNVs into protein sequences</strong>.</li>
-            <li>Click <strong>Submit</strong> using default options.</li>
-            <li>The app processes the BAM file.</li>
+            <li>Navigate to the '<strong>Generate database</strong>' tab.</li>
+            <li>Set the input type to '<strong>BAMs</strong>'.</li>
+            <li>Toggle the checkbox '<strong>Incorporate SNVs into protein sequences</strong>'.</li>
+            <li>
+              Select the corresponding files in the <code>testdata/</code> directory of the local GenomeProt server to upload:
+              <ul>
+                <li>The reference genome FASTA file (<code>GRCh38_chr1_6_7_masked.fa</code>)</li>
+                <li>The BAM file (<code>long_read_bam/Melanoma_data_subset.bam</code>)</li>
+                <li>The reference transcriptome GTF file (<code>gencode_v47_sorted.gtf</code>)</li>
+                <li>The VCF file (<code>BRAF_mutation.vcf</code>)</li>
+              </ul>
+            </li>
+            <li>Click '<strong>Submit</strong>'. The server will then take roughly 1-2 minutes to process the uploaded files.</li>
+            <li>Once the server has finished processing the files, the 'Download results (zip)' button will be enabled and turn green. Click on it to download a ZIP of the output files.</li>
           </ol>
 
-          <img src="images/quick_help_images/help_database_generation.jpg" style="width: 1150px; margin-top: 10px;" alt="Database Generation screenshot">
+          <img src="images/quick_help_images/help_database_generation.png" style="width: 1150px; margin-top: 10px;" alt="Database Generation screenshot">
 
           <h3><strong>Output files:</strong></h3>
 
@@ -145,19 +176,13 @@
           </ul>
 
           <p>
-            Results from this step can be downloaded within the app.
-            The test results file can be downloaded
+            The expected contents of the ZIP output file can be downloaded
             <a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata_output/database_results.zip" download>here</a>.
           </p>
 
           <p>
-            <strong>Note:</strong> To generate a database directly from FASTQ files, or BAM files
-            larger than <strong>20 GB</strong>, use the command-line version.
-          </p>
-
-          <p>
-            Command-line instructions are available
-            <a href="https://github.com/HiteshKore/GenomeProt?tab=readme-ov-file#general-usage" target="_blank">here</a>.
+            <strong>Note:</strong> To generate a database directly from files
+            larger than <strong>20 GB</strong>, run the command-line R and Python scripts instead.
           </p>
 
           <a name="analyse-ms-proteomics"></a>
@@ -177,8 +202,8 @@
             <li>Click on 'Add a mass spectrometry data file' to create a file input for one mass spectrometry data file. Click on 'Add another mass spectrometry data file' to add more file inputs, and click on 'Remove mass spectrometry data file' to remove the file input at the bottom.</li>
             <li>Upload your mass spectrometry data files and set their corresponding data types.</li>
             <li>Specify the proteases used for your mass spectrometry data files.</li>
-            <li>After setting other relevant options (whether to add contaminants into the database and to perform peptide quantification; the number of CPU threads to use and the memory limit for FragPipe), click on <strong>Run FragPipe</strong>.</li>
-            <li>The app calls FragPipe to perform a peptide search (and optionally, peptide quantification) on the mass spectrometry data files using the protein database provided.</li>
+            <li>After setting other relevant options (whether to add contaminants into the database and to perform peptide quantification; the number of CPU threads to use and the memory limit for FragPipe), click on '<strong>Run FragPipe</strong>'.</li>
+            <li>The server calls FragPipe to perform a peptide search (and optionally, peptide quantification) on the mass spectrometry data files using the protein database provided.</li>
           </ol>
 
           <img src="images/quick_help_images/proteomics_search.png" style="width: 1150px; margin-top: 10px;" alt="MS proteomics analysis screenshot">
@@ -186,8 +211,8 @@
           <h3><strong>Output files:</strong></h3>
 
           <ul class="bullet_points">
-            <li><code>peptides.tsv</code>: Peptide search results</li>
-            <li><code>report.pr_matrix.tsv</code>: Peptide counts (only output if peptide quantification was performed)</li>
+            <li><code>peptide.tsv</code>: Peptide search results</li>
+            <li><code>report.pr_matrix.tsv</code>: Peptide counts (only outputted if peptide quantification was performed)</li>
           </ul>
 
           <a name="integrate-data"></a>
@@ -196,25 +221,42 @@
           <p>This step maps peptides identified in Step 2 to spliced transcript coordinates.</p>
 
           <ul class="bullet_points">
-            <li>Files required from step 1: <code>proteome_database_metadata.txt</code> and <code>proteome_database_transcripts.gtf</code></li>
-            <li>Files required from step 2: <code>peptide_data.tsv</code> (must follow required format)</li>
+            <li>Files required from Step 1: <code>proteome_database_metadata.txt</code> and <code>proteome_database_transcripts.gtf</code></li>
+            <li>Files required from Step 2: <code>peptide.tsv</code> (discovered peptides) OR <code>report.pr_matrix.tsv</code> (quantified peptides)</li>
           </ul>
 
           <a name="map-peptides"></a>
           <h2>Steps to map peptides</h2>
 
+          <p>This module consists of two parts: Reformatting proteomics results files and performing proteogenomics integration.</p>
+          <p>
+            Under 'Part 1: Reformat proteomics results files', upload all of the proteomics results files you have obtained from
+            the proteomics search tool you used, then select that tool from the list provided and click '<strong>Submit</strong>'.
+          </p>
+          <p>
+            After the server has finished processing the provided files, it will create a single reformatted peptide results file (<code>peptide_data.tsv</code>).
+            Click on the enabled and green 'Download reformatted results file (peptide_data.tsv)' button to download the reformatted file.
+            With this file, the user can now proceed to the second part ('Part 2: Upload files to integrate').
+          </p>
+
+          <p>To perform proteogenomics integration with the test data, upload the following files:</p>
+
           <ol class="bullet_points">
-            <li>Download ZIP file containing: <code>proteome_database_metadata.txt</code>, <code>proteome_database_transcripts.gtf</code></li>
-            <li>Extract ZIP file</li>
-            <li>Download demo <code>peptide_data.tsv</code> from <a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata/peptide_data.tsv" download>here</a>.</li>
-            <li>Navigate to <strong>Integrate Data</strong> tab</li>
-            <li>Upload required files</li>
-            <li>Click <strong>Submit</strong></li>
-            <li>After successful mapping, the <strong>Download results (zip)</strong> button turns green.</li>
-            <li>Click to download output zip file.</li>
+            <li>Download the output ZIP file from Step 1 and unzip it.</li>
+            <li>Navigate to the '<strong>Integrate data</strong>' tab.</li>
+            <li>
+              Under 'Part 2: Upload files to integrate', select the corresponding files to upload:
+              <ul>
+                <li>The <strong>reformatted</strong> proteomics results file (<code>testdata/peptide_data.tsv</code>).</li>
+                <li>The <code>proteome_database_metadata.txt</code> file from the ZIP file</li>
+                <li>The <code>proteome_database_transcripts.gtf</code> file from the ZIP file</li>
+              </ul>
+            </li>
+            <li>Click '<strong>Submit</strong>'. The server will then take a few minutes to process the uploaded files.</li>
+            <li>Once the server has finished processing the files, the 'Download results (zip)' button will be enabled and turn green. Click on it to download a ZIP of the output files.</li>
           </ol>
 
-          <img src="images/quick_help_images/integrate_data.jpg" style="width: 1150px; margin-top: 10px;" alt="Integrate Data screenshot">
+          <img src="images/quick_help_images/integrate_data.png" style="margin-top: 10px;" alt="Integrate Data screenshot">
           <br>
           <p><strong>Output directory contents:</strong></p>
 
@@ -222,13 +264,16 @@
             <li><code>summary_report.html</code>: Summary report of mapped peptides, transcripts, and ORFs</li>
             <li><code>report_images/</code>: Folder containing PDF versions of graphs from the summary report</li>
             <li><code>peptide_info.tsv</code>: Detailed peptide mapping annotations</li>
-            <li><code>combined_annotations.gtf</code>: GTF file with mapped peptides and transcript coordinates</li>
-            <li><code>peptides.bed12</code>: BED12 file with mapped peptide coordinates for UCSC Genome Browser visualisation</li>
-            <li><code>transcripts.bed12</code>: BED12 file with transcripts supported by peptide evidence for UCSC Genome Browser visualisation</li>
-            <li><code>ORFs.bed12</code>: BED12 file with ORFs supported by peptide evidence for UCSC Genome Browser visualisation</li>
+            <li><code>combined_annotations.gtf</code>: GTF file with mapped peptides, ORF annotations and transcript coordinates for visualisation in IsoVis</li>
+            <li><code>peptides.bed12</code>: BED12 file with mapped peptide coordinates for visualisation in the UCSC Genome Browser</li>
+            <li><code>transcripts.bed12</code>: BED12 file with transcripts supported by peptide evidence for visualisation in the UCSC Genome Browser</li>
+            <li><code>ORFs.bed12</code>: BED12 file with ORFs supported by peptide evidence for visualisation in the UCSC Genome Browser</li>
           </ul>
 
-          <p>The demo results files can be downloaded <a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata_output/2026-05-07_1456_integration_results.tar.gz" download>here</a>.</p>
+          <p>
+            The expected contents of the ZIP output file can be downloaded
+            <a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata_output/2026-05-07_1456_integration_results.zip" download>here</a>.
+          </p>
 
           <a name="visualise-results"></a>
           <h1>4. Visualise Results</h1>
@@ -238,11 +283,11 @@
           <ul class="bullet_points">
             <li>Click '<strong>Upload data</strong>' and select <code>combined_annotations.gtf</code> as the '<strong>transcript data</strong>' file (max. 3 GB).</li>
             <li>Optional: select <strong>raw transcript counts</strong> as the '<strong>transcript counts</strong>' file.</li>
-            <li>Optional: select the <strong>peptide intensities</strong> file from MS analysis as the '<strong>peptide intensities</strong>' file.</li>
-            <li>Click <strong>Apply</strong>.</li>
+            <li>Optional: select the <strong>peptide intensities</strong> file from MS analysis (Step 2) as the '<strong>peptide intensities</strong>' file. Note that this is NOT the reformatted file from Step 3.</li>
+            <li>Click '<strong>Apply</strong>'.</li>
             <li>Select your gene of interest. Start typing either its gene name or Ensembl ID into the search box, select it from the list of results displayed, then either press enter or click '>'.</li>
-            <li>Use the different visualization options provided in IsoVis. For example, parts of the visualization can be toggled, including protein domain labels in the protein diagram.</li>
-            <li>The entire visualization can be exported as a PNG, JPEG, PDF or SVG, and individual visualization components can be exported as SVGs.</li>
+            <li>Use the different visualisation options provided in IsoVis. For example, parts of the visualisation can be toggled, including protein domain labels in the protein diagram.</li>
+            <li>The entire visualisation can be exported as a PNG, JPEG, PDF or SVG, and individual visualisation components can be exported as SVGs.</li>
           </ul>
 
           <img src="images/quick_help_images/isovis_1.jpg" style="width: 1150px;" alt="IsoVis screenshot 1">
@@ -253,13 +298,20 @@
           <p>
             The IsoVis visualisation displays separate tracks for peptides, ORFs and transcripts.
             Users can limit their analysis to specific peptides, ORFs or transcripts of interest
-            by hiding irrelevant parts of the visualization and
+            by hiding irrelevant parts of the visualisation and
             using the peptide and ORF stacks to highlight specific features.
             <br><br>
             Overlapping ORFs are shown using a hatching pattern. Coding regions are represented
             as thick dark grey boxes. Peptides uniquely mapped to ORFs, transcripts, and genes
             are indicated in orange, cyan, and blue, respectively. Multi-mapping peptides are dark grey.
             <br><br>
+          </p>
+          <p>
+            Below is an example exported PNG image from IsoVis:
+          </p>
+          <img src="images/quick_help_images/IsoVis_ENSG00000149100.png" style="width: 1150px; margin-top: 10px;" alt="IsoVis exported PNG example">
+          <br>
+          <p>
             For additional IsoVis details, refer to the documentation
             <a href="https://isomix.org/isovis/help_upload/" target="_blank">here</a>.
           </p>

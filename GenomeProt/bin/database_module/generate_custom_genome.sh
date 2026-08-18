@@ -5,12 +5,11 @@ function usage() {
     /usr/bin/cat << EOF
 Program: Generate custom genome
 
-Usage: generate_custom_genome.sh [-h] [-g <genome fasta>] [-r <reference GTF>] [-v <VCF file>] [-o <outdir>]
+Usage: generate_custom_genome.sh [-h] [-g <genome fasta>] [-v <VCF file>] [-o <outdir>]
 
 OPTIONS:
     -h help             Print this help message
     -g genome fasta     Reference genome FASTA file
-    -r reference GTF    Reference GTF file in GENCODE/ENSEMBL format
     -v VCF file         Variants in VCF file format
     -o outdir           Output directory
 EOF
@@ -33,7 +32,7 @@ if [ $# -eq 0 ]; then
 fi
 
 # Parse options using getopt
-OPTS=$(/usr/bin/getopt -o g:r:v:o:h -n "generate_custom_genome.sh" -- "$@")
+OPTS=$(/usr/bin/getopt -o g:v:o:h -n "generate_custom_genome.sh" -- "$@")
 
 if [ $? != 0 ]; then
     /usr/bin/echo "Failed to parse options." >&2
@@ -53,10 +52,6 @@ while true; do
             ;;
         -g)
             genome_fa=$2
-            shift 2
-            ;;
-        -r)
-            reference_gtf=$2
             shift 2
             ;;
         -v)
@@ -79,14 +74,24 @@ while true; do
     esac
 done
 
+if ! ([[ $genome_fa == *.fasta ]] || [[ $genome_fa == *.fas ]] || [[ $genome_fa == *.fa ]] || [[ $genome_fa == *.fna ]] || [[ $genome_fa == *.ffn ]] || [[ $genome_fa == *.faa ]] || [[ $genome_fa == *.mpfa ]] || [[ $genome_fa == *.frn ]]); then
+    echo "The reference genome FASTA file '$genome_fa' does not have one of the following accepted file extensions: .fasta, .fas, .fa, .fna, .ffn, .faa, .mpfa, .frn";
+    exit 1;
+fi
+
+if ! [[ $vcf_file == *.vcf ]]; then
+    echo "The VCF file '$vcf_file' does not have the .vcf file extension.";
+    exit 1;
+fi
+
 vcf_file_name=$(/usr/bin/basename $vcf_file)
-vcf_file_without_extn=$(/usr/bin/echo $vcf_file_name | /usr/bin/sed s'/.vcf//g')
+vcf_file_without_extn="${vcf_file_name%.*}"
 
 genome_file=$(/usr/bin/basename $genome_fa)
-genome_file_without_extn=$(/usr/bin/echo $genome_file | /usr/bin/sed s'/.fa//g')
+genome_file_without_extn="${genome_file%.*}"
 
 # Segregate homozygous and heterozygous variants in the VCF file into two separate files
-$conda_path run -n GenomeProt_env --no-capture-output python3 bin/database_module/vcfparser.py "$vcf_file" "$outdir"
+$conda_path run -n GenomeProt_env python3 bin/database_module/vcfparser.py "$vcf_file" "$outdir"
 
 # Compress the VCF files
 $conda_path run -n GenomeProt_env bgzip "${outdir}/${vcf_file_without_extn}_heterozygous.vcf" -o "${outdir}/${vcf_file_without_extn}_heterozygous.vcf.gz"

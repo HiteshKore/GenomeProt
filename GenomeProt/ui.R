@@ -1,7 +1,3 @@
-library(shiny)
-library(shinydashboard)
-library(shinyjs)
-
 ui <- dashboardPage(
   title = "GenomeProt",
   dashboardHeader(title = tags$img(
@@ -16,12 +12,12 @@ ui <- dashboardPage(
                                tags$li(HTML('<li><a href="mailto:genomeprot@outlook.com" target="_blank"><i class="fa fa-question"></i><h4>Support</h4><p>genomeprot@outlook.com</p></a></li>'))
                   )),
   # tabs
-  dashboardSidebar(width=200,
+  dashboardSidebar(width = 200,
     sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
                 menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
                 menuItem("Run proteomics analysis", tabName = "analyse_proteomics", icon = icon("search")),
                 menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
-                menuItem("visualise results", tabName = "visualisation", icon = icon("eye")),
+                menuItem("Visualise results", tabName = "visualisation", icon = icon("eye")),
                 menuItem("Quick help", tabName = "help", icon = icon("circle-question"))
     )
   ),
@@ -61,22 +57,6 @@ ui <- dashboardPage(
           display: none;
           text-align: center;
           margin-top: 20px;
-        }
-
-        #downloadResults {
-          background-color: #4CAF50; /* Green */
-          border: none;
-          color: white;
-          padding: 15px 32px;
-          text-align: center;
-          text-decoration: none;
-          display: inline-block;
-          font-size: 12px;
-        }
-
-        #downloadResults:disabled {
-          background-color: #d3d3d3; /* Gray */
-          color: #a9a9a9; /* Dark gray */
         }
 
         .spacing {
@@ -175,8 +155,21 @@ ui <- dashboardPage(
                 column(12,
                        div(class = "box box-primary", style = "padding-right: 5%; padding-left: 5%; font-size:110%",
                            div(class = "box-body", shiny::includeMarkdown("welcome-page-text.md")),
-                           img(src = "images/workflow.png", width = "100%"),
+                           img(src = "images/workflow.png", width = "100%")
                        )
+                )
+              ),
+              fluidRow(
+                column(6,
+                       h3("Validate installation"),
+                       h5("For more information about the test data files used to validate the installation, please read the GenomeProt help guide by clicking on 'Quick help' to the left of this page."),
+                       actionButton("test_data_submit_button", "Run test data through GenomeProt", class = "btn btn-info")
+                ),
+                column(6,
+                       h3("Download test data results:"),
+                       downloadButton("test_data_download_button", "Download results (zip)", style = "width:70%;", enabled = FALSE), # initially disabled
+                       div(id = "test-data-loading-container", class = "loading-container", div(class = "spinner")),
+                       div(id = "test-data-status-msg-container")
                 )
               )
       ),
@@ -185,98 +178,101 @@ ui <- dashboardPage(
               h5("Creates an amino acid FASTA of all ORFs in your data to use as input for FragPipe/MaxQuant etc."),
               fluidRow(
                 column(6,
-                       # radio buttons for various options
-                       radioButtons("sequencing_type", h5(tags$b("Select sequencing type:")),choices = c("Long-read (ONT, PacBio)" = "long-read", "Short-read" = "short-read")),
-                       radioButtons("input_type", h5(tags$b("Select input type:")),choices = c("BAMs" = "bam_input","GTF (and/or transcript counts)" = "gtf_input")),
-                       checkboxInput("vcf_option", "Incoporate SNVs into protein sequences", value = FALSE),
+                       # radio buttons for the sequencing type (long-read or short-read) and input type (BAM or GTF)
+                       radioButtons("sequencing_type", "Select sequencing type:",
+                                    choices = c("Long-read (ONT, PacBio)" = "long-read",
+                                                "Short-read" = "short-read")),
+                       radioButtons("input_type", "Select input type:",
+                                    choices = c("FASTQs" = "fastq_input",
+                                                "BAMs" = "bam_input",
+                                                "GTF (and/or transcript counts)" = "gtf_input")),
 
+                       # checkbox for whether to generate a variant-aware proteome database
+                       checkboxInput("vcf_option", "Incorporate SNVs into protein sequences", value = FALSE),
 
-                       selectInput("organism", label = "Organism:",
-                                   choices = list("Roundworm (C. elegans)" = "CAEEL", "Fruit fly (D. melanogaster)" = "DROME", "Human (H. sapiens)" = "HUMAN", 
-                                                  "Mouse (M. musculus)" = "MOUSE", "Rat (R. rattus)" = "RAT", "Zebrafish (D. rerio)" = "DANRE", "Chimpanzee (P. troglodytes)"= "PANTR",
-                                                  "Cow (B. taurus)"="BOVIN","Clawed frog (X. tropicalis )"="XENTR","Baker's Yeast (S. cerevisiae)"="YEAST"),
-                                   selected = "HUMAN"),
-                       # ORF type
-                       selectInput("database_type", label = "ORFs to be included in proteomedb:", choices = list("canonical", "all"), selected = "all"),
+                       # organism
+                       selectInput("organism", "Organism:",
+                                   choices = c("Human (H. sapiens)" = "HUMAN",
+                                               "Roundworm (C. elegans)" = "CAEEL",
+                                               "Fruit fly (D. melanogaster)" = "DROME",
+                                               "Mouse (M. musculus)" = "MOUSE",
+                                               "Rat (R. norvegicus)" = "RAT",
+                                               "Zebrafish (D. rerio)" = "DANRE")),
+                                               #"Chimpanzee (P. troglodytes)" = "PANTR",
+                                               #"Cow (B. taurus)" = "BOVIN",
+                                               #"Clawed frog (X. tropicalis)" = "XENTR",
+                                               #"Baker's yeast (S. cerevisiae)" = "YEAST")),
+
+                       # Type of ORFs to include in the proteome database
+                       radioButtons("database_type", "Type of ORFs to include in the proteome database:",
+                                    choices = c("Canonical" = "canonical",
+                                                "All" = "all"),
+                                    selected = "all"),
+
                        # ORF length cutoff
-                       numericInput("min_orf_length", label = "ORF length (amino acids):", value = 30),
+                       numericInput("min_orf_length", "Minimum ORF length (in amino acids):", value = 30, min = 0, step = 1),
 
-                       # short ORF options
-                       h5(tags$b("Find short (10 to 'ORF length' amino acids) ORFs in UTRs of reference transcripts:")),
-                       checkboxInput("user_find_utr_5_orfs", label = "Upstream 5' ORFs",
-                                     value = FALSE, width = NULL),
-                       checkboxInput("user_find_utr_3_orfs", label = "Downstream 3' ORFs",
-                                     value = FALSE, width = NULL),
-                       numericInput("minimum_tx_count",
-                                    label = "Minimum expression threshold (sum per transcript):",
-                                    value = 5),
+                       # options for finding short ORFs
+                       h5(tags$b("Find short (10 to 'Minimum ORF length' amino acids) ORFs in the UTRs of reference transcripts:")),
+                       checkboxInput("user_find_utr_5_orfs",   "Upstream 5' ORFs"),
+                       checkboxInput("user_find_utr_3_orfs", "Downstream 3' ORFs"),
+                       numericInput("minimum_tx_count", "Minimum expression threshold (sum per transcript):", value = 5, min = 0, step = 1),
 
-                       # Optional reference GTF file upload to override default
-                       radioButtons("data_source","Reference annotation GTF:",
-                                    choices = c( "Use preloaded GTF file" = "default","Upload Reference GTF file" = "user"), selected = "default"),
+                       # FASTQ-specific input options
+                       conditionalPanel(condition = "input.input_type == 'fastq_input'",
+                         numericInput("user_threads",       "CPUs:", value = 1, min = 1, step = 1),
+                         fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):",        accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                      ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz")),
 
-                       # GTF file upload appears only if user chooses to upload their own GTF file
-                       conditionalPanel(condition = "input.data_source == 'user'",fileInput("reference_gtf_file","Upload GENCODE GTF File",buttonLabel = "Browse...",multiple = FALSE)),
-
-                       # BAM input
-                       conditionalPanel(
-                         condition = "input.input_type == 'bam_input'",
-                         numericInput("user_threads", label = "CPUs (Max 10):", value = 4, min = 1, max = 10, step = 1),
-
-                         # short read
-                         conditionalPanel(condition="(input.sequencing_type == 'short-read') & (input.vcf_option == true)",
-                                          fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)),
-                         conditionalPanel(condition="(input.sequencing_type == 'short-read')",
-                                          fileInput("user_reference_genome_bam", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                                          fileInput("user_bam_files","Upload BAM Files", buttonLabel = "Browse...",multiple = TRUE)),
-
-                         # radio button to load subsetted fasta file by default.
-                         conditionalPanel(condition = "(input.sequencing_type == 'long-read') & (input.vcf_option == true)",
-                           radioButtons("user_reference_genome_bam","Reference genome:",choices = c("Use preloaded reference genome file" = "default","Upload reference genome  FASTA" = "user"),selected = "default"),
-
-                           # upload user specified genome fasta
-                           conditionalPanel(condition = "(input.sequencing_type == 'long-read') & (input.user_reference_genome_bam == 'user')",
-                             fileInput("user_reference_genome_bam","Upload reference genome  FASTA",buttonLabel = "Browse...",multiple = FALSE)),
-
-                           # VCF file input conditionally shown
-                           radioButtons("vcf_data","VCF file:",choices = c("Use preloaded VCF file" = "default","Upload VCF file" = "user"),selected = "default"),
-
-                           # VCF file upload appears only if user chooses to upload their own VCF file
-                           conditionalPanel(condition = "input.vcf_data == 'user'",
-                             fileInput("user_vcf_file","Upload VCF File",buttonLabel = "Browse...", multiple = FALSE)),
+                         conditionalPanel(condition = "input.sequencing_type == 'short-read'",
+                           fileInput("transcriptome_file",  "Upload reference transcriptome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                      ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"))
                          ),
 
-                         # radio button to load subsetted bam file by default
-                         conditionalPanel(condition = "(input.sequencing_type == 'long-read')",
-                           radioButtons("bam_data","BAM Files:",choices = c("Use preloaded BAM file" = "default","Upload BAM files" = "user"),selected = "default"),
+                         fileInput("user_fastq_files",      "Upload FASTQ files (can be gzipped):",                        accept = c(".fastq", ".fq", ".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                      ".fastq.gz", ".fq.gz", ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"), multiple = TRUE),
+                       ),
 
-                           # BAM file upload appears only if user chooses to upload their own BAM file
-                           conditionalPanel(condition = "input.bam_data == 'user'",
-                             fileInput("user_bam_files","Upload BAM Files", buttonLabel = "Browse...",multiple = TRUE))
+                       # BAM-specific input options
+                       conditionalPanel(condition = "input.input_type == 'bam_input'",
+                         numericInput("user_threads",       "CPUs:", value = 1, min = 1, step = 1),
+                         fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                               ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz")),
+                         fileInput("user_bam_files",        "Upload BAM files:",                                    accept = c(".bam"), multiple = TRUE),
+                       ),
+
+                       # GTF-specific input options
+                       conditionalPanel(condition = "input.input_type == 'gtf_input'",
+                         conditionalPanel(condition = "input.sequencing_type == 'long-read'",
+                           fileInput("user_gtf_file",         "Upload user-generated transcript annotation GTF file (e.g. 'bambu_transcript_annotations.gtf'):", accept = c(".gtf", ".gff", ".gff2", ".gff3")),
+                           fileInput("user_tx_count_file",    "Upload user-generated transcript counts file (optional; e.g. 'bambu_transcript_counts.txt'):",    accept = c(".txt", ".csv", ".tsv"))
                          ),
+
+                         conditionalPanel(condition = "input.sequencing_type == 'short-read'",
+                           fileInput("user_tx_count_file",    "Upload user-generated transcript counts file (e.g. 'bambu_transcript_counts.txt'):", accept = c(".txt", ".csv", ".tsv"))
+                         ),
+
+                         conditionalPanel(condition = "input.vcf_option == true",
+                           fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                 ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"))
+                         )
                        ),
 
-                       # Custom GTF input (user generated GTF)
-                       conditionalPanel(
-                         condition = "input.input_type == 'gtf_input' & input.sequencing_type == 'long-read'",
-                         fileInput("user_gtf_file", "Upload 'bambu_transcript_annotations.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                         fileInput("user_tx_count_file", "Upload 'bambu_transcript_counts.txt' (optional):", NULL, buttonLabel = "Browse...", multiple = FALSE)
-                       ),
-                       conditionalPanel(
-                         condition = "input.input_type == 'gtf_input' & input.sequencing_type == 'short-read'",
-                         fileInput("user_tx_count_file", "Upload transcript counts:", NULL, buttonLabel = "Browse...", multiple = FALSE)
-                       ),
-                       conditionalPanel(
-                         condition = "input.input_type == 'gtf_input' & input.vcf_option == true",
-                         fileInput("user_genome_gtf", "Upload reference genome FASTA:", NULL, buttonLabel = "Browse...", multiple = FALSE)
+                       # reference transcriptome GTF file
+                       fileInput("reference_gtf_file", "Upload reference transcriptome GTF file:", accept = c(".gtf", ".gff", ".gff2", ".gff3")),
+
+                       # VCF file
+                       conditionalPanel(condition = "input.vcf_option == true",
+                         fileInput("user_vcf_file", "Upload VCF file:", accept = c(".vcf"))
                        ),
 
-                       actionButton("db_submit_button", "Submit", class = "btn btn-primary")
+                       actionButton("db_submit_button", "Submit", class = "btn btn-info")
                 ),
                 column(6,
-                       HTML("<h3>Download your results:</h3>"),
-                       downloadButton("db_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
-                       div(id = "db-loading-container", class = "loading-container", div(class = "spinner"))
+                       h3("Download your results:"),
+                       downloadButton("db_download_button", "Download results (zip)", style = "width:70%;", enabled = FALSE), # initially disabled
+                       div(id = "db-loading-container", class = "loading-container", div(class = "spinner")),
+                       div(id = "db-status-msg-container")
                 )
               )
       ),
@@ -287,43 +283,39 @@ ui <- dashboardPage(
               fluidRow(
                 column(6,
                        h3("Perform a peptide search with FragPipe:"),
-                       fileInput("fragpipe_prot_db_fasta_file", label = "Upload a proteome database FASTA file (e.g. 'proteome_database.fasta'):", buttonLabel = "Browse...", multiple = FALSE, accept = c(".fasta")),
-                       checkboxInput("user_add_contaminants", label = "Add contaminants into the proteome database?",
-                                     value = TRUE, width = NULL),
-                       checkboxInput("user_perform_quantification", label = "Perform peptide quantification after the peptide search?",
-                                     value = FALSE, width = NULL),
+                       fileInput("fragpipe_prot_db_fasta_file", "Upload a proteome database FASTA file (e.g. 'proteome_database.fasta'):", accept = c(".fasta")),
+                       checkboxInput("user_add_contaminants", "Add contaminants into the proteome database?", value = TRUE),
+                       checkboxInput("user_perform_quantification", "Perform peptide quantification after the peptide search?"),
                        h5(tags$b("Upload mass spectrometry data files and select their data types:")),
                        actionButton("add_mass_spec_file_button", "+ Add mass spectrometry data file", class = "btn btn-warning"),
                        actionButton("remove_mass_spec_file_button", "- Remove mass spectrometry data file", class = "btn"),
                        div(id = "mass_spec_file_list"),
-                       selectInput("protease1", label = "Protease 1:",
-                                   choices = list("stricttrypsin (cuts KR, sense C)" = "stricttrypsin",
-                                                  "trypsin (cuts KR, no cuts P, sense C)" = "trypsin",
-                                                  "trypsin_gluc (cuts DEKR, no cuts P, sense C)" = "trypsin_gluc",
-                                                  "gluc (cuts DE, no cuts P, sense C)" = "gluc",
-                                                  "lysc (cuts K, no cuts P, sense C)" = "lysc",
-                                                  "lysn (cuts K, sense N)" = "lysn",
-                                                  "argc (cuts R, no cuts P, sense C)" = "argc",
-                                                  "aspn (cuts D, sense N)" = "aspn"),
-                                   selected = "stricttrypsin (cuts KR, sense C)"),
-                       selectInput("protease2", label = "Protease 2 (optional; must be different from protease 1):",
-                                   choices = list("none" = "none",
-                                                  "stricttrypsin (cuts KR, sense C)" = "stricttrypsin",
-                                                  "trypsin (cuts KR, no cuts P, sense C)" = "trypsin",
-                                                  "trypsin_gluc (cuts DEKR, no cuts P, sense C)" = "trypsin_gluc",
-                                                  "gluc (cuts DE, no cuts P, sense C)" = "gluc",
-                                                  "lysc (cuts K, no cuts P, sense C)" = "lysc",
-                                                  "lysn (cuts K, sense N)" = "lysn",
-                                                  "argc (cuts R, no cuts P, sense C)" = "argc",
-                                                  "aspn (cuts D, sense N)" = "aspn"),
-                                   selected = "none"),
-                       numericInput("fragpipe_cpu_threads", label = "Number of CPU threads to use (specify '0' for FragPipe to use <number of cores in system - 1> threads)", value = 1, step = 1),
-                       numericInput("fragpipe_memory_limit", label = "Memory limit in GB to use (specify '0' to let FragPipe decide)", value = 15, step = 1),
+                       selectInput("protease1", "Protease 1:",
+                                   choices = c("stricttrypsin (cuts KR, sense C)" = "stricttrypsin",
+                                               "trypsin (cuts KR, no cuts P, sense C)" = "trypsin",
+                                               "trypsin_gluc (cuts DEKR, no cuts P, sense C)" = "trypsin_gluc",
+                                               "gluc (cuts DE, no cuts P, sense C)" = "gluc",
+                                               "lysc (cuts K, no cuts P, sense C)" = "lysc",
+                                               "lysn (cuts K, sense N)" = "lysn",
+                                               "argc (cuts R, no cuts P, sense C)" = "argc",
+                                               "aspn (cuts D, sense N)" = "aspn")),
+                       selectInput("protease2", "Protease 2 (optional; must be different from protease 1):",
+                                   choices = c("None" = "none",
+                                               "stricttrypsin (cuts KR, sense C)" = "stricttrypsin",
+                                               "trypsin (cuts KR, no cuts P, sense C)" = "trypsin",
+                                               "trypsin_gluc (cuts DEKR, no cuts P, sense C)" = "trypsin_gluc",
+                                               "gluc (cuts DE, no cuts P, sense C)" = "gluc",
+                                               "lysc (cuts K, no cuts P, sense C)" = "lysc",
+                                               "lysn (cuts K, sense N)" = "lysn",
+                                               "argc (cuts R, no cuts P, sense C)" = "argc",
+                                               "aspn (cuts D, sense N)" = "aspn")),
+                       numericInput("fragpipe_cpu_threads", "Number of CPU threads to use (specify '0' for FragPipe to use <number of cores in system - 1> threads)", value = 1, min = 0, step = 1),
+                       numericInput("fragpipe_memory_limit", "Memory limit in GB to use (specify '0' to let FragPipe decide)", value = 15, min = 0, step = 1),
                        actionButton("fragpipe_submit_button", "Run FragPipe", class = "btn btn-info")
                 ),
                 column(6,
                        h3("Download FragPipe results:"),
-                       downloadButton("fragpipe_download_button", "Download FragPipe results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
+                       downloadButton("fragpipe_download_button", "Download FragPipe results (zip)", style = "width:70%;", enabled = FALSE), # initially disabled
                        div(id = "fragpipe-loading-container", class = "loading-container", div(class = "spinner")),
                        div(id = "fragpipe-status-msg-container")
                 )
@@ -334,15 +326,36 @@ ui <- dashboardPage(
               h5("Creates BED12s and GTFs of peptides, ORFs and transcripts for visualisation and produces summary data"),
               fluidRow(
                 column(6,
-                       fileInput("user_proteomics_file", "Upload proteomics results:", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_metadata_file", "Upload 'proteome_database_metadata.txt':", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       fileInput("user_post_gtf_file", "Upload 'proteome_database_transcripts.gtf':", NULL, buttonLabel = "Browse...", multiple = FALSE),
-                       actionButton("integ_submit_button", "Submit", class = "btn btn-primary")
+                       h3("Part 1: Reformat proteomics results files"),
+                       h5("Note 1: All proteomics results files with a file extension of '.txt' or '.csv' will be renamed to have a flie extension of '.tsv'."),
+                       h5("Note 2: Ignoring the file extension, if a proteomics results file with the name 'peptide_data' was uploaded, it will be renamed to 'peptide_data_renamed.tsv'."),
+                       fileInput("user_orig_proteomics_files", "Upload proteomics results files:", accept = c(".txt", ".csv", ".tsv"), multiple = TRUE),
+                       radioButtons("proteomics_search_tool", "Select proteomics search tool:",
+                                    choices = c("Spectronaut" = "Spectronaut",
+                                                "FragPipe (identified peptides, i.e. peptide.tsv)" = "FragPipe",
+                                                "FragPipe (quantified peptides, i.e. report.pr_matrix.tsv)" = "FragPipe_quant")),
+                       actionButton("integ_reformat_submit_button", "Submit", class = "btn btn-info")
                 ),
                 column(6,
-                       HTML("<h3>Download your results:</h3>"),
-                       downloadButton("integ_download_button", "Download results (zip)", disabled = TRUE, style = "width:70%;"), # initially disabled
-                       div(id = "integ-loading-container", class = "loading-container", div(class = "spinner"))
+                       h3("Download the reformatted proteomics results file:"),
+                       downloadButton("integ_reformat_download_button", "Download reformatted results file (peptide_data.tsv)", style = "width:70%;", enabled = FALSE), # initially disabled
+                       div(id = "integ-reformat-loading-container", class = "loading-container", div(class = "spinner")),
+                       div(id = "integ-reformat-status-msg-container")
+                )
+              ),
+              fluidRow(
+                column(6,
+                       h3("Part 2: Upload files to integrate"),
+                       fileInput("user_proteomics_file", "Upload reformatted proteomics results file:", accept = c(".txt", ".csv", ".tsv")),
+                       fileInput("user_metadata_file",   "Upload 'proteome_database_metadata.txt':",    accept = c(".txt")),
+                       fileInput("user_post_gtf_file",   "Upload 'proteome_database_transcripts.gtf':", accept = c(".gtf")),
+                       actionButton("integ_submit_button", "Submit", class = "btn btn-info")
+                ),
+                column(6,
+                       h3("Download integration results:"),
+                       downloadButton("integ_download_button", "Download results (zip)", style = "width:70%;", enabled = FALSE), # initially disabled
+                       div(id = "integ-loading-container", class = "loading-container", div(class = "spinner")),
+                       div(id = "integ-status-msg-container")
                 )
               )
       ),
