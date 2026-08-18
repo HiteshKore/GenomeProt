@@ -161,10 +161,9 @@ def main():
         sys.exit(1)
 
     # Check if the organism is supported
-    org_map = {"HUMAN": "Homo sapiens", "CAEEL": "Caenorhabditis elegans", "DROME": "Drosophila melanogaster", "MOUSE": "Mus musculus", "RAT": "Rattus norvegicus", "DANRE": "Danio rerio",
-               "PANTR": "Pan troglodytes", "BOVIN": "Bos taurus", "XENTR": "Xenopus tropicalis", "YEAST": "Saccharomyces cerevisiae"}
+    org_map = {"HUMAN": "Homo sapiens", "CAEEL": "Caenorhabditis elegans", "DROME": "Drosophila melanogaster", "MOUSE": "Mus musculus", "RAT": "Rattus norvegicus", "DANRE": "Danio rerio"}
     if arg_organism.upper().strip() not in org_map:
-        print(f"The organism name '{arg_organism}' must be 'HUMAN', 'CAEEL', 'DROME', 'MOUSE', 'RAT', 'DANRE', 'PANTR', 'BOVIN', 'XENTR' or 'YEAST' (case-insensitive).")
+        print(f"The organism name '{arg_organism}' must be 'HUMAN', 'CAEEL', 'DROME', 'MOUSE', 'RAT' or 'DANRE' (case-insensitive).")
         sys.exit(1)
     organism_latin_name = org_map[arg_organism.upper().strip()]
     organism_info = (arg_organism.upper().strip(), organism_latin_name)
