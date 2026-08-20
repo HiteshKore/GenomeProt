@@ -24,7 +24,9 @@ for filepath in BRAF_mutation.vcf gencode_v47_sorted.gtf GRCh38_chr1_6_7_masked.
     fi
 done
 
-gunzip GRCh38_chr1_6_7_masked.fa.gz
+if ! [ -f GRCh38_chr1_6_7_masked.fa ] && [ -f GRCh38_chr1_6_7_masked.fa.gz ]; then
+    gzip -d GRCh38_chr1_6_7_masked.fa.gz
+fi
 
 if ! [ -f long_read_bam/Melanoma_data_subset.bam ] && [ -f long_read_bam.zip ]; then
     unzip long_read_bam.zip

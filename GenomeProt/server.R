@@ -855,7 +855,6 @@ bambu_server <- function(input, session) {
 
   if (input$input_type == "bam_input") {    # if the user uploaded BAM files
     logfile_path <- file.path(outdir_bambu, "logfile.txt")
-    bam_df <- as.data.frame(user_bam_files)
     bamdir <- dirname(user_bam_files$datapath)
 
     # Specify new filenames
@@ -913,13 +912,13 @@ database_server <- function(input, session) {
     dir.create(outdir_db)
   }
 
-  if (input$input_type == "gtf_input") {                # if the user supplied GTF files
+  if (input$input_type == "gtf_input" && input$sequencing_type == "long-read") {    # if the user supplied GTF files and long-read RNA-seq data
     db_gtf_file <- input$user_gtf_file$datapath
     db_counts_file <- input$user_tx_count_file$datapath
-  } else if (input$sequencing_type == "long-read") {    # if the user supplied long-read RNA-seq data
+  } else if (input$sequencing_type == "long-read") {                                # if the user supplied FASTQ / BAM files and long-read RNA-seq data
     db_gtf_file <- file.path(session_id, "bambu_output", "bambu_transcript_annotations.gtf")
     db_counts_file <- file.path(session_id, "bambu_output", "bambu_transcript_counts.txt")
-  } else {                                              # if the user supplied short-read RNA-seq data
+  } else {                                                                          # if the user supplied short-read RNA-seq data
     db_gtf_file <- input$reference_gtf_file$datapath
     db_counts_file <- file.path(session_id, "mapping_output", "bambu_transcript_counts.txt")
   }

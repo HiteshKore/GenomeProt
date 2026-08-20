@@ -55,8 +55,8 @@ import_orf_metadata <- function(metadata_file) {
   orf_data$transcript_id <- orf_data$transcript
   orf_data$transcript <- NULL
   orf_data$PID <- paste0(orf_data$accession, "|CO=", orf_data$orf_genomic_coordinates)
-  orf_data <- orf_data %>% dplyr::select(PID, accession,protein_description,orf_genomic_coordinates, gene,gene_symbol, transcript_id,strand, transcript_biotype, transcript_coordinates,orf_type, localisation, uniprot_status, openprot_id, 
-                                         protein_sequence,`molecular_weight(kDA)`, isoelectric_point, hydrophobicity, aliphatic_index, longest_orf_in_transcript)
+  orf_data <- orf_data %>% dplyr::select(PID, accession, protein_description, orf_genomic_coordinates, gene, gene_symbol, transcript_id, strand, transcript_biotype, transcript_coordinates, orf_type, localisation, uniprot_status, openprot_id,
+                                         protein_sequence, `molecular_weight(kDA)`, isoelectric_point, hydrophobicity, aliphatic_index, longest_orf_in_transcript)
   return(orf_data)
 }
 
@@ -67,9 +67,9 @@ integrate_metadata<-function(pd,orf_df){
   #subset metadata for proteins detected in proteomics
 
   orf_df_protein_detected <- orf_df %>% dplyr::filter(accession %in% pd$accession) %>%
-    dplyr::rename(gene_id=gene,gene_name=gene_symbol)%>%
-    tidyr::separate(orf_genomic_coordinates, into = c("chromosome", "start", "end"), sep = "\\:|-", remove = FALSE)%>%
-    dplyr::mutate(protein_length=nchar(protein_sequence))
+    dplyr::rename(gene_id = gene, gene_name = gene_symbol) %>%
+    tidyr::separate(orf_genomic_coordinates, into = c("chromosome", "start", "end"), sep = "\\:|-", remove = FALSE) %>%
+    dplyr::mutate(protein_length = nchar(protein_sequence))
 
   # get transcript lengths
   gtf_txdb <- txdbmaker::makeTxDbFromGFF(gtf_import_file, format = "gtf")
@@ -84,11 +84,11 @@ integrate_metadata<-function(pd,orf_df){
     dplyr::select(transcript_id, gene_name, strand)
 
   # merge tx info
-  tx_data <- merge(tx_lengths, gtf_import, by="transcript_id", all.x=T, all.y=F) #transcript_id tx_len gene_name strand
+  tx_data <- merge(tx_lengths, gtf_import, by = "transcript_id", all.x = T, all.y = F) # transcript_id tx_len gene_name strand
   # get transcripts for mapping
   txs <- exonsBy(gtf_txdb, by = c("tx"), use.names = T)
 
-  orf_df_protein_detected <- dplyr::left_join(orf_df_protein_detected, tx_lengths, by="transcript_id")
+  orf_df_protein_detected <- dplyr::left_join(orf_df_protein_detected, tx_lengths, by = "transcript_id")
 
   orf_df_protein_detected$start <- as.numeric(orf_df_protein_detected$start)
   orf_df_protein_detected$end <- as.numeric(orf_df_protein_detected$end)
@@ -319,7 +319,7 @@ md <- integrate_metadata(pd, orf_df)
 
 # create unique ID of ORF in transcript
 
-md_order<-c("transcript_id","gene_id","PID","accession", "orf_genomic_coordinates", "chromosome","start","end","protein_sequence","protein_length","nt_length","tx_len","gene_name","strand","stranded_start","exon_start","exon_end","exon_rank","exon_length","total_length","txstart","txend")
+md_order <- c("transcript_id", "gene_id", "PID", "accession", "orf_genomic_coordinates", "chromosome", "start", "end", "protein_sequence", "protein_length", "nt_length", "tx_len", "gene_name", "strand", "stranded_start", "exon_start", "exon_end", "exon_rank", "exon_length", "total_length", "txstart", "txend")
 
 md <- md %>%
   dplyr::select(dplyr::any_of(md_order), dplyr::everything())

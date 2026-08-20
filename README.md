@@ -368,7 +368,7 @@ This module uses [IsoVis](https://isomix.org/isovis/) to create an interactive v
  </tr>
  <tr>
   <td>GTF</td>
-  <td>Assembled transcripts (from Bambu) (long-read only)</td>
+  <td>Assembled transcripts (e.g. from Bambu)</td>
  </tr>
  <tr>
   <td>Single nucleotide variants</td>
@@ -378,12 +378,12 @@ This module uses [IsoVis](https://isomix.org/isovis/) to create an interactive v
  </tr>
  <tr>
   <td>Transcript counts</td>
-  <td>TXT/CSV</td>
-  <td>No</td>
+  <td>TXT/CSV/TSV</td>
+  <td>Short-read GTF input only</td>
   <td>Transcript expression counts used to optionally filter lowly expressed transcripts from the database</td>
  </tr>
  <tr>
-  <td>Reference annotations</td>
+  <td>Reference transcriptome annotations</td>
   <td>GTF</td>
   <td>Yes</td>
   <td>ENSEMBL or Gencode annotation</td>
@@ -391,7 +391,7 @@ This module uses [IsoVis](https://isomix.org/isovis/) to create an interactive v
  <tr>
   <td>Reference genome</td>
   <td>FASTA</td>
-  <td>FASTQ input only</td>
+  <td>Yes for FASTQ and BAM input; only required for GTF input if uploading a VCF file</td>
   <td>Genome sequences</td>
  </tr>
  <tr>
@@ -451,13 +451,23 @@ The output includes `peptide.tsv` and `report.pr_matrix.tsv` (the latter include
 
 ### 3. Integration
 
+Part 1: Reformat proteomics results files
+
 | Input | File Type | Required? | Description |
 |-|-|-|-|
-| Proteomics peptide data | TSV/TXT | Yes | Peptide results. Typically, 'peptides.txt', 'peptide.tsv' or 'report.pr_matrix.tsv' |
-| Database (proteome_database.fasta) | FASTA | Yes | Generated in Module 1. Amino acid sequences of all ORFs in the data |
+| Proteomics results | TXT/CSV/TSV | Yes | Proteomics results files from a specific proteomics search tool. Typically, 'peptides.txt', 'peptide.tsv' or 'report.pr_matrix.tsv'. Currently supports peptide results created by Spectronaut and FragPipe. |
+
+| Output | File | File Type | Description |
+|-|-|-|-|
+| Reformatted proteomics results file | peptide_data.tsv | TSV | A file storing a reformatted version of the results from the uploaded files |
+
+Part 2: Upload files to integrate
+
+| Input | File Type | Required? | Description |
+|-|-|-|-|
+| Reformatted proteomics results file | TXT/CSV/TSV | Yes | The reformatted proteomics results file generated in Part 1 above |
 | Database metadata (proteome_database_metadata.txt) | TXT | Yes | Generated in Module 1. Information on each ORF in the data |
 | Database transcripts (proteome_database_transcripts.gtf) | GTF | Yes | Generated in Module 1. Annotations of transcripts used to generate the database |
-
 
 | Output | File | File Type | Description |
 |-|-|-|-|
@@ -511,7 +521,7 @@ The output includes `peptide.tsv` and `report.pr_matrix.tsv` (the latter include
 | Input | File Type | Required? | Description |
 |-|-|-|-|
 | Transcript annotations (combined_annotations.gtf) | GTF | Yes | Generated in Step 3, annotations of ORFs, peptides and transcripts |
-| Transcript counts (bambu_transcript_counts.txt) | TXT/CSV | No | Generated in Step 1, transcript counts per sample |
-| Peptide intensities | TXT | No | Generated in Step 2 (external), Peptide intensity data 'report.pr_matrix.tsv' |
+| Transcript counts (bambu_transcript_counts.txt) | TXT/CSV/TSV | No | Generated in Step 1, transcript counts per sample |
+| Peptide intensities | TXT/CSV/TSV | No | Generated in Step 2 (external), Peptide intensity data 'report.pr_matrix.tsv' |
 
 **Note:** This tool is interactive and there is an option to download plots as PNG, JPEG, SVG and PDF.

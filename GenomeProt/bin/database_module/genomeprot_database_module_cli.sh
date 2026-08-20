@@ -488,17 +488,6 @@ fi
 
 #set working directory
 cd ../../../
-yml_dir=$(pwd)
-
-
-
-yaml_file=$yml_dir"/conda_env.yaml" #fix this
-
-install_file=$yml_dir"/install.R"
-
-
-
-echo $yaml_file
 
 #genomeprot directory
 
@@ -521,7 +510,7 @@ echo "Run started at: "$start | tee -a "$log_file"
 
 # Check if the Conda environment exists
 if conda env list | grep -q "^$genomeprot_env\s"; then
-    echo "Conda environment '$genomeprot_env'exists."
+    echo "Conda environment '$genomeprot_env' exists."
 
     #short read data #######
 
@@ -535,25 +524,14 @@ if conda env list | grep -q "^$genomeprot_env\s"; then
         generate_database "$reference_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
     fi
 
-
     #execute commands
     if [[ "$data_type" = "GTF" ]]; then
       generate_database "$custom_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
     else
       fastq_bam_input fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$sequencing_platform" "$genome_fa" "$sample_directory" "$output_directory" "$threads" "$reference_gtf" "$organism" "$orf_length" "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$min_tx_count" "$data_type"
     fi
-
-
 else
-    echo "Conda environment '$genomeprot_env' does not exist. Creating it from $yaml_file..."
-    if [ -f "$yaml_file" ]; then
-        #create conda environment and install packages
-        Rscript $install_file $yaml_file
-    else
-        echo "YAML file '$yaml_file' not found. Cannot create Conda environment." >&2
-        exit 1
-    fi #yml file condition
-
+    echo "Conda environment '$genomeprot_env' does not exist."
 fi #environment check
 
 # Capture end time
