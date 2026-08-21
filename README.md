@@ -212,7 +212,7 @@ For instance, if FragPipe was extracted into `/home/user/a/b/c/d/`, change `/hom
 
 #### Prepare the reference and test datasets
 
-Run the following command to unzip the combined UniProt and OpenProt reference files in the `GenomeProt/data` directory and download the test data for the database generation module to preload:
+Run the following command to unzip the combined UniProt and OpenProt reference files in the `GenomeProt/data` directory and the test data files in the `GenomeProt/testdata` directory:
 
 ```bash
 bash prepare_ref_and_test_data.sh
