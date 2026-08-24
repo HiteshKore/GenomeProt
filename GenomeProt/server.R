@@ -595,7 +595,7 @@ fastq_server <- function(input, session) {
                                  " -t ", shQuote(user_threads),
                                  " -ax ", shQuote("splice:hq"),
                                  " -o ", shQuote(mapped_reads_file),
-                                 " ", shQuote(index_file),
+                                 " ", shQuote(genome_index_file),
                                  " ", shQuote(fastq_file))
       message(command_minimap2)
       system(command_minimap2)
@@ -776,6 +776,7 @@ bam_server <- function(input, session) {
   }
 
   # generate the reference transcript FASTA file
+  user_threads <- floor(input$user_threads)
   user_reference_genome <- input$user_reference_genome$datapath
   reference_gtf_file <- input$reference_gtf_file$datapath
   transcript_fasta_file <- file.path(outdir_bam, "transcript.fa")
