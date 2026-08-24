@@ -853,9 +853,9 @@ bambu_server <- function(input, session) {
   user_bam_files <- input$user_bam_files
   reference_gtf_file <- input$reference_gtf_file$datapath
   organism <- input$organism
+  logfile_path <- file.path(outdir_bambu, "logfile.txt")
 
   if (input$input_type == "bam_input") {    # if the user uploaded BAM files
-    logfile_path <- file.path(outdir_bambu, "logfile.txt")
     bamdir <- dirname(user_bam_files$datapath)
 
     # Specify new filenames
