@@ -1339,7 +1339,7 @@ database_server <- function(input, session) {
     files_to_zip_db <- c(files_to_zip_db, bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
   } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
     files_to_zip_db <- c(files_to_zip_db, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
-  } else if (input$sequencing_type == "short-read") {
+  } else if (input$input_type != "gtf_input" & input$sequencing_type == "short-read") {
     files_to_zip_db <- c(files_to_zip_db, "../mapping_output/bambu_transcript_counts.txt")
   }
 
