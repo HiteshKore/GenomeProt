@@ -727,7 +727,7 @@ fastq_server <- function(input, session) {
     is_reference_genome_gzipped <- grepl("\\.gz$", user_reference_genome$datapath)
     is_reference_transcriptome_gzipped <- grepl("\\.gz$", transcriptome_file)
     decoy_file <- file.path(outdir_bam, "decoys.txt")
-    salmon_index_file <- file.path(outdir_bam, "salmon_index")
+    salmon_index_dir <- file.path(outdir_bam, "salmon_index")
 
     if (is_reference_genome_gzipped) {  # if the genome is gzipped, decompress it before generating decoys
       temp_decompressed_genome_file <- file.path(outdir_bam, "temp_genome.fa")
@@ -814,17 +814,20 @@ fastq_server <- function(input, session) {
                             " -t ", shQuote(genome_transcriptome_combined_file),
                             " -d ", shQuote(decoy_file),
                             " -p ", shQuote(user_threads),
-                            " -i ", shQuote(salmon_index_file))
+                            " -i ", shQuote(salmon_index_dir))
 
-    remove_file_if_exists(salmon_index_file)
+    if (dir.exists(salmon_index_dir)) {
+      unlink(salmon_index_dir, recursive = TRUE)
+    }
 
     # Generate the salmon index
     message(command_index)
     system(command_index)
 
-    # Ensure the salmon index file exists
-    if (!file.exists(salmon_index_file)) {
-      error_msg <- "Error: Failed to generate the salmon index file."
+    # Ensure the salmon index directory exists
+    info_json_file <- file.path(salmon_index_dir, "info.json")
+    if (!(dir.exists(salmon_index_dir) & file.exists(info_json_file))) {
+      error_msg <- "Error: Failed to generate the salmon index directory."
       return(error_msg)
     }
 
@@ -864,7 +867,7 @@ fastq_server <- function(input, session) {
         quant_output_file <- file.path(quant_output_folder, "quant.sf")
 
         command_salmon <- paste0(conda_command, "salmon quant",
-                                 " -i ", shQuote(salmon_index_file),
+                                 " -i ", shQuote(salmon_index_dir),
                                  " -p ", shQuote(user_threads),
                                  " -l ", shQuote("A"),
                                  " -1 ", shQuote(R1_path),
@@ -893,7 +896,7 @@ fastq_server <- function(input, session) {
       quant_output_file <- file.path(quant_output_folder, "quant.sf")
 
       command_salmon <- paste0(conda_command, "salmon quant",
-                               " -i ", shQuote(salmon_index_file),
+                               " -i ", shQuote(salmon_index_dir),
                                " -p ", shQuote(user_threads),
                                " -l ", shQuote("A"),
                                " -r ", shQuote(single_end[[base_name]]),
