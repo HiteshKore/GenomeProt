@@ -524,6 +524,24 @@ if (nchar(error_message) > 0) {
   stop(error_message)
 }
 
+# ensure that none of the specified files are empty
+
+if (file.size(gtf_path) == 0) {
+  error_message <- paste0("The custom user GTF '", gtf_path, "' must not be empty.")
+} else if (file.size(reference_gtf) == 0) {
+  error_message <- paste0("The reference GTF '", reference_gtf, "' must not be empty.")
+} else if (!is.null(ref_genome) && file.size(ref_genome) == 0) {
+  error_message <- paste0("The reference genome FASTA '", ref_genome, "' must not be empty.")
+} else if (!is.null(tx_count_path) && file.size(tx_count_path) == 0) {
+  error_message <- paste0("The transcript counts file '", tx_count_path, "' must not be empty.")
+} else if (!is.null(vcf_file) && file.size(vcf_file) == 0) {
+  error_message <- paste0("The VCF file '", vcf_file, "' must not be empty.")
+}
+
+if (nchar(error_message) > 0) {
+  stop(error_message)
+}
+
 # select the reference genome corresponding to the specified organism
 if (organism == "HUMAN") {          # H. sapiens
   suppressPackageStartupMessages({

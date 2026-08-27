@@ -82,7 +82,21 @@ if (!file.exists(bam_dir)) {
   bam_files <- list.files(path = bam_dir, "\\.bam$", full.names = TRUE)
   if (length(bam_files) == 0) {
     error_message <- paste0("The BAM file directory '", bam_dir, "' does not contain any BAM files (i.e. files ending with '.bam').")
+  } else if (any(dir.exists(bam_files))) {
+    error_message <- paste0("The BAM file directory '", bam_dir, "' contains BAM files that are directories. Please ensure that all BAM files in the BAM file directory specified are files and not directories.")
   }
+}
+
+if (nchar(error_message) > 0) {
+  stop(error_message)
+}
+
+# ensure that none of the specified files are empty
+
+if (file.size(gtf_file) == 0) {
+  error_message <- paste0("The transcript annotation file '", gtf_file, "' must not be empty.")
+} else if (any(file.size(bam_files) == 0)) {
+  error_message <- paste0("The BAM file directory '", bam_dir, "' contains empty BAM files. Please ensure that all BAM files in the BAM file directory specified are not empty.")
 }
 
 if (nchar(error_message) > 0) {

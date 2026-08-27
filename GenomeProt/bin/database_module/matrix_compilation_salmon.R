@@ -43,6 +43,12 @@ if (!file.exists(salmon_outdir)) {
   if (length(files) == 0) {
     stop(paste0("The Salmon output directory '", salmon_outdir, "' does not contain any directories with the file 'quant.sf'."))
   }
+  if (any(dir.exists(files))) {
+    stop(paste0("The Salmon output directory '", salmon_outdir, "' contains quant.sf files that are directories. Please ensure that all quant.sf files in the Salmon output directory specified are files and not directories."))
+  }
+  if (any(file.size(files) == 0)) {
+    stop(paste0("The Salmon output directory '", salmon_outdir, "' contains quant.sf files that are empty. Please ensure that all quant.sf files in the Salmon output directory specified are not empty."))
+  }
 }
 
 # load the rest of the libraries needed for the remainder of the script to run

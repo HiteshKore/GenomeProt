@@ -27,14 +27,17 @@ if (is.null(report_rmd_file)) {
 }
 
 # check the input arguments
+peptide_info_file <- file.path(report_outdir, "peptide_info.tsv")
 if (!file.exists(report_rmd_file)) {
   stop(paste0("The integration summary report Rmd file '", report_rmd_file, "' does not exist."))
 } else if (!file.exists(report_outdir)) {
   stop(paste0("The output directory '", report_outdir, "' does not exist."))
 } else if (file.exists(report_outdir) && !dir.exists(report_outdir)) {
   stop(paste0("'", report_outdir, "' exists but is not a directory."))
-} else if (!file.exists(file.path(report_outdir, "peptide_info.tsv"))) {
+} else if (!file.exists(peptide_info_file)) {
   stop(paste0("The file 'peptide_info.tsv' cannot be found in the output directory '", report_outdir, "'."))
+} else if (file.size(peptide_info_file) == 0) {
+  stop(paste0("The file 'peptide_info.tsv' in the output directory '", report_outdir, "' is empty."))
 }
 
 # create the directory for storing the report images if it does not exist

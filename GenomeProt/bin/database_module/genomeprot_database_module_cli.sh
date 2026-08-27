@@ -1,5 +1,21 @@
 #!/bin/bash
 
+# Get the path to the conda binary
+conda_path=$(/usr/bin/which conda)
+if [ -z "$conda_path" ]; then
+    echo 'Failed to find the conda binary. Check if conda is installed or if it is within a directory specified in the $PATH variable.' >&2
+    exit 1
+fi
+
+# Name of the Conda environment
+genomeprot_env="GenomeProt_env"
+
+# Check if the Conda environment exists
+if ! ($conda_path env list | grep -q "^$genomeprot_env\s"); then
+    echo "Conda environment '$genomeprot_env' does not exist."
+    exit 1
+fi
+
 function short_read_commands() {
     fq_se=("${!1}")
     bm_fn=("${!2}")
@@ -34,7 +50,7 @@ function short_read_commands() {
         cat "$transcriptome_db" "$genome_fa" > $output_dir"gentrome.fa.gz"
 
         # Run Salmon index
-        conda run -n GenomeProt_env salmon index --gencode -t $output_dir"gentrome.fa.gz" -d $output_dir"decoys.txt" -p "$threads" -i $output_dir"salmon_index"
+        $conda_path run -n $genomeprot_env salmon index --gencode -t $output_dir"gentrome.fa.gz" -d $output_dir"decoys.txt" -p "$threads" -i $output_dir"salmon_index"
     else
         echo "Processing uncompressed files"
 
@@ -48,7 +64,7 @@ function short_read_commands() {
         cat "$transcriptome_db" "$genome_fa" > $output_dir"gentrome.fa"
 
         # Run Salmon index
-        conda run -n GenomeProt_env salmon index --gencode -t $output_dir"gentrome.fa" -d $output_dir"decoys.txt" -p "$threads" -i $output_dir"salmon_index"
+        $conda_path run -n $genomeprot_env salmon index --gencode -t $output_dir"gentrome.fa" -d $output_dir"decoys.txt" -p "$threads" -i $output_dir"salmon_index"
     fi
 
     # Process paired-end samples
@@ -58,7 +74,7 @@ function short_read_commands() {
 
             r1_file_path=$(find "$sample_dir" -type f \( -name "${id}_R1.fastq" -o -name "${id}_R1.fastq.gz" \))
             r2_file_path=$(find "$sample_dir" -type f \( -name "${id}_R2.fastq" -o -name "${id}_R2.fastq.gz" \))
-            conda run -n GenomeProt_env salmon quant -i $output_dir"salmon_index" -p "$threads" -l A -1 $r1_file_path -2 $r2_file_path -o $output_dir$id
+            $conda_path run -n $genomeprot_env salmon quant -i $output_dir"salmon_index" -p "$threads" -l A -1 $r1_file_path -2 $r2_file_path -o $output_dir$id
         done
 
         echo "Paired-end samples processed." | tee -a "$log_file"
@@ -70,14 +86,14 @@ function short_read_commands() {
             id=$(echo "$file" | sed -e 's/\(.*\)\.fastq\.gz/\1/' -e 's/\(.*\)\.fastq/\1/')
             echo "Quantifying single-end reads from "$id | tee -a "$log_file"
 
-            conda run -n GenomeProt_env salmon quant -i $output_dir"salmon_index" -p "$threads" -l A -r $sample_dir$file -o $output_dir$id
+            $conda_path run -n $genomeprot_env salmon quant -i $output_dir"salmon_index" -p "$threads" -l A -r $sample_dir$file -o $output_dir$id
         done
 
         echo "Single-end samples processed." | tee -a "$log_file"
     fi
 
     echo "Generating transcript counts from Salmon quantification files" | tee -a "$log_file"
-    conda run -n GenomeProt_env Rscript ./bin/database_module/matrix_compilation_salmon.R -s "$output_dir" -g "$ref_gtf" -o $output_dir"counts_transcript.txt"
+    $conda_path run -n $genomeprot_env Rscript ./bin/database_module/matrix_compilation_salmon.R -s "$output_dir" -g "$ref_gtf" -o $output_dir"counts_transcript.txt"
 }
 
 function generate_database() {
@@ -102,17 +118,17 @@ function generate_database() {
         echo $min_tx_count
 
         if [[ "$tx_count_file" == "None" ]]; then
-            conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
+            $conda_path run -n $genomeprot_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
         else
-            conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
+            $conda_path run -n $genomeprot_env Rscript ./bin/database_module/generate_proteome.R -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -s $output_dir
         fi
 
         echo "Annotating the proteome database" | tee -a "$log_file"
 
         if [[ "$input_type" == "GTF" ]]; then
-            conda run -n GenomeProt_env python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $custom_gtf $output_dir $orf_input_type $orf_length None $organism $threads 2000
+            $conda_path run -n $genomeprot_env python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $custom_gtf $output_dir $orf_input_type $orf_length None $organism $threads 2000
         else
-            conda run -n GenomeProt_env python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length None $organism $threads 2000
+            $conda_path run -n $genomeprot_env python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length None $organism $threads 2000
         fi
     else                                    # if a VCF file was provided
         echo "Generating the proteome database" | tee -a "$log_file"
@@ -120,15 +136,15 @@ function generate_database() {
         echo $min_tx_count
 
         if [[ "$tx_count_file" == "None" ]]; then
-            conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
+            $conda_path run -n $genomeprot_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
         else
-            conda run -n GenomeProt_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
+            $conda_path run -n $genomeprot_env Rscript ./bin/database_module/generate_proteome.R -G $ref_genome -g $custom_gtf -r $ref_gtf -c $tx_count_file -m $min_tx_count -o $organism -l $orf_length -u $five_utr_orf -d $three_utr_orf -v $vcf_fn -s $output_dir
         fi
 
         echo "Annotating the proteome database" | tee -a "$log_file"
 
         mutant_db=$output_dir"Mutant_ORFome_aa.txt"
-        conda run -n GenomeProt_env python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length $mutant_db $organism $threads 2000
+        $conda_path run -n $genomeprot_env python ./bin/database_module/annotate_proteome.py $ref_gtf $ref_proteome $output_dir"ORFome_aa.txt" $output_dir"proteome_database_transcripts.gtf" $output_dir $orf_input_type $orf_length $mutant_db $organism $threads 2000
     fi
 }
 
@@ -159,25 +175,25 @@ function fastq_bam_input() {
         # FASTQ files
         if [[ ${#fq_se[@]} -gt 0 ]]; then
             echo "Generating minimap2 index" | tee -a "$log_file"
-            conda run -n GenomeProt_env bash -c "minimap2 -ax splice:hq -d  $output_dir$index_fn  $genome_fa"
+            $conda_path run -n $genomeprot_env bash -c "minimap2 -ax splice:hq -d  $output_dir$index_fn  $genome_fa"
             echo "Indexing complete" | tee -a "$log_file"
 
             echo "Genome alignment started" | tee -a "$log_file"
             for file in "${fq_se[@]}"; do
                 file_prefix="${file%%.fastq*}"
                 echo "Processing:\t"$file_prefix | tee -a "$log_file"
-                conda run -n GenomeProt_env bash -c "minimap2 -t $threads -ax splice:hq --sam-hit-only --secondary=no $output_dir$index_fn $sample_dir$file | samtools view -bh | samtools sort -@ $threads -o $output_dir$file_prefix.bam"
+                $conda_path run -n $genomeprot_env bash -c "minimap2 -t $threads -ax splice:hq --sam-hit-only --secondary=no $output_dir$index_fn $sample_dir$file | samtools view -bh | samtools sort -@ $threads -o $output_dir$file_prefix.bam"
             done
             echo "Genome alignment completed" | tee -a "$log_file"
 
             echo "Performing transcript identification and quantification with bambu" | tee -a "$log_file"
-            conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $output_dir -g $ref_gtf -t $threads -s $organism -o $output_dir 2>&1 | tee -a "$log_file"
+            $conda_path run -n $genomeprot_env Rscript ./bin/database_module/run_bambu.R -b $output_dir -g $ref_gtf -t $threads -s $organism -o $output_dir 2>&1 | tee -a "$log_file"
         fi
 
         # BAM files
         if [[ ${#bm_fn[@]} -gt 0 ]]; then
             echo "Performing transcript identification and quantification with bambu" | tee -a "$log_file"
-            conda run -n GenomeProt_env Rscript ./bin/database_module/run_bambu.R -b $sample_dir -g $ref_gtf -t $threads -s $organism -o $output_dir 2>&1 | tee -a "$log_file"
+            $conda_path run -n $genomeprot_env Rscript ./bin/database_module/run_bambu.R -b $sample_dir -g $ref_gtf -t $threads -s $organism -o $output_dir 2>&1 | tee -a "$log_file"
         fi
 
         transcript_count_fn=$output_directory"counts_transcript.txt"
@@ -401,7 +417,7 @@ fastqfile_se=()
 bamfiles=()
 index=0
 
-# check if the sample directory exists
+# Check if the sample directory exists
 if [ -d "$sample_directory" ] ; then
     echo "Searching for $data_type files from the sample directory '$sample_directory'..." | tee -a "$log_file"
 
@@ -432,14 +448,11 @@ else
     exit 1
 fi
 
-#set working directory
+# Set the working directory
 cd ../../
 
 genomeprot_dir=$(pwd)
 echo "GenomeProt direcory: $genomeprot_dir"
-
-# Name of the conda environment
-genomeprot_env="GenomeProt_env"
 
 echo $log_file
 # Capture end time
@@ -448,29 +461,22 @@ start_time=$(date +%s)
 
 echo "Run started at: "$start | tee -a "$log_file"
 
-# Check if the Conda environment exists
-if conda env list | grep -q "^$genomeprot_env\s"; then
-    echo "Conda environment '$genomeprot_env' exists."
+# short read data
+if [[ "$sequencing_platform" == "short-read" && -f "$transcriptome_db" ]]; then
+    # run salmon and compile transcript and transcript_counts.txt file
+    short_read_commands fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$genome_fa" "$transcriptome_db" "$reference_gtf" "$sample_directory" "$output_directory" "$organism" "$orf_length" "$vcf" "$orf_type" "$threads" "$upstream_orf" "$downstream_orf" "$ref_proteome"
 
-    # short read data
-    if [[ "$sequencing_platform" == "short-read" && -f "$transcriptome_db" ]]; then
-        # run salmon and compile transcript and transcript_counts.txt file
-        short_read_commands fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$genome_fa" "$transcriptome_db" "$reference_gtf" "$sample_directory" "$output_directory" "$organism" "$orf_length" "$vcf" "$orf_type" "$threads" "$upstream_orf" "$downstream_orf" "$ref_proteome"
+    # generate database
+    tx_count_file=$output_directory"counts_transcript.txt"
+    generate_database "$reference_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
+fi
 
-        # generate database
-        tx_count_file=$output_directory"counts_transcript.txt"
-        generate_database "$reference_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
-    fi
-
-    # execute commands
-    if [[ "$data_type" = "GTF" ]]; then
-        generate_database "$custom_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
-    else
-        fastq_bam_input fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$sequencing_platform" "$genome_fa" "$sample_directory" "$output_directory" "$threads" "$reference_gtf" "$organism" "$orf_length" "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$min_tx_count" "$data_type"
-    fi
+# execute commands
+if [[ "$data_type" = "GTF" ]]; then
+    generate_database "$custom_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
 else
-    echo "Conda environment '$genomeprot_env' does not exist."
-fi #environment check
+    fastq_bam_input fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$sequencing_platform" "$genome_fa" "$sample_directory" "$output_directory" "$threads" "$reference_gtf" "$organism" "$orf_length" "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$min_tx_count" "$data_type"
+fi
 
 # Capture end time
 end=$(date)

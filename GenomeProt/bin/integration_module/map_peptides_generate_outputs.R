@@ -270,17 +270,59 @@ suppressPackageStartupMessages({
 # define options
 option_list = list(
   make_option(c("-p", "--proteomics"), type="character", default=NULL,
-              help="Proteomics data file", metavar="character"),
+              help="Reformatted proteomics results file (e.g. peptide_data.tsv)", metavar="character"),
   make_option(c("-m", "--metadata"), type="character", default=NULL,
-              help="Custom metadata used for proteomics", metavar="character"),
+              help="Proteome database metadata file (e.g. proteome_database_metadata.txt)", metavar="character"),
   make_option(c("-g", "--gtf"), type="character", default=NULL,
-              help="GTF used to generate custom FASTA", metavar="character"),
+              help="Proteome database transcripts GTF file (e.g. proteome_database_transcripts.gtf)", metavar="character"),
   make_option(c("-s", "--savepath"), type="character", default=NULL,
               help="Output directory", metavar="character")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
+
+# store the input arguments
+proteomics_import_file <- opt$proteomics
+metadata_import_file <- opt$metadata
+gtf_import_file <- opt$gtf
+output_directory <- opt$savepath
+
+# check if any input arguments are missing
+if (is.null(proteomics_import_file)) {
+  stop("Please provide a reformatted proteomics results file.")
+} else if (is.null(metadata_import_file)) {
+  stop("Please provide a proteome database metadata file.")
+} else if (is.null(gtf_import_file)) {
+  stop("Please provide a proteome database transcripts GTF file.")
+} else if (is.null(output_directory)) {
+  stop("Please specify an output directory.")
+}
+
+# check the input arguments
+if (!file.exists(proteomics_import_file)) {
+  stop(paste0("The reformatted proteomics results file '", proteomics_import_file, "' does not exist."))
+} else if (!file.exists(metadata_import_file)) {
+  stop(paste0("The proteome database metadata file '", metadata_import_file, "' does not exist."))
+} else if (!file.exists(gtf_import_file)) {
+  stop(paste0("The proteome database transcripts GTF file '", gtf_import_file, "' does not exist."))
+} else if (file.exists(output_directory) && !dir.exists(output_directory)) {
+  stop(paste0("'", output_directory, "' exists but is not a directory."))
+}
+
+# ensure that none of the specified files are empty
+if (file.size(proteomics_import_file) == 0) {
+  stop(paste0("The reformatted proteomics results file '", proteomics_import_file, "' must not be empty."))
+} else if (file.size(metadata_import_file) == 0) {
+  stop(paste0("The proteome database metadata file '", metadata_import_file, "' must not be empty."))
+} else if (file.size(gtf_import_file) == 0) {
+  stop(paste0("The proteome database transcripts GTF file '", gtf_import_file, "' must not be empty."))
+}
+
+# create the output directory if it does not already exist
+if (!dir.exists(output_directory)) {
+  dir.create(output_directory)
+}
 
 options(scipen = 999)
 
@@ -300,11 +342,6 @@ suppressPackageStartupMessages({
   library(stringi)
   library(stats)
 })
-
-proteomics_import_file <- opt$proteomics
-metadata_import_file <- opt$metadata
-gtf_import_file <- opt$gtf
-output_directory <- opt$savepath
 
 # ------------- import files ------------- #
 
