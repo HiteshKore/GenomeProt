@@ -1895,6 +1895,16 @@ server <- function(input, output, session) {
     }
   )
 
+  # when the 'Quick start' button is pressed, users are brought to the 'Quick help' tab
+  observeEvent(input$quick_start_button, {
+    session$sendCustomMessage("switchTab", list(tab = "help"))
+  })
+
+  # when the 'Visualise data' button is pressed, users are brought to the visualisation module
+  observeEvent(input$visualise_data_button, {
+    session$sendCustomMessage("switchTab", list(tab = "visualisation"))
+  })
+
   # DATABASE MODULE
 
   # create reactive value for the database zip

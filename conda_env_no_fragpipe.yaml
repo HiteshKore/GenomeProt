@@ -30,7 +30,7 @@ dependencies:
   - r-stringr
   - r-stringi
   - r-shinyjs
-  - r-shiny
+  - r-shiny>=1.14.0
   - r-shinydashboard
   - r-markdown
   - r-knitr

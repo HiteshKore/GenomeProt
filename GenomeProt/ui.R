@@ -108,6 +108,20 @@ ui <- dashboardPage(
           document.getElementById(container).style.color = '';
         });
 
+        Shiny.addCustomMessageHandler('switchTab', function(params) {
+          var tab = params.tab;
+          var target_hash = '#shiny-tab-' + tab;
+          var a_tags = document.getElementsByTagName('a');
+          for (let i = 0; i < a_tags.length; ++i) {
+            let a_tag = a_tags[i];
+            let hash = a_tag.hash;
+            if (hash === target_hash) {
+              a_tag.click();
+              break;
+            }
+          }
+        });
+
         var is_first_resize_ignored = false;
         window.addEventListener('message', handleMessage, false);
 
@@ -161,15 +175,17 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 column(6,
-                       h3("Validate installation"),
-                       h5("For more information about the test data files used to validate the installation, please read the GenomeProt help guide by clicking on 'Quick help' to the left of this page."),
-                       actionButton("test_data_submit_button", "Run test data through GenomeProt", class = "btn btn-info")
-                ),
-                column(6,
-                       h3("Download test data results:"),
-                       downloadButton("test_data_download_button", "Download results (zip)", style = "width:70%;", enabled = FALSE), # initially disabled
+                       h3("Validate installation", style = "margin: 0px"),
+                       actionButton("test_data_submit_button", "Run test data", class = "btn btn-info"),
+                       downloadButton("test_data_download_button", "Download results (zip)", style = "width:30%;", enabled = FALSE), # initially disabled
                        div(id = "test-data-loading-container", class = "loading-container", div(class = "spinner")),
                        div(id = "test-data-status-msg-container")
+                ),
+                column(6,
+                       h4("For more information about the test data files used to validate the installation, click the button below to head to the GenomeProt help guide."),
+                       actionButton("quick_start_button", "Quick start", class = "btn"),
+                       h4("To visualise results from running the test data through GenomeProt, click the button below to head to the visualisation module."),
+                       actionButton("visualise_data_button", "Visualise data", class = "btn")
                 )
               )
       ),
@@ -360,8 +376,15 @@ ui <- dashboardPage(
               )
       ),
       tabItem(tabName = "visualisation",
-              h2("Visualise results with IsoVis"),
-              h5("The IsoVis website is displayed below for convenience. It is also accessible directly at: https://isomix.org/isovis/"),
+              fluidRow(
+                column(12,
+                    tags$iframe(id = "isovis_window",
+                                src = "https://isomix.org/isovis/",
+                                width = "100%",
+                                height = "950px",
+                                style = "border:none;"))
+              ),
+              h5("The IsoVis website is displayed above for convenience. It is also accessible directly at: https://isomix.org/isovis/"),
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
               conditionalPanel(
                 condition = "input.show_isovis_steps % 2 == 1",
@@ -370,14 +393,6 @@ ui <- dashboardPage(
                 p("Step 3: For the 'Peptide intensities' file, upload the peptide intensities file from the proteomics pipeline you used (e.g. 'report.pr_matrix.tsv'), then click 'Apply'."),
                 p("Step 4: Type the symbol or ID of a gene to view, select it from the list of results displayed, then either press enter or click '>'."),
                 p("Step 5: To see the mappings of peptides to open reading frames, click on the 'Stack options' dropdown menu and select 'Peptide mapping'.")
-              ),
-              fluidRow(
-                column(12,
-                    tags$iframe(id = "isovis_window",
-                                src = "https://isomix.org/isovis/",
-                                width = "100%",
-                                height = "950px",
-                                style = "border:none;"))
               )
       ),
       tabItem(
