@@ -67,7 +67,7 @@ test_data_server <- function(session) {
                           " -b ", shQuote(dirname(bam_file)),
                           " -g ", shQuote(reference_transcriptome_file),
                           " -o ", shQuote(outdir_test_data_bambu),
-                          " -t ", shQuote(1),
+                          " -t ", shQuote(5),
                           " -s ", shQuote("HUMAN"),
                           " > ", shQuote(logfile_path),
                           " 2>&1")
@@ -548,9 +548,10 @@ is_database_generation_input_valid <- function(input) {
 fastq_server <- function(input, session) {
   session_id <- session$token                           # session ID
   outdir_bam <- file.path(session_id, "mapping_output") # output directory
-
+  print(!dir.exists(outdir_bam))
   if (!dir.exists(outdir_bam)) {    # create the output directory if it does not exist yet
     dir.create(outdir_bam)
+    
   } else {                          # if it already exists, remove all Salmon quant.sf files inside it
     quant_sf_files <- Sys.glob(file.path(outdir_bam, "*", "quant.sf"))
     for (quant_sf_file in quant_sf_files) {
@@ -670,16 +671,9 @@ fastq_server <- function(input, session) {
     commands <- c(command_generate_decoy, command_sed, command_ref_file, command_index)
     for (i in 1:length(commands)) {
       message(commands[i])
+      print(commands[i])
       system(commands[i])
-
-      # remove the temporary decompressed genome or transcriptome file after creating the combined genome and transcriptome file
-      if (i == 3) {
-        if (is_reference_genome_gzipped & file.exists(temp_decompressed_genome_file)) {
-          file.remove(temp_decompressed_genome_file)
-        } else if (!is_reference_genome_gzipped & is_reference_transcriptome_gzipped & file.exists(temp_decompressed_transcriptome_file)) {
-          file.remove(temp_decompressed_transcriptome_file)
-        }
-      }
+      
     }
 
     # for each FASTQ file, determine whether it contains paired-end reads or single-end reads
@@ -731,7 +725,7 @@ fastq_server <- function(input, session) {
 
     # quantify single-end reads
     for (base_name in names(single_end)) {
-      if (base_name == "") { 
+      if (base_name == "") {
         next
       }
 
@@ -757,7 +751,7 @@ fastq_server <- function(input, session) {
     # create the count matrix
     message(command_create_count_matrix)
     system(command_create_count_matrix)
-  }
+   }
 }
 
 bam_server <- function(input, session) {
@@ -779,6 +773,7 @@ bam_server <- function(input, session) {
   user_reference_genome <- input$user_reference_genome$datapath
   reference_gtf_file <- input$reference_gtf_file$datapath
   transcript_fasta_file <- file.path(outdir_bam, "transcript.fa")
+  user_threads <- floor(input$user_threads)
 
   is_reference_genome_gzipped <- grepl("\\.gz$", user_reference_genome)
   if (is_reference_genome_gzipped) {    # if the reference genome file is gzipped, decompress it first
@@ -800,12 +795,6 @@ bam_server <- function(input, session) {
 
   message(command_gffread)
   system(command_gffread)
-
-  # remove the temporary decompressed reference genome file
-  if (is_reference_genome_gzipped & file.exists(decompressed_genome_fasta_file)) {
-    file.remove(decompressed_genome_fasta_file)
-  }
-
   # create df of bam file names
   user_bam_files_df <- input$user_bam_files %>%
     dplyr::mutate(file_prefix = sub("\\.bam$", "", name))
@@ -1233,7 +1222,7 @@ fragpipe_server <- function(input, session_id, mass_spec_file_num) {
   mass_spec_info_file <- "mass_spec_info_list.txt"
   writeLines(mass_spec_info_file_contents, mass_spec_info_file)
 
-  command_run_fragpipe <- paste0(conda_command, "python ../../bin/proteomics_module/fragpipe-run.py",
+  command_run_fragpipe <- paste0(conda_command, "python ./bin/proteomics_module/fragpipe-run.py",
                                  " --db_path ", shQuote(renamed_fragpipe_prot_db_file),
                                  " --mass_spec_info_path ", shQuote(mass_spec_info_file),
                                  " --output_dir ", shQuote(output_dir),
@@ -1251,10 +1240,10 @@ fragpipe_server <- function(input, session_id, mass_spec_file_num) {
     command_run_fragpipe <- paste0(command_run_fragpipe, " --perform_quantification")
   }
 
-  command_run_fragpipe <- paste0(command_run_fragpipe,
-                                 " --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
-                                 " --num_threads ", shQuote(fragpipe_cpu_threads),
-                                 " --memory_limit ", shQuote(fragpipe_memory_limit))
+  #command_run_fragpipe <- paste0(command_run_fragpipe,
+  #                               " --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
+  #                               " --num_threads ", shQuote(fragpipe_cpu_threads),
+  #                               " --memory_limit ", shQuote(fragpipe_memory_limit))
   message(command_run_fragpipe)
   system(command_run_fragpipe)
 
@@ -1887,9 +1876,9 @@ server <- function(input, output, session) {
   # END INTEGRATION MODULE
 
   # remove session id tmp directory created each time app is run
-  session$onSessionEnded(function() {
-    if (dir.exists(session_id)) {
-      unlink(session_id, recursive = TRUE)
-    }
-  })
+  # session$onSessionEnded(function() {
+  #   if (dir.exists(session_id)) {
+  #     unlink(session_id, recursive = TRUE)
+  #   }
+  # })
 }

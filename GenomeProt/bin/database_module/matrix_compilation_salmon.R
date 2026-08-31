@@ -31,46 +31,52 @@ if (is.null(salmon_outdir)) {
   stop("Please provide a path to write the counts file.")
 }
 
+salmon_outdir=list.dirs(salmon_outdir, full.names = TRUE, recursive = FALSE)
+
+salmon_outdir <- salmon_outdir[basename(salmon_outdir) != "salmon_index"]
+
 # check the input arguments
-if (!file.exists(salmon_outdir)) {
-  stop(paste0("The Salmon output directory '", salmon_outdir, "' does not exist."))
-} else if (file.exists(salmon_outdir) && !dir.exists(salmon_outdir)) {
-  stop(paste0("'", salmon_outdir, "' exists but is not a directory."))
-} else if (!file.exists(reference_gtf)) {
-  stop(paste0("The reference GTF file '", reference_gtf, "' does not exist."))
-} else {
-  files <- Sys.glob(file.path(salmon_outdir, "*", "quant.sf"))
-  if (length(files) == 0) {
+files <- Sys.glob(file.path(salmon_outdir,"/quant.sf"))
+
+if (length(files) == 0) {
     stop(paste0("The Salmon output directory '", salmon_outdir, "' does not contain any directories with the file 'quant.sf'."))
-  }
 }
 
-# load the rest of the libraries needed for the remainder of the script to run
-suppressPackageStartupMessages({
-  library(tximport)
-  library(rtracklayer)
-  library(dplyr)
-  library(readr)
-})
 
-# import and filter the GTF for relevant gene info
-gtf_df <- as.data.frame(rtracklayer::import(reference_gtf, format = "gtf"))
-transcript_gene_info <- gtf_df[gtf_df$type == "transcript", c("transcript_id", "gene_id")]
-colnames(transcript_gene_info) <- c("TXNAME", "GENEID")
+if (all(file.exists(files))) {
+  # load the rest of the libraries needed for the remainder of the script to run
+  suppressPackageStartupMessages({
+    library(tximport)
+    library(rtracklayer)
+    library(dplyr)
+    library(readr)
+  })
+  
+  # import and filter the GTF for relevant gene info
+  gtf_df <- as.data.frame(rtracklayer::import(reference_gtf, format = "gtf"))
+  transcript_gene_info <- gtf_df[gtf_df$type == "transcript", c("transcript_id", "gene_id")]
+  colnames(transcript_gene_info) <- c("TXNAME", "GENEID")
+  
+  # import salmon quantification files
+  
+  sample <- basename(dirname(files))
+  names(files) <- sample
+  txi <- tximport::tximport(files, type = "salmon", txOut = TRUE)
+  
+  # prepare the transcript counts data
+  count_df <- as.data.frame(txi$counts) %>% dplyr::mutate(TXNAME = rownames(txi$counts)) %>% dplyr::select(TXNAME, dplyr::everything())
+  
+  rownames(count_df) <- NULL
+  
+  # merge the transcript counts and gene info
+  count_df_merged <- dplyr::left_join(count_df, transcript_gene_info, by = "TXNAME")
+  count_df_merged <- count_df_merged %>% dplyr::select(TXNAME, GENEID, dplyr::everything())
+  
+  # export short-read count data
+  readr::write_tsv(count_df_merged, file = counts_output_file, escape = "none", col_names = TRUE)
 
-# import salmon quantification files
-samples <- sub(file.path(paste0("^", salmon_outdir), ""), "", files)
-samples <- sub(file.path("", "quant\\.sf$"), "", samples)
-names(files) <- samples
-txi <- tximport::tximport(files, type = "salmon", txOut = TRUE)
+}else{
+  
+  stop(paste0("'quant.sf' is not present for some samples."))
+}
 
-# prepare the transcript counts data
-count_df <- as.data.frame(txi$counts) %>% dplyr::mutate(TXNAME = rownames(count_df)) %>% dplyr::select(TXNAME, dplyr::everything())
-rownames(count_df) <- NULL
-
-# merge the transcript counts and gene info
-count_df_merged <- dplyr::left_join(count_df, transcript_gene_info, by = "TXNAME")
-count_df_merged <- count_df_merged %>% dplyr::select(TXNAME, GENEID, dplyr::everything())
-
-# export short-read count data
-readr::write_tsv(count_df_merged, file = counts_output_file, escape = "none", col_names = TRUE)
