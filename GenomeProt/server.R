@@ -284,16 +284,16 @@ is_database_generation_input_valid <- function(input) {
     return(error_msg)
   }
 
+  # Number of CPUs: Positive integer
+  user_threads <- floor(input$user_threads)
+  if (!(is.finite(user_threads) && (user_threads >= 1))) {
+    error_msg <- paste0("Error: The number of CPUs must be a positive integer. Entered value: ", user_threads)
+    return(error_msg)
+  }
+
   vcf_option <- input$vcf_option
 
   if (input_type == "fastq_input") {
-    # Number of CPUs: Positive integer
-    user_threads <- floor(input$user_threads)
-    if (!(is.finite(user_threads) && (user_threads >= 1))) {
-      error_msg <- paste0("Error: The number of CPUs must be a positive integer. Entered value: ", user_threads)
-      return(error_msg)
-    }
-
     # Check if the user has uploaded a reference genome FASTA file yet
     user_reference_genome <- input$user_reference_genome
     if (is.null(user_reference_genome)) {
@@ -379,13 +379,6 @@ is_database_generation_input_valid <- function(input) {
       }
     }
   } else if (input_type == "bam_input") {
-    # Number of CPUs: Positive integer
-    user_threads <- floor(input$user_threads)
-    if (!(is.finite(user_threads) && (user_threads >= 1))) {
-      error_msg <- paste0("Error: The number of CPUs must be a positive integer. Entered value: ", user_threads)
-      return(error_msg)
-    }
-
     # Check if the user has uploaded a reference genome FASTA file yet
     user_reference_genome <- input$user_reference_genome
     if (is.null(user_reference_genome)) {
