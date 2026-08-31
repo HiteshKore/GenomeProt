@@ -233,10 +233,10 @@ ui <- dashboardPage(
                        checkboxInput("user_find_utr_5_orfs",   "Upstream 5' ORFs"),
                        checkboxInput("user_find_utr_3_orfs", "Downstream 3' ORFs"),
                        numericInput("minimum_tx_count", "Minimum expression threshold (sum per transcript):", value = 5, min = 0, step = 1),
+                       numericInput("user_threads",       "CPUs:", value = 1, min = 1, step = 1),
 
                        # FASTQ-specific input options
                        conditionalPanel(condition = "input.input_type == 'fastq_input'",
-                         numericInput("user_threads",       "CPUs:", value = 1, min = 1, step = 1),
                          fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):",        accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
                                                                                                                                       ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz")),
 
@@ -251,7 +251,6 @@ ui <- dashboardPage(
 
                        # BAM-specific input options
                        conditionalPanel(condition = "input.input_type == 'bam_input'",
-                         numericInput("user_threads",       "CPUs:", value = 1, min = 1, step = 1),
                          fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
                                                                                                                                ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz")),
                          fileInput("user_bam_files",        "Upload BAM files:",                                    accept = c(".bam"), multiple = TRUE),
