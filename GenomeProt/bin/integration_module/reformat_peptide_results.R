@@ -4,14 +4,13 @@ reformat_spectronaut_data <- function(peptide_file, dataset_id) {
   peptide_data <- readr::read_tsv(peptide_file)
   peptide_data_df <- peptide_data %>%
                        dplyr::select(dplyr::contains("PG."), dplyr::contains("PEP.AllOccurringProteinAccessions"), dplyr::contains("EG.PrecursorId"))
-
   if (length(peptide_data_df) == 0) {
     return(NULL)
   }
 
   metadata <- peptide_data_df %>%
-                dplyr::mutate(Peptide = sapply(stringr::str_split(stringr::str_replace_all(EG.PrecursorId, "\\[.*?\\]", ""), "_"), `[`, 2))
-                dplyr::select(Peptide, PEP.AllOccurringProteinAccessions) %>%
+                dplyr::mutate(Peptide = sapply(stringr::str_split(stringr::str_replace_all(EG.PrecursorId, "\\[.*?\\]", ""), "_"), `[`, 2))%>%
+                dplyr::select(Peptide, PEP.AllOccurringProteinAccessions)%>%
                 base::unique() %>%
                 dplyr::mutate(Dataset_id = dataset_id)
   return(metadata)
@@ -153,20 +152,12 @@ suppressPackageStartupMessages({
 peptide_results <- list()
 for (fn in peptide_files) {
   dataset_id <- stringr::str_replace(basename(fn), "\\.tsv$", "")
-
-  # rename peptide_data.tsv to peptide_data_renamed.tsv
-  if (dataset_id == "peptide_data") {
-    new_filename <- file.path(peptide_results_dir, "peptide_data_renamed.tsv")
-    message(paste0("Renaming '", fn, "' to '", new_filename, "' before reformatting..."))
-    file.rename(fn, new_filename)
-    fn <- new_filename
-    dataset_id <- "peptide_data_renamed"
-  }
-
+  
   # reformat peptide results according to the proteomics search tool specified
-  if (search_tool == "spectronaut") {
+  if (search_tool == "spectronaut" && dataset_id != "peptide_data") {
     results <- reformat_spectronaut_data(fn, dataset_id)
-  } else if (search_tool == "fragpipe") {
+    
+  } else if (search_tool == "fragpipe" && dataset_id != "peptide_data") {
     results <- reformat_fragpipe_data(fn, dataset_id)
   } else {
     results <- reformat_fragpipe_quant_data(fn, dataset_id)

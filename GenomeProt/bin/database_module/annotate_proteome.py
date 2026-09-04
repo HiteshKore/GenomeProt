@@ -124,16 +124,26 @@ def main():
     error_message = ""
     if not os.path.isfile(arg_reference_gtf_filename):
         error_message = f"The reference GTF file '{arg_reference_gtf_filename}' either does not exist or is not a file."
+    elif os.path.getsize(arg_reference_gtf_filename) == 0:
+        error_message = f"The reference GTF file '{arg_reference_gtf_filename}' must not be empty."
     elif not os.path.isfile(arg_combined_protein_db_filename):
         error_message = f"The combined protein database file '{arg_combined_protein_db_filename}' either does not exist or is not a file."
+    elif os.path.getsize(arg_combined_protein_db_filename) == 0:
+        error_message = f"The combined protein database file '{arg_combined_protein_db_filename}' must not be empty."
     elif not os.path.isfile(arg_orfome_filename):
         error_message = f"The ORFome annotation file '{arg_orfome_filename}' either does not exist or is not a file."
+    elif os.path.getsize(arg_orfome_filename) == 0:
+        error_message = f"The ORFome annotation file '{arg_orfome_filename}' must not be empty."
     elif not os.path.isfile(arg_orfome_transcript_gtf_filename):
         error_message = f"The ORFome transcripts GTF file '{arg_orfome_transcript_gtf_filename}' either does not exist or is not a file."
+    elif os.path.getsize(arg_orfome_transcript_gtf_filename) == 0:
+        error_message = f"The ORFome transcripts GTF file '{arg_orfome_transcript_gtf_filename}' must not be empty."
     elif os.path.exists(arg_outdir) and not os.path.isdir(arg_outdir):
         error_message = f"'{arg_outdir}' exists but it is not a directory."
     elif arg_mutant_protein_db_filename.lower() != "none" and not os.path.isfile(arg_mutant_protein_db_filename):
         error_message = f"The variant ORFome annotation file '{arg_mutant_protein_db_filename}' either does not exist or is not a file."
+    elif arg_mutant_protein_db_filename.lower() != "none" and os.path.getsize(arg_mutant_protein_db_filename) == 0:
+        error_message = f"The variant ORFome annotation file '{arg_mutant_protein_db_filename}' must not be empty."
     elif arg_canonical_or_all.lower().strip() not in ["canonical", "all"]:
         error_message = f"The type of ORFs to be annotated can only be 'canonical' or 'all', not '{arg_canonical_or_all}' (case-insensitive)."
 

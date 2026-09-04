@@ -73,6 +73,27 @@
             <li>Variant peptides and proteoforms</li>
           </ul>
 
+          <h2>The GenomeProt workflow</h2>
+
+          <p><b>The workflow consists of four steps:</b></p>
+
+          <ol class="bullet_points">
+            <li><a href="#database-generation">Database Generation</a></li>
+            <ul>
+              <li><a href="#generate-database-demo">Steps to generate a database using the test data</a></li>
+            </ul>
+            <li><a href="#analyse-ms-proteomics">Analyse MS Proteomics</a></li>
+            <ul>
+              <li><a href="#proteomics-search">Steps to perform a proteomics search</a></li>
+            </ul>
+            <li><a href="#integrate-data">Integrate Data</a></li>
+            <ul>
+              <li><a href="#map-peptides">Steps to map peptides</a></li>
+              <li><a href="#integrate-data-demo">Performing proteogenomics integration with test data</a></li>
+            </ul>
+            <li><a href="#visualise-results">Visualise Results</a></li>
+          </ol>
+
           <h2>Validating the GenomeProt installation with test data</h2>
 
           <p>
@@ -105,25 +126,11 @@
             Otherwise, an error message will be displayed and the 'Download results (zip)' button remains disabled.
           </p>
 
-          <h2>The GenomeProt workflow</h2>
+          <h2>Quick start: Try using GenomeProt with the test data</h2>
 
-          <p><b>The workflow consists of four steps:</b></p>
-
-          <ol class="bullet_points">
-            <li><a href="#database-generation">Database Generation</a></li>
-            <ul>
-              <li><a href="#generate-database-demo">Steps to generate a database using the test data</a></li>
-            </ul>
-            <li><a href="#analyse-ms-proteomics">Analyse MS Proteomics</a></li>
-            <ul>
-              <li><a href="#proteomics-search">Steps to perform a proteomics search</a></li>
-            </ul>
-            <li><a href="#integrate-data">Integrate Data</a></li>
-            <ul>
-              <li><a href="#map-peptides">Steps to map peptides</a></li>
-            </ul>
-            <li><a href="#visualise-results">Visualise Results</a></li>
-          </ol>
+          <p>
+            Each step of the GenomeProt workflow is described below. Steps 1 (<a href="#generate-database-demo">database generation</a>) and 3 (<a href="#integrate-data-demo">integrate data</a>) contain instructions on how to use them with test data, while Step 4 (<a href="#visualise-results">visualise results</a>) has general usage instructions that can be followed where appropriate.
+          </p>
 
           <a name="database-generation"></a>
           <h1>1. Database Generation</h1>
@@ -234,12 +241,16 @@
             the proteomics search tool you used, then select that tool from the list provided and click '<strong>Submit</strong>'.
           </p>
           <p>
-            After the server has finished processing the provided files, it will create a single reformatted peptide results file (<code>peptide_data.tsv</code>).
+            Once the server has finished processing the provided files, it will create a single reformatted peptide results file (<code>peptide_data.tsv</code>).
             Click on the enabled and green 'Download reformatted results file (peptide_data.tsv)' button to download the reformatted file.
-            With this file, the user can now proceed to the second part ('Part 2: Upload files to integrate').
+          </p>
+          <p>
+            Afterwards, under 'Part 2: Upload files to integrate', upload the reformatted peptide results file from Part 1 and the proteome database metadata file (<code>proteome_database_metadata.txt</code>) and transcript annotation GTF file (<code>proteome_database_transcripts.gtf</code>) from Step 1, then click '<strong>Submit</strong>'.
+            When data integration is complete, the 'Download results (zip)' button will be enabled and turn green. Click on it to download a zip file containing an HTML integration summary report and visualisation files.
           </p>
 
-          <p>To perform proteogenomics integration with the test data, upload the following files:</p>
+          <a name="integrate-data-demo"></a>
+          <h2>Performing proteogenomics integration with test data</h2>
 
           <ol class="bullet_points">
             <li>Download the output ZIP file from Step 1 and unzip it.</li>
@@ -256,8 +267,9 @@
             <li>Once the server has finished processing the files, the 'Download results (zip)' button will be enabled and turn green. Click on it to download a ZIP of the output files.</li>
           </ol>
 
-          <img src="images/quick_help_images/integrate_data.png" style="margin-top: 10px;" alt="Integrate Data screenshot">
+          <img src="images/quick_help_images/integrate_data.png" alt="Integrate Data screenshot">
           <br>
+
           <p><strong>Output directory contents:</strong></p>
 
           <ul class="bullet_points">

@@ -458,6 +458,9 @@ def prepare_workflow(protease1, protease2, is_perform_quantification):
         if not os.path.isfile(custom_db_path):
             logging.error(f"Error: The custom proteome database '{custom_db_path}' exists but it is not a file.")
             return False
+        if os.path.getsize(custom_db_path) == 0:
+            logging.error(f"Error: The custom proteome database '{custom_db_path}' is empty.")
+            return False
         # Specify the proteome database
         workflow_data = workflow_template.replace("database.db-path=", "database.db-path=" + custom_db_path)
         # Specify the proteases
@@ -570,10 +573,14 @@ def main():
         error_msg = f"The proteome database '{db_path}' does not exist."
     elif not os.path.isfile(db_path):
         error_msg = f"The proteome database '{db_path}' exists but it is not a file."
+    elif os.path.getsize(db_path) == 0:
+        error_msg = f"The proteome database '{db_path}' must not be empty."
     elif not os.path.exists(mass_spec_info_path):
         error_msg = f"The mass spectrometry file list '{mass_spec_info_path}' does not exist."
     elif not os.path.isfile(mass_spec_info_path):
         error_msg = f"The mass spectrometry file list '{mass_spec_info_path}' exists but it is not a file."
+    elif os.path.getsize(mass_spec_info_path) == 0:
+        error_msg = f"The mass spectrometry file list '{mass_spec_info_path}' must not be empty."
     elif protease1 not in protease_rules:
         error_msg = f"The first protease {protease1} is not supported. Please specify one from the following: {', '.join(protease_rules)}"
     elif protease2 and protease2 not in protease_rules:
@@ -596,6 +603,8 @@ def main():
         error_msg = f"The FragPipe binary '{fragpipe_bin_path}' exists but it is not a file. Please ensure that the FragPipe directory specified is correct."
     elif not os.access(fragpipe_bin_path, os.X_OK):
         error_msg = f"The FragPipe binary '{fragpipe_bin_path}' is not executable. Please ensure that the FragPipe directory specified is correct and the FragPipe binary has executable permissions."
+    elif os.path.getsize(fragpipe_bin_path) == 0:
+        error_msg = f"The FragPipe binary '{fragpipe_bin_path}' must not be empty. Please ensure that the FragPipe directory specified is correct."
     elif is_perform_quantification and not diann_path:
         error_msg = f"There is no DIA-NN binary fitting the glob pattern '{diann_path_glob}'. Please ensure that the FragPipe directory specified is correct. Alternatively, specify the DIA-NN binary directly with --diann_path."
     elif is_perform_quantification and not os.path.exists(diann_path):
@@ -604,6 +613,8 @@ def main():
         error_msg = f"The DIA-NN binary '{diann_path}' exists but it is not a file."
     elif is_perform_quantification and not os.access(diann_path, os.X_OK):
         error_msg = f"The DIA-NN binary '{diann_path}' is not executable."
+    elif is_perform_quantification and os.path.getsize(diann_path) == 0:
+        error_msg = f"The DIA-NN binary '{diann_path}' must not be empty."
     elif not python_path:
         error_msg = f"Unable to automatically determine the location of the Python binary. Please specify the path to the Python binary directly with --python_path."
     elif not os.path.exists(python_path):
@@ -612,6 +623,8 @@ def main():
         error_msg = f"The Python binary '{python_path}' exists but it is not a file."
     elif not os.access(python_path, os.X_OK):
         error_msg = f"The Python binary '{python_path}' is not executable."
+    elif os.path.getsize(python_path) == 0:
+        error_msg = f"The Python binary '{python_path}' must not be empty."
     elif not philosopher_path:
         error_msg = f"There is no Philosopher binary fitting the glob pattern '{philosopher_path_glob}'. Please ensure that the FragPipe directory specified is correct. Alternatively, specify the path to the Philosopher binary directly with --philosopher_path."
     elif not os.path.exists(philosopher_path):
@@ -620,6 +633,8 @@ def main():
         error_msg = f"The Philosopher binary '{philosopher_path}' exists but it is not a file."
     elif not os.access(philosopher_path, os.X_OK):
         error_msg = f"The Philosopher binary '{philosopher_path}' is not executable."
+    elif os.path.getsize(philosopher_path) == 0:
+        error_msg = f"The Philosopher binary '{philosopher_path}' must not be empty."
     elif not os.path.exists(tools_folder_path):
         error_msg = f"The FragPipe tools folder '{tools_folder_path}' does not exist."
         if not args.tools_folder_path:
@@ -661,6 +676,8 @@ def main():
                 if not os.path.isfile(mass_spec_filename):
                     error_msg = f"The mass spectrometry data file '{mass_spec_filename}' exists but it is not a file. Please ensure all data files specified in the mass spectrometry file list are correct."
                     break
+                if os.path.getsize(mass_spec_filename) == 0:
+                    error_msg = f"The mass spectrometry data file '{mass_spec_filename}' is empty. Please ensure all data files specified in the mass spectrometry file list are not empty."
                 if mass_spec_data_type.lower() not in accepted_mass_spec_data_types_lower:
                     error_msg = f"The mass spectrometry data type '{mass_spec_data_type}' for the file '{mass_spec_filename}' is not supported. Please ensure all data types specified in the mass spectrometry file list are within the following group (case-insensitive): {', '.join(accepted_mass_spec_data_types)}"
                     break

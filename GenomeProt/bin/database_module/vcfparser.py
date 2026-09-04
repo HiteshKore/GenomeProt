@@ -88,6 +88,8 @@ def main():
     error_message = ""
     if not os.path.isfile(arg_vcf_path):
         error_message = f"The VCF file '{arg_vcf_path}' either does not exist or is not a file."
+    elif os.path.getsize(arg_vcf_path) == 0:
+        error_message = f"The VCF file '{arg_vcf_path}' must not be empty."
     elif os.path.exists(arg_outdir) and not os.path.isdir(arg_outdir):
         error_message = f"'{arg_outdir}' exists but it is not a directory."
 

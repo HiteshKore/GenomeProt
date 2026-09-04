@@ -12,11 +12,11 @@ ARG fragpipe_token=123456
 ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=true
 
 # Install gcc because it's necessary for building biopython
-# Install unzip for unpacking the reference datasets
+# Install unzip and gzip for unpacking the reference and test datasets
 
 RUN apt update && \
     apt upgrade && \
-    apt install --yes gcc unzip && \
+    apt install --yes gcc unzip gzip && \
     useradd --create-home --shell /bin/bash user
 
 # Set up the user directory

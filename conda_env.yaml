@@ -8,7 +8,7 @@ channels:
 dependencies:
   - cd-hit=4.8.1
   - samtools
-  - salmon
+  - salmon>=2.0.0
   - gffread
   - gffcompare
   - minimap2=2.28
@@ -17,6 +17,7 @@ dependencies:
   - python=3.9
   - pip
   - zip
+  - gzip
   - r-base=4.5.3
   - r-optparse
   - r-rmarkdown
@@ -29,7 +30,7 @@ dependencies:
   - r-stringr
   - r-stringi
   - r-shinyjs
-  - r-shiny
+  - r-shiny>=1.14.0
   - r-shinydashboard
   - r-markdown
   - r-knitr

@@ -6,6 +6,12 @@ if (nchar(Sys.getenv("R_ZIPCMD", "zip")) == 0) {
   Sys.setenv("R_ZIPCMD" = "zip")
 }
 
+remove_file_if_exists <- function(file_path) {
+  if (file.exists(file_path)) {
+    file.remove(file_path)
+  }
+}
+
 # internal server functions
 is_test_data_input_valid <- function() {
   error_msg <- ""
@@ -219,9 +225,7 @@ test_data_server <- function(session) {
   setwd(outdir_test_data_integ)
 
   if (base::all(file.exists(files_to_zip_int))) {
-    if (file.exists(zipfile_path_int)) {
-      file.remove(zipfile_path_int)
-    }
+    remove_file_if_exists(zipfile_path_int)
 
     # zip files
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
@@ -304,8 +308,14 @@ is_database_generation_input_valid <- function(input) {
       return(error_msg)
     }
 
-    # The reference genome FASTA file must not be empty
+    # Make sure the reference genome FASTA file still exists
     file_path <- user_reference_genome$datapath
+    if (!file.exists(file_path)) {
+      error_msg <- "Error: The uploaded reference genome FASTA file got deleted. Please reupload it."
+      return(error_msg)
+    }
+
+    # The reference genome FASTA file must not be empty
     if (file.size(file_path) == 0) {
       error_msg <- "Error: The reference genome FASTA file must not be empty."
       return(error_msg)
@@ -326,8 +336,14 @@ is_database_generation_input_valid <- function(input) {
         return(error_msg)
       }
 
-      # The reference transcriptome FASTA file must not be empty
+      # Make sure the reference transcriptome FASTA file still exists
       file_path <- transcriptome_file$datapath
+      if (!file.exists(file_path)) {
+        error_msg <- "Error: The uploaded reference transcriptome FASTA file got deleted. Please reupload it."
+        return(error_msg)
+      }
+
+      # The reference transcriptome FASTA file must not be empty
       if (file.size(file_path) == 0) {
         error_msg <- "Error: The reference transcriptome FASTA file must not be empty."
         return(error_msg)
@@ -341,7 +357,7 @@ is_database_generation_input_valid <- function(input) {
       return(error_msg)
     }
 
-    # Every FASTQ file must have a file extension of '.fastq', '.fq', '.fasta', '.fas', '.fa', '.fna', '.ffn', '.faa', '.mpfa' or '.frn' (+ '.gz' if gzipped), and must not be empty
+    # Every FASTQ file must have a file extension of '.fastq', '.fq', '.fasta', '.fas', '.fa', '.fna', '.ffn', '.faa', '.mpfa' or '.frn' (+ '.gz' if gzipped), must exist, and must not be empty
     num_files <- nrow(user_fastq_files)
     filenames <- user_fastq_files$name
     for (i in 1:num_files) {
@@ -352,6 +368,11 @@ is_database_generation_input_valid <- function(input) {
       }
 
       file_path <- user_fastq_files$datapath[i]
+      if (!file.exists(file_path)) {
+        error_msg <- "Error: The uploaded FASTQ files got deleted. Please reupload them."
+        return(error_msg)
+      }
+
       if (file.size(file_path) == 0) {
         error_msg <- "Error: Please ensure that none of the uploaded FASTQ files are empty."
         return(error_msg)
@@ -379,8 +400,14 @@ is_database_generation_input_valid <- function(input) {
       return(error_msg)
     }
 
-    # The reference genome FASTA file must not be empty
+    # Make sure the reference genome FASTA file still exists
     file_path <- user_reference_genome$datapath
+    if (!file.exists(file_path)) {
+      error_msg <- "Error: The uploaded reference genome FASTA file got deleted. Please reupload it."
+      return(error_msg)
+    }
+
+    # The reference genome FASTA file must not be empty
     if (file.size(file_path) == 0) {
       error_msg <- "Error: The reference genome FASTA file must not be empty."
       return(error_msg)
@@ -393,7 +420,7 @@ is_database_generation_input_valid <- function(input) {
       return(error_msg)
     }
 
-    # Every BAM file must have a file extension of '.bam' and must not be empty
+    # Every BAM file must have a file extension of '.bam', must exist and must not be empty
     num_files <- nrow(user_bam_files)
     filenames <- user_bam_files$name
     for (i in 1:num_files) {
@@ -404,6 +431,11 @@ is_database_generation_input_valid <- function(input) {
       }
 
       file_path <- user_bam_files$datapath[i]
+      if (!file.exists(file_path)) {
+        error_msg <- "Error: The uploaded BAM files got deleted. Please reupload them."
+        return(error_msg)
+      }
+
       if (file.size(file_path) == 0) {
         error_msg <- "Error: Please ensure that none of the uploaded BAM files are empty."
         return(error_msg)
@@ -425,8 +457,14 @@ is_database_generation_input_valid <- function(input) {
         return(error_msg)
       }
 
-      # The user-generated transcript annotation GTF file must not be empty
+      # Make sure the user-generated transcript annotation GTF file still exists
       file_path <- user_gtf_file$datapath
+      if (!file.exists(file_path)) {
+        error_msg <- "Error: The uploaded user-generated transcript annotation GTF file got deleted. Please reupload it."
+        return(error_msg)
+      }
+
+      # The user-generated transcript annotation GTF file must not be empty
       if (file.size(file_path) == 0) {
         error_msg <- "Error: The user-generated transcript annotation GTF file must not be empty."
         return(error_msg)
@@ -442,8 +480,14 @@ is_database_generation_input_valid <- function(input) {
           return(error_msg)
         }
 
-        # The user-generated transcript counts file must not be empty
+        # Make sure the user-generated transcript counts file still exists
         file_path <- user_tx_count_file$datapath
+        if (!file.exists(file_path)) {
+          error_msg <- "Error: The uploaded user-generated transcript counts file got deleted. Please reupload it."
+          return(error_msg)
+        }
+
+        # The user-generated transcript counts file must not be empty
         if (file.size(file_path) == 0) {
           error_msg <- "Error: The user-generated transcript counts file must not be empty."
           return(error_msg)
@@ -464,8 +508,14 @@ is_database_generation_input_valid <- function(input) {
         return(error_msg)
       }
 
-      # The user-generated transcript counts file must not be empty
+      # Make sure the user-generated transcript counts file still exists
       file_path <- user_tx_count_file$datapath
+      if (!file.exists(file_path)) {
+        error_msg <- "Error: The uploaded user-generated transcript counts file got deleted. Please reupload it."
+        return(error_msg)
+      }
+
+      # The user-generated transcript counts file must not be empty
       if (file.size(file_path) == 0) {
         error_msg <- "Error: The user-generated transcript counts file must not be empty."
         return(error_msg)
@@ -487,8 +537,14 @@ is_database_generation_input_valid <- function(input) {
         return(error_msg)
       }
 
-      # The reference genome FASTA file must not be empty
+      # Make sure the reference genome FASTA file still exists
       file_path <- user_reference_genome$datapath
+      if (!file.exists(file_path)) {
+        error_msg <- "Error: The uploaded reference genome FASTA file got deleted. Please reupload it."
+        return(error_msg)
+      }
+
+      # The reference genome FASTA file must not be empty
       if (file.size(file_path) == 0) {
         error_msg <- "Error: The reference genome FASTA file must not be empty."
         return(error_msg)
@@ -510,8 +566,14 @@ is_database_generation_input_valid <- function(input) {
     return(error_msg)
   }
 
-  # The reference transcriptome GTF file must not be empty
+  # Make sure the reference transcriptome GTF file still exists
   file_path <- reference_gtf_file$datapath
+  if (!file.exists(file_path)) {
+    error_msg <- "Error: The uploaded reference transcriptome GTF file got deleted. Please reupload it."
+    return(error_msg)
+  }
+
+  # The reference transcriptome GTF file must not be empty
   if (file.size(file_path) == 0) {
     error_msg <- "Error: The reference transcriptome GTF file must not be empty."
     return(error_msg)
@@ -533,8 +595,14 @@ is_database_generation_input_valid <- function(input) {
       return(error_msg)
     }
 
-    # The VCF file must not be empty
+    # Make sure the VCF file still exists
     file_path <- user_vcf_file$datapath
+    if (!file.exists(file_path)) {
+      error_msg <- "Error: The uploaded VCF file got deleted. Please reupload it."
+      return(error_msg)
+    }
+
+    # The VCF file must not be empty
     if (file.size(file_path) == 0) {
       error_msg <- "Error: The VCF file must not be empty."
       return(error_msg)
@@ -548,16 +616,15 @@ is_database_generation_input_valid <- function(input) {
 fastq_server <- function(input, session) {
   session_id <- session$token                           # session ID
   outdir_bam <- file.path(session_id, "mapping_output") # output directory
-  print(!dir.exists(outdir_bam))
+  error_msg <- ""
+
   if (!dir.exists(outdir_bam)) {    # create the output directory if it does not exist yet
     dir.create(outdir_bam)
     
   } else {                          # if it already exists, remove all Salmon quant.sf files inside it
     quant_sf_files <- Sys.glob(file.path(outdir_bam, "*", "quant.sf"))
     for (quant_sf_file in quant_sf_files) {
-      if (file.exists(quant_sf_file)) {
-        file.remove(quant_sf_file)
-      }
+      remove_file_if_exists(quant_sf_file)
     }
   }
 
@@ -565,7 +632,6 @@ fastq_server <- function(input, session) {
     dplyr::mutate(file_prefix = stringr::str_replace_all(name, c("\\.fastq$" = "", "\\.fq$" = "", "\\.fasta$" = "", "\\.fas$" = "", "\\.fa$" = "", "\\.fna$" = "", "\\.ffn$" = "", "\\.faa$" = "", "\\.mpfa$" = "", "\\.frn$" = "",
                                                                  "\\.fastq\\.gz$" = "", "\\.fq\\.gz$" = "", "\\.fasta\\.gz$" = "", "\\.fas\\.gz$" = "", "\\.fa\\.gz$" = "", "\\.fna\\.gz$" = "", "\\.ffn\\.gz$" = "", "\\.faa\\.gz$" = "", "\\.mpfa\\.gz$" = "", "\\.frn\\.gz$" = "")))
 
-  print(user_fastq_files_df)
 
   # map reads
   user_threads <- floor(input$user_threads)
@@ -573,75 +639,131 @@ fastq_server <- function(input, session) {
   reference_gtf_file <- input$reference_gtf_file$datapath
   transcriptome_file <- input$transcriptome_file$datapath
   if (input$sequencing_type == "long-read") {
+    # Index the reference genome first
     genome_index_file <- file.path(outdir_bam, paste0(stringr::str_replace_all(user_reference_genome$name, c("\\.fasta$" = "", "\\.fas$" = "", "\\.fa$" = "", "\\.fna$" = "", "\\.ffn$" = "", "\\.faa$" = "", "\\.mpfa$" = "", "\\.frn$" = "",
                                                                                                              "\\.fasta\\.gz$" = "", "\\.fas\\.gz$" = "", "\\.fa\\.gz$" = "", "\\.fna\\.gz$" = "", "\\.ffn\\.gz$" = "", "\\.faa\\.gz$" = "", "\\.mpfa\\.gz$" = "", "\\.frn\\.gz$" = "")),
                                                       ".mmi"))
+    remove_file_if_exists(genome_index_file)
+
     command_minimap2_index <- paste0(conda_command, "minimap2",
                                      " -ax ", shQuote("splice:hq"),
                                      " -d ", shQuote(genome_index_file),
                                      " ", shQuote(user_reference_genome$datapath))
 
-    # index the genome
     message(command_minimap2_index)
     system(command_minimap2_index)
+
+    # Ensure the genome index file exists
+    if (!file.exists(genome_index_file)) {
+      error_msg <- "Error: Failed to index the reference genome FASTA file."
+      return(error_msg)
+    }
 
     # for each FASTQ file, go through the following 3 steps...
     for (i in 1:nrow(user_fastq_files_df)) {
       fastq_file <- user_fastq_files_df$datapath[i]
       file_prefix <- user_fastq_files_df$file_prefix[i]
+      fastq_file_name <- user_fastq_files_df$name[i]
 
       # 1. create a SAM file of reads mapped to the indexed genome
       mapped_reads_file <- file.path(outdir_bam, paste0(file_prefix, ".sam"))
+      remove_file_if_exists(mapped_reads_file)
+
       command_minimap2 <- paste0(conda_command, "minimap2 --sam-hit-only --secondary=no",
                                  " -t ", shQuote(user_threads),
                                  " -ax ", shQuote("splice:hq"),
                                  " -o ", shQuote(mapped_reads_file),
-                                 " ", shQuote(index_file),
+                                 " ", shQuote(genome_index_file),
                                  " ", shQuote(fastq_file))
       message(command_minimap2)
       system(command_minimap2)
 
-      # 2. turn the SAM file into a BAM file with headers
+      # Ensure the SAM file of mapped reads exists
+      if (!file.exists(mapped_reads_file)) {
+        error_msg <- paste0("Error: Failed to create a SAM file of reads mapped to the indexed genome for the FASTQ file '", fastq_file_name, "'.")
+        return(error_msg)
+      }
+
+      # 2. turn the SAM file into an unsorted BAM file with headers
       unsorted_bam_file <- file.path(outdir_bam, paste0(file_prefix, "_unsorted.bam"))
+      remove_file_if_exists(unsorted_bam_file)
+
       command_samtools_view <- paste0(conda_command, "samtools view -bh",
                                       " -o ", shQuote(unsorted_bam_file),
                                       " ", shQuote(mapped_reads_file))
       message(command_samtools_view)
       system(command_samtools_view)
-      if (file.exists(mapped_reads_file)) {
-        file.remove(mapped_reads_file)
+
+      # Ensure the unsorted BAM file exists
+      if (!file.exists(unsorted_bam_file)) {
+        error_msg <- paste0("Error: Failed to turn the SAM file of mapped genome reads into an unsorted BAM file with headers for the FASTQ file '", fastq_file_name, "'.")
+        return(error_msg)
       }
 
-      # 3. sort the reads in the BAM file by ascending genomic coordinates
+      # The mapped reads SAM file is no longer needed
+      remove_file_if_exists(mapped_reads_file)
+
+      # 3. sort the reads in the unsorted BAM file of mapped genomic reads by ascending genomic coordinates
       sorted_bam_file <- file.path(outdir_bam, paste0(file_prefix, ".bam"))
+      remove_file_if_exists(sorted_bam_file)
+
       command_samtools_sort <- paste0(conda_command, "samtools sort",
                                       " -@ ", shQuote(user_threads),
                                       " -o ", shQuote(sorted_bam_file),
                                       " ", shQuote(unsorted_bam_file))
       message(command_samtools_sort)
       system(command_samtools_sort)
-      if (file.exists(unsorted_bam_file)) {
-        file.remove(unsorted_bam_file)
+
+      # Ensure the sorted BAM file exists
+      if (!file.exists(sorted_bam_file)) {
+        error_msg <- paste0("Error: Failed to sort the unsorted BAM file of mapped genome reads by ascending genomic coordinates for the FASTQ file '", fastq_file_name, "'.")
+        return(error_msg)
       }
+
+      # The unsorted mapped reads BAM file is no longer needed
+      remove_file_if_exists(unsorted_bam_file)
     }
   } else {
     is_reference_genome_gzipped <- grepl("\\.gz$", user_reference_genome$datapath)
     is_reference_transcriptome_gzipped <- grepl("\\.gz$", transcriptome_file)
     decoy_file <- file.path(outdir_bam, "decoys.txt")
-    salmon_index_file <- file.path(outdir_bam, "salmon_index")
+    salmon_index_dir <- file.path(outdir_bam, "salmon_index")
 
     if (is_reference_genome_gzipped) {  # if the genome is gzipped, decompress it before generating decoys
       temp_decompressed_genome_file <- file.path(outdir_bam, "temp_genome.fa")
+      remove_file_if_exists(temp_decompressed_genome_file)
+
       command_decompress <- paste0("gzip -c -d ", shQuote(user_reference_genome$datapath), " > ", shQuote(temp_decompressed_genome_file))
       message(command_decompress)
       system(command_decompress)
+
+      # Ensure the decompressed genome exists
+      if (!file.exists(temp_decompressed_genome_file)) {
+        error_msg <- "Error: Failed to decompress the gzipped reference genome FASTA file."
+        return(error_msg)
+      }
 
       command_generate_decoy <- paste0("grep '^>' ",  shQuote(temp_decompressed_genome_file), " | cut -d ' ' -f 1 > ", shQuote(decoy_file))
     } else {
       command_generate_decoy <- paste0("grep '^>' ", shQuote(user_reference_genome$datapath), " | cut -d ' ' -f 1 > ", shQuote(decoy_file))
     }
 
+    remove_file_if_exists(decoy_file)
+
+    # Generate decoys
+    message(command_generate_decoy)
+    system(command_generate_decoy)
+
+    # Ensure the decoy file is generated
+    if (!file.exists(decoy_file)) {
+      error_msg <- "Error: Failed to generate decoys from the reference genome FASTA file."
+      return(error_msg)
+    }
+
+    # Remove the '>' characters that are placed before chromosome names from the decoy file
     command_sed <- paste0("sed -i -e 's/>//g' ", shQuote(decoy_file))
+    message(command_sed)
+    system(command_sed)
 
     genome_transcriptome_combined_file <- file.path(outdir_bam, "gentrome.fa")
     if (is_reference_genome_gzipped & is_reference_transcriptome_gzipped) {             # if both the genome and transcriptome are gzipped, combine them directly
@@ -654,26 +776,58 @@ fastq_server <- function(input, session) {
       command_ref_file <- paste0("cat ",                   shQuote(transcriptome_file), " ",  shQuote(temp_decompressed_genome_file), " > ", shQuote(genome_transcriptome_combined_file))
     } else {                                                                            # if only the transcriptome is gzipped, decompress it before combining it with the genome
       temp_decompressed_transcriptome_file <- file.path(outdir_bam, "temp_transcriptome.fa")
+      remove_file_if_exists(temp_decompressed_transcriptome_file)
+
       command_decompress <- paste0("gzip -c -d ", shQuote(transcriptome_file), " > ", shQuote(temp_decompressed_transcriptome_file))
       message(command_decompress)
       system(command_decompress)
 
+      # Ensure the decompressed transcriptome exists
+      if (!file.exists(temp_decompressed_transcriptome_file)) {
+        error_msg <- "Error: Failed to decompress the gzipped reference transcriptome FASTA file."
+        return(error_msg)
+      }
+
       command_ref_file <- paste0("cat ", shQuote(temp_decompressed_transcriptome_file), " ", shQuote(user_reference_genome$datapath), " > ", shQuote(genome_transcriptome_combined_file))
+    }
+
+    remove_file_if_exists(genome_transcriptome_combined_file)
+
+    # Combine the genome and transcriptome into one file
+    message(command_ref_file)
+    system(command_ref_file)
+
+    # Ensure the combined genome and transcriptome file exists
+    if (!file.exists(genome_transcriptome_combined_file)) {
+      error_msg <- "Error: Failed to combine the genome and transcriptome into one file."
+      return(error_msg)
+    }
+
+    # Remove the temporary decompressed genome or transcriptome file after creating the combined file
+    if (is_reference_genome_gzipped) {
+      remove_file_if_exists(temp_decompressed_genome_file)
+    } else if (!is_reference_genome_gzipped & is_reference_transcriptome_gzipped) {
+      remove_file_if_exists(temp_decompressed_transcriptome_file)
     }
 
     command_index <- paste0(conda_command, "salmon index --gencode",
                             " -t ", shQuote(genome_transcriptome_combined_file),
                             " -d ", shQuote(decoy_file),
                             " -p ", shQuote(user_threads),
-                            " -i ", shQuote(salmon_index_file))
+                            " -i ", shQuote(salmon_index_dir))
 
-    # generate the salmon index
-    commands <- c(command_generate_decoy, command_sed, command_ref_file, command_index)
-    for (i in 1:length(commands)) {
-      message(commands[i])
-      print(commands[i])
-      system(commands[i])
-      
+    if (dir.exists(salmon_index_dir)) {
+      unlink(salmon_index_dir, recursive = TRUE)
+    }
+
+    # Generate the salmon index
+    message(command_index)
+    system(command_index)
+
+    # Ensure the salmon index directory exists
+    info_json_file <- file.path(salmon_index_dir, "info.json")
+    if (!(dir.exists(salmon_index_dir) & file.exists(info_json_file))) {
+      error_msg <- "Error: Failed to generate the salmon index directory."
     }
 
     # for each FASTQ file, determine whether it contains paired-end reads or single-end reads
@@ -698,7 +852,7 @@ fastq_server <- function(input, session) {
       }
     }
 
-    # quantify paired-end reads
+    # Quantify paired-end reads
     for (base_name in names(paired_end)) {
       if (base_name == "") {
         next
@@ -709,8 +863,10 @@ fastq_server <- function(input, session) {
 
       if (!is.null(R1_path) & !is.null(R2_path)) {
         quant_output_folder <- file.path(outdir_bam, base_name)
-        command_salmon <- paste0(conda_command, "salmon quant --validateMappings",
-                                 " -i ", shQuote(salmon_index_file),
+        quant_output_file <- file.path(quant_output_folder, "quant.sf")
+
+        command_salmon <- paste0(conda_command, "salmon quant",
+                                 " -i ", shQuote(salmon_index_dir),
                                  " -p ", shQuote(user_threads),
                                  " -l ", shQuote("A"),
                                  " -1 ", shQuote(R1_path),
@@ -720,18 +876,26 @@ fastq_server <- function(input, session) {
         message(paste0("Base name: ", base_name, " --- ", "R1 path: ", R1_path, ", R2 path: ", R2_path))
         message(command_salmon)
         system(command_salmon)
+
+        # Ensure the paired-end reads of the sample are quantified
+        if (!file.exists(quant_output_file)) {
+          error_msg <- paste0("Error: Failed to quantify the paired-end reads of the sample '", base_name, "'.")
+          return(error_msg)
+        }
       }
     }
 
-    # quantify single-end reads
+    # Quantify single-end reads
     for (base_name in names(single_end)) {
       if (base_name == "") {
         next
       }
 
       quant_output_folder <- file.path(outdir_bam, base_name)
-      command_salmon <- paste0(conda_command, "salmon quant --validateMappings",
-                               " -i ", shQuote(salmon_index_file),
+      quant_output_file <- file.path(quant_output_folder, "quant.sf")
+
+      command_salmon <- paste0(conda_command, "salmon quant",
+                               " -i ", shQuote(salmon_index_dir),
                                " -p ", shQuote(user_threads),
                                " -l ", shQuote("A"),
                                " -r ", shQuote(single_end[[base_name]]),
@@ -740,36 +904,52 @@ fastq_server <- function(input, session) {
       message(single_end[[base_name]])
       message(command_salmon)
       system(command_salmon)
+
+      # Ensure the single-end reads of the sample are quantified
+      if (!file.exists(quant_output_file)) {
+        error_msg <- paste0("Error: Failed to quantify the single-end reads of the sample '", base_name, "'.")
+        return(error_msg)
+      }
     }
 
     transcript_counts_file <- file.path(outdir_bam, "bambu_transcript_counts.txt")
+    remove_file_if_exists(transcript_counts_file)
+
     command_create_count_matrix <- paste0(conda_command, "Rscript bin/database_module/matrix_compilation_salmon.R",
                                           " -s ", shQuote(outdir_bam),
                                           " -g ", shQuote(reference_gtf_file),
                                           " -o ", shQuote(transcript_counts_file))
 
-    # create the count matrix
+    # Create the count matrix
     message(command_create_count_matrix)
     system(command_create_count_matrix)
-   }
+    # Ensure the count matrix exists
+    if (!file.exists(transcript_counts_file)) {
+      error_msg <- "Error: Failed to create the count matrix from the salmon quantification output files."
+      return(error_msg)
+    }
+  }
+
+  # No errors have occurred
+  return(error_msg)
 }
 
 bam_server <- function(input, session) {
   session_id <- session$token                           # session ID
   outdir_bam <- file.path(session_id, "mapping_output") # output directory
+  error_msg <- ""
 
   if (!dir.exists(outdir_bam)) {    # create the output directory if it does not exist yet
     dir.create(outdir_bam)
   } else {                          # if it already exists, remove all Salmon quant.sf files inside it
     quant_sf_files <- Sys.glob(file.path(outdir_bam, "*", "quant.sf"))
     for (quant_sf_file in quant_sf_files) {
-      if (file.exists(quant_sf_file)) {
-        file.remove(quant_sf_file)
-      }
+      remove_file_if_exists(quant_sf_file)
     }
   }
 
-  # generate the reference transcript FASTA file
+  # Generate the reference transcriptome FASTA file
+  user_threads <- floor(input$user_threads)
   user_reference_genome <- input$user_reference_genome$datapath
   reference_gtf_file <- input$reference_gtf_file$datapath
   transcript_fasta_file <- file.path(outdir_bam, "transcript.fa")
@@ -778,9 +958,17 @@ bam_server <- function(input, session) {
   is_reference_genome_gzipped <- grepl("\\.gz$", user_reference_genome)
   if (is_reference_genome_gzipped) {    # if the reference genome file is gzipped, decompress it first
     decompressed_genome_fasta_file <- file.path(outdir_bam, "temp_genome.fa")
+    remove_file_if_exists(decompressed_genome_fasta_file)
+
     command_decompress <- paste0("gzip -c -d ", shQuote(user_reference_genome), " > ", shQuote(decompressed_genome_fasta_file))
     message(command_decompress)
     system(command_decompress)
+
+    # Ensure the decompressed genome exists
+    if (!file.exists(decompressed_genome_fasta_file)) {
+      error_msg <- "Error: Failed to decompress the gzipped reference genome FASTA file."
+      return(error_msg)
+    }
 
     command_gffread <- paste0(conda_command, "gffread",
                               " -w ", shQuote(transcript_fasta_file),
@@ -793,17 +981,33 @@ bam_server <- function(input, session) {
                               " ", shQuote(reference_gtf_file))
   }
 
+  remove_file_if_exists(transcript_fasta_file)
+
+  # Generate the reference transcriptome FASTA file
   message(command_gffread)
   system(command_gffread)
-  # create df of bam file names
+
+  # Ensure the reference transcriptome FASTA file exists
+  if (!file.exists(transcript_fasta_file)) {
+    error_msg <- "Error: Failed to generate the reference transcriptome FASTA file."
+    return(error_msg)
+  }
+
+  # Remove the temporary decompressed reference genome file
+  if (is_reference_genome_gzipped) {
+    remove_file_if_exists(decompressed_genome_fasta_file)
+  }
+
   user_bam_files_df <- input$user_bam_files %>%
     dplyr::mutate(file_prefix = sub("\\.bam$", "", name))
 
-  # for each bam file, quantify reads
+  # For each bam file, quantify reads
   for (i in 1:nrow(user_bam_files_df)) {
     bam_file <- user_bam_files_df$datapath[i]
     file_prefix <- user_bam_files_df$file_prefix[i]
+
     quant_output_folder <- file.path(outdir_bam, file_prefix)
+    quant_output_file <- file.path(quant_output_folder, "quant.sf")
 
     command_salmon <- paste0(conda_command, "salmon quant",
                              " -t ", shQuote(transcript_fasta_file),
@@ -814,23 +1018,41 @@ bam_server <- function(input, session) {
 
     message(command_salmon)
     system(command_salmon)
+
+    # Ensure the reads are quantified
+    if (!file.exists(quant_output_file)) {
+      error_msg <- paste0("Error: Failed to quantify reads of the sample '", file_prefix, "'.")
+      return(error_msg)
+    }
   }
 
   transcript_counts_file <- file.path(outdir_bam, "bambu_transcript_counts.txt")
+  remove_file_if_exists(transcript_counts_file)
+
   command_create_count_matrix <- paste0(conda_command, "Rscript bin/database_module/matrix_compilation_salmon.R",
                                         " -s ", shQuote(outdir_bam),
                                         " -g ", shQuote(reference_gtf_file),
                                         " -o ", shQuote(transcript_counts_file))
 
-  # create the count matrix
+  # Create the count matrix
   message(command_create_count_matrix)
   system(command_create_count_matrix)
+
+  # Ensure the count matrix exists
+  if (!file.exists(transcript_counts_file)) {
+    error_msg <- "Error: Failed to create the count matrix from the salmon quantification output files."
+    return(error_msg)
+  }
+
+  # No errors have occurred
+  return(error_msg)
 }
 
 bambu_server <- function(input, session) {
   session_id <- session$token                           # session ID
   outdir_bam <- file.path(session_id, "mapping_output")
   outdir_bambu <- file.path(session_id, "bambu_output") # output directory
+  error_msg <- ""
 
   # create the output directory
   if (!dir.exists(outdir_bambu)) {
@@ -842,8 +1064,19 @@ bambu_server <- function(input, session) {
   reference_gtf_file <- input$reference_gtf_file$datapath
   organism <- input$organism
 
+  logfile_path <- file.path(outdir_bambu, "logfile.txt")
+  remove_file_if_exists(logfile_path)
+
+  transcript_counts_file <- file.path(outdir_bambu, "counts_transcript.txt")
+  remove_file_if_exists(transcript_counts_file)
+
+  transcript_annotations_file <- file.path(outdir_bambu, "extended_annotations.gtf")
+  remove_file_if_exists(transcript_annotations_file)
+
+  novel_transcript_classes_file <- file.path(outdir_bambu, "novel_transcript_classes.csv")
+  remove_file_if_exists(novel_transcript_classes_file)
+
   if (input$input_type == "bam_input") {    # if the user uploaded BAM files
-    logfile_path <- file.path(outdir_bambu, "logfile.txt")
     bamdir <- dirname(user_bam_files$datapath)
 
     # Specify new filenames
@@ -871,30 +1104,51 @@ bambu_server <- function(input, session) {
                             " 2>&1")
   }
 
-  # run bambu
+  # Run bambu
   message(command_bambu)
   system(command_bambu)
 
-  # rename bambu output files
-  renamed_gtf <- file.path(outdir_bambu, "bambu_transcript_annotations.gtf")
-  file.rename(file.path(outdir_bambu,    "counts_transcript.txt"), file.path(outdir_bambu, "bambu_transcript_counts.txt"))
-  file.rename(file.path(outdir_bambu, "extended_annotations.gtf"), renamed_gtf)
+  # Ensure the bambu log file, transcript counts file, transcript annotations file and novel transcript classes file exist
+  if (!base::all(file.exists(c(logfile_path, transcript_counts_file, transcript_annotations_file, novel_transcript_classes_file)))) {
+    error_msg <- paste0("Error: Bambu failed to run for the uploaded ", ifelse(input$input_type == "bam_input", "BAM", "FASTQ"), " files.")
+    return(error_msg)
+  }
 
-  # run gffcompare
+  # Rename bambu output files
+  renamed_transcript_annotations_file <- file.path(outdir_bambu, "bambu_transcript_annotations.gtf")
+  file.rename(     transcript_counts_file, file.path(outdir_bambu, "bambu_transcript_counts.txt"))
+  file.rename(transcript_annotations_file, renamed_transcript_annotations_file)
+
+  gffcompare_tmap_file <- file.path(outdir_bambu, "gffcmp.bambu_transcript_annotations.gtf.tmap")
+  remove_file_if_exists(gffcompare_tmap_file)
+
+  # Run gffcompare
   command_gff_compare <- paste0(conda_command, "gffcompare",
                                 " -r ", shQuote(reference_gtf_file),
-                                " ", shQuote(renamed_gtf))
+                                " ", shQuote(renamed_transcript_annotations_file))
   message(command_gff_compare)
   system(command_gff_compare)
 
-  # rename gffcompare output files
-  file.rename(file.path(outdir_bambu, "gffcmp.bambu_transcript_annotations.gtf.tmap"), file.path(outdir_bambu, "gffcompare.tmap.txt"))
+  # Ensure the main gffcompare output file exists (the most closely matching reference transcript for each transcript in the bambu annotations file)
+  if (!file.exists(gffcompare_tmap_file)) {
+    error_msg <- "Error: gffcompare failed to run on the bambu transcript annotations file."
+    return(error_msg)
+  }
+
+  # Rename the main gffcompare output file
+  file.rename(gffcompare_tmap_file, file.path(outdir_bambu, "gffcompare.tmap.txt"))
+
+  # Remove other irrelevant gffcompare output files
   file.remove(Sys.glob("gffcmp*"))
+
+  # No errors have occurred
+  return(error_msg)
 }
 
 database_server <- function(input, session) {
   session_id <- session$token                           # session ID
   outdir_db <- file.path(session_id, "database_output") # output directory
+  error_msg <- ""
 
   # create the output directory
   if (!dir.exists(outdir_db)) {
@@ -907,7 +1161,10 @@ database_server <- function(input, session) {
   } else if (input$sequencing_type == "long-read") {                                # if the user supplied FASTQ / BAM files and long-read RNA-seq data
     db_gtf_file <- file.path(session_id, "bambu_output", "bambu_transcript_annotations.gtf")
     db_counts_file <- file.path(session_id, "bambu_output", "bambu_transcript_counts.txt")
-  } else {                                                                          # if the user supplied short-read RNA-seq data
+  } else if (input$input_type == "gtf_input") {                                     # if the user supplied GTF files and short-read RNA-seq data
+    db_gtf_file <- input$reference_gtf_file$datapath
+    db_counts_file <- input$user_tx_count_file$datapath
+  } else {                                                                          # if the user supplied FASTQ / BAM files and short-read RNA-seq data
     db_gtf_file <- input$reference_gtf_file$datapath
     db_counts_file <- file.path(session_id, "mapping_output", "bambu_transcript_counts.txt")
   }
@@ -928,9 +1185,17 @@ database_server <- function(input, session) {
     is_reference_genome_gzipped <- grepl("\\.gz$", input$user_reference_genome$datapath)
     if (is_reference_genome_gzipped) {  # if the genome is gzipped, decompress it
       temp_decompressed_genome_file <- file.path(outdir_db, "temp_genome.fa")
+      remove_file_if_exists(temp_decompressed_genome_file)
+
       command_decompress <- paste0("gzip -c -d ", shQuote(input$user_reference_genome$datapath), " > ", shQuote(temp_decompressed_genome_file))
       message(command_decompress)
       system(command_decompress)
+
+      # Ensure the decompressed genome exists
+      if (!file.exists(temp_decompressed_genome_file)) {
+        error_msg <- "Error: Failed to decompressed the gzipped reference genome FASTA file."
+        return(error_msg)
+      }
 
       paste0(" -v ", shQuote(vcf_file), " -G ",        shQuote(temp_decompressed_genome_file))
     } else {
@@ -939,6 +1204,17 @@ database_server <- function(input, session) {
   } else {
     vcf_file <- NULL
     ""
+  }
+
+  orfome_file <- file.path(outdir_db, "ORFome_aa.txt")
+  remove_file_if_exists(orfome_file)
+
+  proteome_database_transcripts_gtf_file <- file.path(outdir_db, "proteome_database_transcripts.gtf")
+  remove_file_if_exists(proteome_database_transcripts_gtf_file)
+
+  mutant_orfome_file <- file.path(outdir_db, "Mutant_ORFome_aa.txt")
+  if (!is.null(vcf_file)) {
+    remove_file_if_exists(mutant_orfome_file)
   }
 
   # construct the command
@@ -959,9 +1235,21 @@ database_server <- function(input, session) {
                                       vcf_arg,
                                       " -s ", shQuote(outdir_db))
 
-  # run command
+  # Generate the proteome database
   message(command_generate_proteome)
   system(command_generate_proteome)
+
+  expected_files <- c(orfome_file, proteome_database_transcripts_gtf_file)
+  if (!is.null(vcf_file)) {
+    expected_files <- c(expected_files, mutant_orfome_file)
+  }
+
+  # Ensure the orfome file, proteome database transcripts annotation file (and the mutant orfome file, if a VCF file was provided) exist
+  if (!base::all(file.exists(expected_files))) {
+    error_msg <- "Error: Failed to generate the proteome database."
+    return(error_msg)
+  }
+
   message("Generated ORFs")
 
   # set reference protein database per organism
@@ -978,21 +1266,7 @@ database_server <- function(input, session) {
   } else {
     ref_proteome <- file.path("data", "openprot_uniprotDb_zebrafish.txt")
   }
-  #} else if (organism == "DANRE") {
-  #  ref_proteome <- file.path("data", "openprot_uniprotDb_zebrafish.txt")
-  #} else if (organism == "PANTR") {
-  #  ref_proteome <- file.path("data", "openprot_uniprotDb_chimp.txt")
-  #} else if (organism == "BOVIN") {
-  #  ref_proteome <- file.path("data", "openprot_uniprotDb_cow.txt")
-  #} else if (organism == "XENTR") {
-  #  ref_proteome <- file.path("data", "openprot_uniprotDb_clawed_frog.txt")
-  #} else {
-  #  ref_proteome <- file.path("data", "openprot_uniprotDb_yeast.txt")
-  #}
 
-  orfome_file <- file.path(outdir_db, "ORFome_aa.txt")
-  proteome_database_transcripts_gtf_file <- file.path(outdir_db, "proteome_database_transcripts.gtf")
-  mutant_orfome_file <- file.path(outdir_db, "Mutant_ORFome_aa.txt")
   if (!is.null(vcf_file)) { # if there is a VCF file uploaded
     command_annotate_proteome <- paste0(conda_command, "python bin/database_module/annotate_proteome.py",
                                         " ", shQuote(ref_gtf),
@@ -1021,56 +1295,68 @@ database_server <- function(input, session) {
                                         " ", shQuote("2000"))
   }
 
-  # annotate the proteome
+  # Annotate the proteome
   message(command_annotate_proteome)
   system(command_annotate_proteome)
+
+  proteome_database_fasta_file <- file.path(outdir_db, "proteome_database.fasta")
+  proteome_database_metadata_file <- file.path(outdir_db, "proteome_database_metadata.txt")
+
+  # Ensure the proteome database FASTA file, metadata file and transcript GTF file exist
+  if (!base::all(file.exists(c(proteome_database_fasta_file, proteome_database_metadata_file, proteome_database_transcripts_gtf_file)))) {
+    error_msg <- "Error: Failed to annotate the generated proteome database."
+    return(error_msg)
+  }
+
   message("Annotated proteome")
 
-  # remove the temporary decompressed genome file if a VCF file and a gzipped reference genome file were provided
+  # Remove the temporary decompressed genome file if a VCF file and a gzipped reference genome file were provided
   if (nchar(vcf_arg) != 0) {
     is_reference_genome_gzipped <- grepl("\\.gz$", input$user_reference_genome$datapath)
     if (is_reference_genome_gzipped) {
       temp_decompressed_genome_file <- file.path(outdir_db, "temp_genome.fa")
-      if (file.exists(temp_decompressed_genome_file)) {
-        file.remove(temp_decompressed_genome_file)
-      }
+      remove_file_if_exists(temp_decompressed_genome_file)
     }
   }
 
   # get top level directory
   top_level_dir <- getwd()
 
-  # zip all results files depending on input types
-  proteome_database_fasta_file <- file.path(outdir_db, "proteome_database.fasta")
-  orf_temp_file <- file.path(outdir_db, "orf_temp.txt")
-  if (file.exists(proteome_database_fasta_file) & file.exists(proteome_database_transcripts_gtf_file) & !file.exists(orf_temp_file)) {
-    files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
+  # Create a zip of the results files depending on the input type and sequencing type
+  files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
 
-    if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
-      bam_files <- list.files(path = file.path("..", "mapping_output"), "\\.bam$", full.names = TRUE)
-      files_to_zip_db <- c(files_to_zip_db, bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
-    } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-      files_to_zip_db <- c(files_to_zip_db, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
-    } else if (input$sequencing_type == "short-read") {
-      files_to_zip_db <- c(files_to_zip_db, "../mapping_output/bambu_transcript_counts.txt")
-    }
-
-    # set the path to the ZIP file (in the session_id directory)
-    zipfile_path_db <- file.path("..", "database_results.zip")
-
-    # temp change the working dir to outdir_db
-    setwd(outdir_db)
-
-    if (file.exists(zipfile_path_db)) {
-      file.remove(zipfile_path_db)
-    }
-
-    # zip files
-    zip(zipfile = zipfile_path_db, files = files_to_zip_db)
-
-    # change back to starting wd
-    setwd(top_level_dir)
+  if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
+    bam_files <- list.files(path = file.path("..", "mapping_output"), "\\.bam$", full.names = TRUE)
+    files_to_zip_db <- c(files_to_zip_db, bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
+  } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
+    files_to_zip_db <- c(files_to_zip_db, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
+  } else if (input$input_type != "gtf_input" & input$sequencing_type == "short-read") {
+    files_to_zip_db <- c(files_to_zip_db, "../mapping_output/bambu_transcript_counts.txt")
   }
+
+  # Set the path to the ZIP file (in the session_id directory)
+  zipfile_path_db <- file.path("..", "database_results.zip")
+
+  # Temporarily change the working directory to outdir_db
+  setwd(outdir_db)
+
+  # Ensure all of the results files to be zipped exist
+  if (!base::all(file.exists(files_to_zip_db))) {
+    setwd(top_level_dir)
+    error_msg <- "Error: Some results files are missing, so the results ZIP file cannot be generated."
+    return(error_msg)
+  }
+
+  remove_file_if_exists(zipfile_path_db)
+
+  # Zip the results files
+  zip(zipfile = zipfile_path_db, files = files_to_zip_db)
+
+  # Change the working directory back to what it originally was
+  setwd(top_level_dir)
+
+  # No errors have occurred
+  return(error_msg)
 }
 
 # Proteomics module
@@ -1091,8 +1377,14 @@ is_fragpipe_input_valid <- function(input, mass_spec_file_num) {
     return(error_msg)
   }
 
-  # The proteome database must not be empty
+  # Make sure the proteome database still exists
   file_path <- fragpipe_prot_db_file$datapath
+  if (!file.exists(file_path)) {
+    error_msg <- "Error: The uploaded proteome database file got deleted. Please reupload it."
+    return(error_msg)
+  }
+
+  # The proteome database must not be empty
   if (file.size(file_path) == 0) {
     error_msg <- "Error: The proteome database file must not be empty."
     return(error_msg)
@@ -1126,8 +1418,14 @@ is_fragpipe_input_valid <- function(input, mass_spec_file_num) {
       return(error_msg)
     }
 
-    # Mass spectrometry data files must not be empty
+    # Make sure the mass spectrometry data file still exists
     file_path <- mass_spec_file$datapath
+    if (!file.exists(file_path)) {
+      error_msg <- paste0("Error: The uploaded mass spectrometry data file (#", i, ") got deleted. Please reupload it.")
+      return(error_msg)
+    }
+
+    # Mass spectrometry data files must not be empty
     if (file.size(file_path) == 0) {
       error_msg <- "Error: Please ensure that none of the uploaded mass spectrometry data files are empty."
       return(error_msg)
@@ -1207,7 +1505,8 @@ fragpipe_server <- function(input, session_id, mass_spec_file_num) {
 
   fragpipe_cpu_threads <- floor(input$fragpipe_cpu_threads)
   fragpipe_memory_limit <- floor(input$fragpipe_memory_limit)
-  output_dir <- "fragpipe_output"   # output directory
+  #output_dir <- paste0(session_id,"/fragpipe_output/")   # output directory
+  output_dir <- "fragpipe_output/"   # output directory
 
   # Create the output directory
   if (!dir.exists(output_dir)) {
@@ -1222,7 +1521,7 @@ fragpipe_server <- function(input, session_id, mass_spec_file_num) {
   mass_spec_info_file <- "mass_spec_info_list.txt"
   writeLines(mass_spec_info_file_contents, mass_spec_info_file)
 
-  command_run_fragpipe <- paste0(conda_command, "python ./bin/proteomics_module/fragpipe-run.py",
+  command_run_fragpipe <- paste0(conda_command, "python ../../bin/proteomics_module/fragpipe-run.py",
                                  " --db_path ", shQuote(renamed_fragpipe_prot_db_file),
                                  " --mass_spec_info_path ", shQuote(mass_spec_info_file),
                                  " --output_dir ", shQuote(output_dir),
@@ -1240,18 +1539,20 @@ fragpipe_server <- function(input, session_id, mass_spec_file_num) {
     command_run_fragpipe <- paste0(command_run_fragpipe, " --perform_quantification")
   }
 
-  #command_run_fragpipe <- paste0(command_run_fragpipe,
-  #                               " --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
-  #                               " --num_threads ", shQuote(fragpipe_cpu_threads),
-  #                               " --memory_limit ", shQuote(fragpipe_memory_limit))
+  command_run_fragpipe <- paste0(command_run_fragpipe,
+                                 " --fragpipe_path ", shQuote("/home/hiteshk/GenomeProt_git/fragpipe-23.1/"),
+                                 " --num_threads ", shQuote(fragpipe_cpu_threads),
+                                 " --memory_limit ", shQuote(fragpipe_memory_limit))
   message(command_run_fragpipe)
   system(command_run_fragpipe)
 
   # Find files to zip
+  #output_dir="fc8e728377ae3f59358b4affe8464c60/fragpipe_output/"
   files_to_zip_fragpipe <- c("peptide.tsv")
   if (input$user_perform_quantification) {
     files_to_zip_fragpipe <- c(files_to_zip_fragpipe, file.path("dia-quant-output", "report.pr_matrix.tsv"))
   }
+  
 
   error_msg <- ""
   if (base::all(file.exists(files_to_zip_fragpipe))) {
@@ -1277,7 +1578,7 @@ is_peptide_reformat_input_valid <- function(input) {
     return(error_msg)
   }
 
-  # Every proteomics results file must have a file extension of '.txt', '.csv' or '.tsv' and must not be empty
+  # Every proteomics results file must have a file extension of '.txt', '.csv' or '.tsv', must exist and must not be empty
   num_files <- nrow(user_orig_proteomics_files)
   filenames <- user_orig_proteomics_files$name
   for (i in 1:num_files) {
@@ -1288,6 +1589,11 @@ is_peptide_reformat_input_valid <- function(input) {
     }
 
     file_path <- user_orig_proteomics_files$datapath[i]
+    if (!file.exists(file_path)) {
+      error_msg <- "Error: The uploaded proteomics results files got deleted. Please reupload them."
+      return(error_msg)
+    }
+
     if (file.size(file_path) == 0) {
       error_msg <- "Error: Please ensure that none of the uploaded proteomics results files are empty."
       return(error_msg)
@@ -1373,8 +1679,14 @@ is_integration_input_valid <- function(input) {
     return(error_msg)
   }
 
-  # The reformatted proteomics results file must not be empty
+  # Make sure the reformatted proteomics results file still exists
   file_path <- user_proteomics_file$datapath
+  if (!file.exists(file_path)) {
+    error_msg <- "Error: The uploaded reformatted proteomics results file got deleted. Please reupload it."
+    return(error_msg)
+  }
+
+  # The reformatted proteomics results file must not be empty
   if (file.size(file_path) == 0) {
     error_msg <- "Error: The reformatted proteomics results file must not be empty."
     return(error_msg)
@@ -1394,8 +1706,14 @@ is_integration_input_valid <- function(input) {
     return(error_msg)
   }
 
-  # proteome_database_metadata.txt must not be empty
+  # Make sure proteome_database_metadata.txt still exists
   file_path <- user_metadata_file$datapath
+  if (!file.exists(file_path)) {
+    error_msg <- "Error: The uploaded proteome_database_metadata.txt got deleted. Please reupload it."
+    return(error_msg)
+  }
+
+  # proteome_database_metadata.txt must not be empty
   if (file.size(file_path) == 0) {
     error_msg <- "Error: proteome_database_metadata.txt must not be empty."
     return(error_msg)
@@ -1415,8 +1733,14 @@ is_integration_input_valid <- function(input) {
     return(error_msg)
   }
 
-  # proteome_database_transcripts.gtf must not be empty
+  # Make sure proteome_database_transcripts.gtf still exists
   file_path <- user_post_gtf_file$datapath
+  if (!file.exists(file_path)) {
+    error_msg <- "Error: The uploaded proteome_database_transcripts.gtf got deleted. Please reupload it."
+    return(error_msg)
+  }
+
+  # proteome_database_transcripts.gtf must not be empty
   if (file.size(file_path) == 0) {
     error_msg <- "Error: proteome_database_transcripts.gtf must not be empty."
     return(error_msg)
@@ -1476,9 +1800,7 @@ integration_server <- function(input, session) {
   setwd(outdir_integ)
 
   if (base::all(file.exists(files_to_zip_int))) {
-    if (file.exists(zipfile_path_int)) {
-      file.remove(zipfile_path_int)
-    }
+    remove_file_if_exists(zipfile_path_int)
 
     # zip files
     zip(zipfile = zipfile_path_int, files = files_to_zip_int)
@@ -1509,8 +1831,6 @@ server <- function(input, output, session) {
 
   # run test data through GenomeProt when the submit button is pressed
   observeEvent(input$test_data_submit_button, {
-    file_available_test_data_output(FALSE)
-
     message("Validating input for running test data...")
     error_msg <- is_test_data_input_valid()
     if (error_msg != "") {
@@ -1522,12 +1842,12 @@ server <- function(input, output, session) {
     message("Validated!")
 
     session$sendCustomMessage("disableButton", list(id = "test_data_submit_button", spinnerId = "test-data-loading-container")) # disable submit button
+    file_available_test_data_output(FALSE)
 
     # run the test data through GenomeProt
     test_data_output_file <- file.path(session_id, "test_data_output", "test_data_results.zip")
-    if (file.exists(test_data_output_file)) {
-      file.remove(test_data_output_file)
-    }
+    remove_file_if_exists(test_data_output_file)
+
     error_msg <- test_data_server(session)
 
     session$sendCustomMessage("enableButton", list(id = "test_data_submit_button", spinnerId = "test-data-loading-container"))
@@ -1538,6 +1858,7 @@ server <- function(input, output, session) {
     }
 
     if (error_msg != "") {
+      message(error_msg)
       session$sendCustomMessage("showStatusMessage", list(message = error_msg, container = "test-data-status-msg-container", color = "red"))
     } else {
       file_available_test_data_output(TRUE)
@@ -1549,7 +1870,9 @@ server <- function(input, output, session) {
     if (file_available_test_data_output()) {
       shinyjs::enable("test_data_download_button")
       shinyjs::runjs("document.getElementById('test_data_download_button').style.backgroundColor = '#4CAF50';")
-      session$sendCustomMessage("enableButton", list(id = "test_data_submit_button", spinnerId = "test-data-loading-container")) # re-enable submit button
+    } else {
+      shinyjs::disable("test_data_download_button")
+      shinyjs::runjs("document.getElementById('test_data_download_button').style.backgroundColor = '#F4F4F4';")
     }
   })
 
@@ -1563,6 +1886,16 @@ server <- function(input, output, session) {
     }
   )
 
+  # when the 'Quick start' button is pressed, users are brought to the 'Quick help' tab
+  observeEvent(input$quick_start_button, {
+    session$sendCustomMessage("switchTab", list(tab = "help"))
+  })
+
+  # when the 'Visualise data' button is pressed, users are brought to the visualisation module
+  observeEvent(input$visualise_data_button, {
+    session$sendCustomMessage("switchTab", list(tab = "visualisation"))
+  })
+
   # DATABASE MODULE
 
   # create reactive value for the database zip
@@ -1570,8 +1903,6 @@ server <- function(input, output, session) {
 
   # generate the database when the submit button is pressed
   observeEvent(input$db_submit_button, {
-    file_available_db(FALSE)
-
     message("Validating database generation module input...")
     error_msg <- is_database_generation_input_valid(input)
     if (error_msg != "") {
@@ -1583,43 +1914,69 @@ server <- function(input, output, session) {
     message("Validated!")
 
     session$sendCustomMessage("disableButton", list(id = "db_submit_button", spinnerId = "db-loading-container")) # disable submit button
+    file_available_db(FALSE)
 
     # run the database generation server
     results_zip_file <- file.path(session_id, "database_results.zip")
-    if (file.exists(results_zip_file)) {
-      file.remove(results_zip_file)
+    remove_file_if_exists(results_zip_file)
+
+    steps <- c("database")
+    if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
+      steps <- c("fastq", "bambu", steps)
+    } else if (input$input_type == "fastq_input" & input$sequencing_type == "short-read") {
+      steps <- c("fastq", steps)
+    } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
+      steps <- c("bambu", steps)
+    } else if (input$input_type == "bam_input" & input$sequencing_type == "short-read") {
+      steps <- c("bam", steps)
     }
 
-    # TODO: Add error messages for the database generation module servers
-    if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
-      fastq_server(input, session)
-      bambu_server(input, session)
-      database_server(input, session)
-    } else if (input$input_type == "fastq_input" & input$sequencing_type == "short-read") {
-      fastq_server(input, session)
-      database_server(input, session)
-    } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-      bambu_server(input, session)
-      database_server(input, session)
-    } else if (input$input_type == "bam_input" & input$sequencing_type == "short-read") {
-      bam_server(input, session)
-      database_server(input, session)
-    } else {
-      database_server(input, session)
+    # Run each of the database generation module servers based on the input type and sequencing type
+    for (step in steps) {
+      if (step == "fastq") {
+        error_msg <- fastq_server(input, session)
+      } else if (step == "bambu") {
+        error_msg <- bambu_server(input, session)
+      } else if (step == "bam") {
+        error_msg <- bam_server(input, session)
+      } else {
+        error_msg <- database_server(input, session)
+      }
+
+      # If the server returns an error message, don't run the remaining servers and display the error message
+      if (error_msg != "") {
+        if (step == "fastq") {
+          error_msg <- paste0("An error occurred while processing the FASTQ input data.\n", error_msg)
+        } else if (step == "bambu" & input$input_type == "fastq_input") {
+          error_msg <- paste0("An error occurred while processing the BAM files generated from the FASTQ input data.\n", error_msg)
+        } else if (step != "database" & input$input_type == "bam_input") {
+          error_msg <- paste0("An error occurred while processing the BAM input data.\n", error_msg)
+        } else if (input$input_type == "gtf_input") {
+          error_msg <- paste0("An error occurred while processing the GTF input data.\n", error_msg)
+        } else {
+          error_msg <- paste0("An error occurred while generating the proteome database.\n", error_msg)
+        }
+
+        break
+      }
     }
 
     session$sendCustomMessage("enableButton", list(id = "db_submit_button", spinnerId = "db-loading-container"))
-
-    # check if the zip file is created
-    error_msg <- ""
-    if (!file.exists(results_zip_file) & (error_msg == "")) {
-      error_msg <- "Error: Database generation failed. Please ensure the files you have uploaded are formatted correctly and you have selected the correct input type and sequencing type."
-    }
-
     if (error_msg != "") {
+      message(error_msg)
       session$sendCustomMessage("showStatusMessage", list(message = error_msg, container = "db-status-msg-container", color = "red"))
     } else {
-      file_available_db(TRUE)
+      # check if the zip file is created
+      if (!file.exists(results_zip_file)) {
+        error_msg <- "Error: Database generation failed. Please ensure the files you have uploaded are formatted correctly and you have selected the correct input type and sequencing type."
+      }
+
+      if (error_msg != "") {
+        message(error_msg)
+        session$sendCustomMessage("showStatusMessage", list(message = error_msg, container = "db-status-msg-container", color = "red"))
+      } else {
+        file_available_db(TRUE)
+      }
     }
   })
 
@@ -1628,7 +1985,9 @@ server <- function(input, output, session) {
     if (file_available_db()) {
       shinyjs::enable("db_download_button")
       shinyjs::runjs("document.getElementById('db_download_button').style.backgroundColor = '#4CAF50';")
-      session$sendCustomMessage("enableButton", list(id = "db_submit_button", spinnerId = "db-loading-container")) # re-enable submit button
+    } else {
+      shinyjs::disable("db_download_button")
+      shinyjs::runjs("document.getElementById('db_download_button').style.backgroundColor = '#F4F4F4';")
     }
   })
 
@@ -1697,8 +2056,6 @@ server <- function(input, output, session) {
 
   # run FragPipe when the 'Run FragPipe' button is pressed
   observeEvent(input$fragpipe_submit_button, {
-    file_available_fragpipe(FALSE)
-
     message("Validating FragPipe input...")
     error_msg <- is_fragpipe_input_valid(input, mass_spec_file_num)
     if (error_msg != "") {
@@ -1710,12 +2067,13 @@ server <- function(input, output, session) {
     message("Validated!")
 
     session$sendCustomMessage("disableButton", list(id = "fragpipe_submit_button", spinnerId = "fragpipe-loading-container")) # disable submit button
+    file_available_fragpipe(FALSE)
 
     # run the FragPipe server
+    #session_id="fc8e728377ae3f59358b4affe8464c60"
     results_zip_file <- file.path(session_id, "fragpipe_results.zip")
-    if (file.exists(results_zip_file)) {
-      file.remove(results_zip_file)
-    }
+    #remove_file_if_exists(results_zip_file)
+
     error_msg <- fragpipe_server(input, session_id, mass_spec_file_num)
 
     session$sendCustomMessage("enableButton", list(id = "fragpipe_submit_button", spinnerId = "fragpipe-loading-container"))
@@ -1726,6 +2084,7 @@ server <- function(input, output, session) {
     }
 
     if (error_msg != "") {
+      message(error_msg)
       session$sendCustomMessage("showStatusMessage", list(message = error_msg, container = "fragpipe-status-msg-container", color = "red"))
     } else {
       file_available_fragpipe(TRUE)
@@ -1737,7 +2096,9 @@ server <- function(input, output, session) {
     if (file_available_fragpipe()) {
       shinyjs::enable("fragpipe_download_button")
       shinyjs::runjs("document.getElementById('fragpipe_download_button').style.backgroundColor = '#4CAF50';")
-      session$sendCustomMessage("enableButton", list(id = "fragpipe_submit_button", spinnerId = "fragpipe-loading-container")) # re-enable submit button
+    } else {
+      shinyjs::disable("fragpipe_download_button")
+      shinyjs::runjs("document.getElementById('fragpipe_download_button').style.backgroundColor = '#F4F4F4';")
     }
   })
 
@@ -1747,9 +2108,14 @@ server <- function(input, output, session) {
       paste0(Sys.Date(), "_", format(Sys.time(), "%H%M"), "_fragpipe_results.zip")
     },
     content = function(file) {
-      file.copy(file.path(session_id, "fragpipe_results.zip"), file)
+      
+      
+      file.copy(file.path(session_id, "fragpipe_results.zip"),file)
+      
+      
     }
   )
+ 
 
   # END PROTEOMICS MODULE
 
@@ -1760,8 +2126,6 @@ server <- function(input, output, session) {
 
   # run integration function when submit is pressed
   observeEvent(input$integ_reformat_submit_button, {
-    file_available_integ_reformatted(FALSE)
-
     message("Validating input for reformatting proteomics results...")
     error_msg <- is_peptide_reformat_input_valid(input)
     if (error_msg != "") {
@@ -1773,12 +2137,12 @@ server <- function(input, output, session) {
     message("Validated!")
 
     session$sendCustomMessage("disableButton", list(id = "integ_reformat_submit_button", spinnerId = "integ-reformat-loading-container")) # disable submit button
+    file_available_integ_reformatted(FALSE)
 
     # run the proteomics results reformatting server
     reformatted_file <- file.path(session_id, "peptide_results_output", "peptide_data.tsv")
-    if (file.exists(reformatted_file)) {
-      file.remove(reformatted_file)
-    }
+    remove_file_if_exists(reformatted_file)
+
     error_msg <- integration_reformat_server(input, session)
 
     session$sendCustomMessage("enableButton", list(id = "integ_reformat_submit_button", spinnerId = "integ-reformat-loading-container"))
@@ -1789,6 +2153,7 @@ server <- function(input, output, session) {
     }
 
     if (error_msg != "") {
+      message(error_msg)
       session$sendCustomMessage("showStatusMessage", list(message = error_msg, container = "integ-reformat-status-msg-container", color = "red"))
     } else {
       file_available_integ_reformatted(TRUE)
@@ -1800,7 +2165,9 @@ server <- function(input, output, session) {
     if (file_available_integ_reformatted()) {
       shinyjs::enable("integ_reformat_download_button")
       shinyjs::runjs("document.getElementById('integ_reformat_download_button').style.backgroundColor = '#4CAF50';")
-      session$sendCustomMessage("enableButton", list(id = "integ_reformat_submit_button", spinnerId = "integ-reformat-loading-container")) # re-enable submit button
+    } else {
+      shinyjs::disable("integ_reformat_download_button")
+      shinyjs::runjs("document.getElementById('integ_reformat_download_button').style.backgroundColor = '#F4F4F4';")
     }
   })
 
@@ -1819,8 +2186,6 @@ server <- function(input, output, session) {
 
   # run integration function when submit is pressed
   observeEvent(input$integ_submit_button, {
-    file_available_integ(FALSE)
-
     message("Validating integration module input...")
     error_msg <- is_integration_input_valid(input)
     if (error_msg != "") {
@@ -1832,12 +2197,12 @@ server <- function(input, output, session) {
     message("Validated!")
 
     session$sendCustomMessage("disableButton", list(id = "integ_submit_button", spinnerId = "integ-loading-container")) # disable submit button
+    file_available_integ(FALSE)
 
     # run integration server
     integration_results_zip <- file.path(session_id, "integration_results.zip")
-    if (file.exists(integration_results_zip)) {
-      file.remove(integration_results_zip)
-    }
+    remove_file_if_exists(integration_results_zip)
+
     error_msg <- integration_server(input, session)
 
     session$sendCustomMessage("enableButton", list(id = "integ_submit_button", spinnerId = "integ-loading-container"))
@@ -1848,6 +2213,7 @@ server <- function(input, output, session) {
     }
 
     if (error_msg != "") {
+      message(error_msg)
       session$sendCustomMessage("showStatusMessage", list(message = error_msg, container = "integ-status-msg-container", color = "red"))
     } else {
       file_available_integ(TRUE)
@@ -1859,7 +2225,9 @@ server <- function(input, output, session) {
     if (file_available_integ()) {
       shinyjs::enable("integ_download_button")
       shinyjs::runjs("document.getElementById('integ_download_button').style.backgroundColor = '#4CAF50';")
-      session$sendCustomMessage("enableButton", list(id = "integ_submit_button", spinnerId = "integ-loading-container")) # re-enable submit button
+    } else {
+      shinyjs::disable("integ_download_button")
+      shinyjs::runjs("document.getElementById('integ_download_button').style.backgroundColor = '#F4F4F4';")
     }
   })
 

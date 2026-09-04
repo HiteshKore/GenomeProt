@@ -25,7 +25,7 @@ counts_output_file <- opt$counts_output_file
 # check if any input arguments are missing
 if (is.null(salmon_outdir)) {
   stop("Please specify a Salmon output directory.")
-} else if (is.null(reference_gtf)) {
+} else if (is.null(reference_gtf) && !file.exists(reference_gtf)) { 
   stop("Please provide a reference GTF file.")
 } else if (is.null(counts_output_file)) {
   stop("Please provide a path to write the counts file.")
@@ -38,9 +38,17 @@ salmon_outdir <- salmon_outdir[basename(salmon_outdir) != "salmon_index"]
 # check the input arguments
 files <- Sys.glob(file.path(salmon_outdir,"/quant.sf"))
 
-if (length(files) == 0) {
+  if (length(files) == 0) {
     stop(paste0("The Salmon output directory '", salmon_outdir, "' does not contain any directories with the file 'quant.sf'."))
-}
+  }
+  if (any(dir.exists(files))) {
+    stop(paste0("The Salmon output directory '", salmon_outdir, "' contains quant.sf files that are directories. Please ensure that all quant.sf files in the Salmon output directory specified are files and not directories."))
+  }
+  if (any(file.size(files) == 0)) {
+    stop(paste0("The Salmon output directory '", salmon_outdir, "' contains quant.sf files that are empty. Please ensure that all quant.sf files in the Salmon output directory specified are not empty."))
+  }
+
+
 
 
 if (all(file.exists(files))) {

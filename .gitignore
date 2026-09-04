@@ -9,6 +9,7 @@ GenomeProt/testdata_output/
 GenomeProt/data/openprot_uniprotDb_*.txt
 GenomeProt/data/openprot_uniprotDb_*.txt
 testdata/*
+fragpipe-23.1
 !testdata/
 !testdata/*.zip
 testdata/long_read_bam/*

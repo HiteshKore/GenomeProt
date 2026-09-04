@@ -5,10 +5,6 @@
 ## Contents
 
 - [Overview](#overview)
-- [Installation](#installation)
-  - [Option 1 (recommended): Access GenomeProt online](#option-1-recommended-access-genomeprot-online)
-  - [Option 2: Run the shiny application with Docker](#option-2-run-the-shiny-application-with-docker)
-  - [Option 3: Locally install the shiny application](#option-3-locally-install-the-shiny-application)
 - [General usage](#general-usage)
   - [Database generation](#1-database-generation)
   - [Analyse MS proteomics](#2-analyse-ms-proteomics)
@@ -19,263 +15,14 @@
   - [Analyse MS proteomics](#2-analyse-ms-proteomics-1)
   - [Integration](#3-integration-1)
   - [Visualisation](#4-visualisation-1)
+- [Installation](#installation)
+  - [Option 1 (recommended): Access GenomeProt online](#option-1-recommended-access-genomeprot-online)
+  - [Option 2: Run the shiny application with Docker](#option-2-run-the-shiny-application-with-docker)
+  - [Option 3: Locally install the shiny application](#option-3-locally-install-the-shiny-application)
 
 ## Overview
 
 Quantifying the diversity of RNAs and proteins produced by cells is fundamental to the biological and clinical sciences. However, many proteins remain uncharacterized due to the limitations of standard proteomics techniques. GenomeProt is a tool to enable user-friendly proteogenomics and identify both known and novel translated open reading frames. GenomeProt integrates RNA-seq and mass-spectrometry data and outputs the RNAs, peptides and proteins present in each sample in a HTML summary report, BED12 and GTF files. GenomeProt also provides a visualisation module to analyse the results and can optionally accept a VCF file of DNA variants to identify variant proteins. GenomeProt can be accessed via a public website, by installing a local version that runs through your web browser, or via the command line.
-
-## Installation
-
-GenomeProt can both be run as an interactive web application and run entirely from the command-line.
-
-To use GenomeProt now, follow [Option 1](#option-1-recommended-access-genomeprot-online).
-
-To install GenomeProt locally or on an HPC (high-performance computing) system, follow [Option 2 (run with Docker)](#option-2-run-the-shiny-application-with-docker) or [Option 3](#option-3-locally-install-the-shiny-application).
-
-### Option 1 (recommended): Access GenomeProt online
-Click on the following link to access GenomeProt in your current browser tab: https://genomeprot.researchsoftware.unimelb.edu.au/
-
-Note: To ensure fair use of the resources, the public GenomeProt server does not perform read mapping from FASTQs (BAM or GTF input only) and excludes the "Analyse MS proteomics" step. Users wishing to perform these steps should utilise a local version of GenomeProt or perform these steps externally.
-
-### Option 2: Run the shiny application with Docker
-
-Make sure you have [Docker](https://docs.docker.com/engine/install/) installed before you begin.
-
-#### Clone the GenomeProt GitHub repository
-
-```bash
-git clone https://github.com/HiteshKore/GenomeProt.git
-```
-
-#### Build the Docker image
-
-Navigate into the directory containing the Dockerfile:
-
-```bash
-cd GenomeProt
-```
-
-The Dockerfile accepts two build arguments:
-- `is_install_fragpipe` (default: `true`): Whether to install FragPipe. FragPipe will be installed if this argument is set to `true`.
-- `fragpipe_token` (default: `123456`): The 6-digit token used for installing necessary FragPipe tools. This argument will only be considered if `is_install_fragpipe` is set to `true`.
-
-If you wish to use the proteomics module and install FragPipe, follow these instructions on obtaining a 6-digit token for installing the tools:
-
-<details>
-<summary>How to obtain a 6-digit token for installing FragPipe tools <b><u>(click to expand)</u></b></summary>
-
-1. Head to https://msfragger-upgrader.nesvilab.org/upgrader/.
-2. Enter your first name, last name, academic email address and academic institution.
-3. Check all tickboxes for the academic license, license agreement and SDK library distribution conditions.
-4. Click on the 'Download' button (NOT the 'Get a license key...' button).
-5. Wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
-  - `https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip`
-6. Copy the `<6-digit token>` from the download link. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
-</details>
-
-Then, run the following command, replacing `<6-digit token>` with the token you have copied:
-
-```bash
-docker build --tag genomeprot --network host --build-arg is_install_fragpipe=true --build-arg fragpipe_token=<6-digit token> .
-```
-
-If you do not wish to use the proteomics module or do not want to install FragPipe, run the following command instead:
-
-```bash
-docker build --tag genomeprot --network host --build-arg is_install_fragpipe=false .
-```
-
-In either case, the Docker image will take roughly 10 - 30 minutes to build due to the substantial dependencies GenomeProt uses.
-
-#### Running the Docker container
-
-After building the Docker image, use the following command to run the Docker container:
-
-```bash
-docker run --rm -p 3838:3838 genomeprot
-```
-
-The `--rm` flag removes the container after it is stopped and the `-p 3838:3838` argument maps your local port 3838 to the same port inside the container.
-
-The GenomeProt website should now be running on http://0.0.0.0:3838/ and accessible with a web browser, where you can upload files and run GenomeProt modules.
-
-Although the app is running through a web browser, no files will be uploaded to the internet and everything will be run locally.
-
-#### Stopping the Docker container
-
-To stop the Docker container, close the GenomeProt web browser tab, head back to the terminal where the Docker container is running, and press Ctrl+C.
-
-If the container fails to stop, keep pressing Ctrl+C until you see a message saying the command forcefully exited. Then, run the following command:
-
-```bash
-docker ps
-```
-
-You should see output that looks like the following:
-
-```
-CONTAINER ID   IMAGE          COMMAND                    ...
-abcdef012345   genomeprot     "/bin/sh -c '/bin/ba..."   ...
-```
-
-Copy the container ID and run the following command to stop the container (replace `abcdef012345` with the actual ID):
-
-```bash
-docker stop abcdef012345
-```
-
-The container should be stopped when its ID is printed after running the command.
-
-### Option 3: Locally install the shiny application
-
-The application has substantial dependencies that we have provided as conda environment files.
-
-#### Clone the GenomeProt GitHub repository
-
-```bash
-git clone https://github.com/HiteshKore/GenomeProt.git
-```
-
-#### Set up the GenomeProt conda environment
-
-Install conda by following [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
-
-Two conda environments are provided: one contains the dependencies for running FragPipe and the GenomeProt proteomics module, while the other lacks them. Build the conda environment that suits your needs best:
-```bash
-cd GenomeProt
-conda env create -f conda_env.yaml             # Run this line if you wish to use the proteomics module
-conda env create -f conda_env_no_fragpipe.yaml # Run this line if you DO NOT wish to use the proteomics module
-```
-
-If you choose NOT to use the proteomics module, skip the step below and head to [the next step](#prepare-the-reference-and-test-datasets).
-
-#### Install FragPipe and configure the proteomics module
-
-The proteomics module requires a complete FragPipe v23.1 installation, which can be done by running an interactive Python script provided in this repository:
-
-```bash
-python3 fragpipe_installer.py                # Run this line if you wish to install FragPipe in the current working directory
-python3 fragpipe_installer.py path/to/folder # Run this line if you wish to install FragPipe at a specific path
-```
-
-When running the script, type 'Y' and press enter to answer yes to prompts on installing FragPipe and additional necessary tools. Afterwards, follow the instructions on obtaining a 6-digit token for installing the tools:
-
-<details>
-<summary>How to obtain a 6-digit token for installing FragPipe tools <b><u>(click to expand)</u></b></summary>
-
-1. Head to https://msfragger-upgrader.nesvilab.org/upgrader/.
-2. Enter your first name, last name, academic email address and academic institution.
-3. Check all tickboxes for the academic license, license agreement and SDK library distribution conditions.
-4. Click on the 'Download' button (NOT the 'Get a license key...' button).
-5. Wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
-  - `https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip`
-6. Copy the `<6-digit token>` from the download link and paste it into the terminal. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
-</details>
-
-After the installation is complete, the following line in the `server.R` script needs to be modified if FragPipe was not extracted into `/home/user/Desktop/GenomeProt`:
-
-```R
-" --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
-```
-
-For instance, if FragPipe was extracted into `/home/user/a/b/c/d/`, change `/home/user/Desktop/GenomeProt/fragpipe-23.1/` to `/home/user/a/b/c/d/fragpipe-23.1/`.
-
-<details>
-<summary>Example run of the FragPipe installation script <b><u>(click to expand)</u></b></summary>
-
-    Extraction directory: /home/user/Desktop/GenomeProt
-    Would you like to install FragPipe ([Y]/n)? Y
-    ...
-    Downloading FragPipe v23.1 from https://github.com/Nesvilab/FragPipe/releases/download/23.1/FragPipe-23.1-linux.zip...
-    ...
-    Done!
-    Would you like to install MSFragger, IonQuant and diaTracer (required additional tools to run the FragPipe analysis) ([Y]/n)? Y
-    ...
-    To install the FragPipe tools, first head to https://msfragger-upgrader.nesvilab.org/upgrader/.
-    Then, enter your first name, last name, academic email address and academic institution, and check all tickboxes for the academic license, license agreement and SDK library distribution conditions.
-    Next, click on the 'Download' button (NOT the 'Get a license key...' button), and wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
-    https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip
-    The 6-digit token can be used to download MSFragger, IonQuant and diaTracer. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
-    Please enter your token (6 digits): 123456
-    Using token '123456'...
-    ...
-    MSFragger downloaded!
-    ...
-    IonQuant downloaded!
-    ...
-    diaTracer downloaded!
-    ...
-    FragPipe installation complete.
-    FragPipe extracted into /home/user/Desktop/GenomeProt.
-    FragPipe tools extracted into /home/user/Desktop/GenomeProt/fragpipe-23.1/tools.
-</details>
-
-#### Prepare the reference and test datasets
-
-Run the following command to unzip the combined UniProt and OpenProt reference files in the `GenomeProt/data` directory and the test data files in the `GenomeProt/testdata` directory:
-
-```bash
-bash prepare_ref_and_test_data.sh
-```
-
-#### Ensuring sufficient space for storing temporary files (if required)
-
-<details>
-<summary>Instructions <b><u>(click to expand)</u></b></summary>
-
-Files selected through the GenomeProt website are copied into a folder reserved for temporary files (usually `/tmp`). If the filesystem storing this folder is too small, selected files cannot be fully copied into the folder, which causes errors during data processing. This problem can be encountered when uploading large files, including mass spectrometry data files for FragPipe to process.
-
-There are two methods to resolve this issue:
-
-1. Store temporary files in a filesystem with sufficient space by setting the `TMPDIR` environment variable (does NOT require `sudo` privileges)
-
-In this example, running `df -h` in a terminal produces the following output:
-
-```
-Filesystem      Size  Used Avail Use% Mounted on
-udev            3.9G     0  3.9G   0% /dev
-tmpfs           795M  524K  794M   1% /run
-/dev/sda2       124G   50G   68G  43% /
-tmpfs           3.9G     0  3.9G   0% /dev/shm
-tmpfs           3.9G  8.0K  3.9G   1% /tmp
-/dev/sda1       511M  4.7M  507M   1% /boot/efi
-tmpfs           795M   36K  794M   1% /run/user/1000
-```
-
-Here, `/tmp` is its own filesystem and has a size of 3.9 GB, but that might be too small for storing mass spectrometry data files, whereas the `/dev/sda2` disk filesystem has a size of 124 GB and contains 68 GB of free space. So, the `/dev/sda2` filesystem should have enough space for storing temporary files.
-
-Assuming the user can create files and folders in the `/dev/sda2` filesystem, they can run GenomeProt as follows, where `/path/to/temp/folder` resides in that filesystem and overrides the default location where temporary files are written to:
-
-```bash
-conda activate GenomeProt_env
-mkdir -p /path/to/temp/folder
-TMPDIR=/path/to/temp/folder Rscript -e "shiny::runApp('path/to/app/GenomeProt/', host='0.0.0.0', port=3838)"
-```
-
-After stopping GenomeProt by pressing Ctrl+C in the terminal where it is running, all temporary files written into `/path/to/temp/folder` should be automatically removed.
-
-2. Increase the size of the filesystem for storing temporary files (requires `sudo` privileges; might be unsuitable for HPC systems)
-
-Instead of changing where temporary files are written to, the filesystem storing these files can be resized to contain sufficient space. Following the example from above, assuming the user has `sudo` privileges, they can run the following command to resize the `/tmp` filesystem to 10 GB:
-
-```bash
-sudo mount -o remount,size=10G /tmp
-```
-
-This method might not work on HPC systems as such privileges are typically not provided to HPC users. Also, the recommended size of the filesystem depends on the sizes of files you wish to process through the GenomeProt website.
-</details>
-
-#### Running GenomeProt
-
-Activate the conda environment and run the GenomeProt shiny app from the command line:
-```bash
-conda activate GenomeProt_env
-Rscript -e "shiny::runApp('path/to/app/GenomeProt/', host='0.0.0.0', port=3838)"
-```
-
-The GenomeProt website should then be hosted locally on http://0.0.0.0:3838/ and accessible with a web browser.
-
-To stop the web application, press Ctrl+C in the terminal tab where it is running.
 
 ## General usage
 
@@ -525,3 +272,262 @@ Part 2: Upload files to integrate
 | Peptide intensities | TXT/CSV/TSV | No | Generated in Step 2 (external), Peptide intensity data 'report.pr_matrix.tsv' |
 
 **Note:** This tool is interactive and there is an option to download plots as PNG, JPEG, SVG and PDF.
+
+## Installation
+
+GenomeProt can be used in three ways: Through its public webserver, as a locally hosted interactive web application, or entirely via the command-line.
+
+To use GenomeProt now, follow [Option 1](#option-1-recommended-access-genomeprot-online).
+
+To run the GenomeProt webserver locally or on an HPC (high-performance computing) system, follow [Option 2 (run with Docker)](#option-2-run-the-shiny-application-with-docker) or [Option 3](#option-3-locally-install-the-shiny-application).
+
+To run GenomeProt through the command line locally or on an HPC system, follow [Option 3](#option-3-locally-install-the-shiny-application).
+
+### Option 1 (recommended): Access GenomeProt online
+Click on the following link to access GenomeProt in your current browser tab: https://genomeprot.researchsoftware.unimelb.edu.au/
+
+Note: To ensure fair use of the resources, the public GenomeProt server does not perform read mapping from FASTQs (BAM or GTF input only) and excludes the "Analyse MS proteomics" step. Users wishing to perform these steps should utilise a local version of GenomeProt or perform these steps externally.
+
+### Option 2: Run the shiny application with Docker
+
+Make sure you have [Docker](https://docs.docker.com/engine/install/) installed before you begin.
+
+#### Clone the GenomeProt GitHub repository
+
+```bash
+git clone https://github.com/HiteshKore/GenomeProt.git
+```
+
+#### Build the Docker image
+
+Navigate into the directory containing the Dockerfile:
+
+```bash
+cd GenomeProt
+```
+
+The Dockerfile accepts two build arguments:
+- `is_install_fragpipe` (default: `true`): Whether to install FragPipe. FragPipe will be installed if this argument is set to `true`.
+- `fragpipe_token` (default: `123456`): The 6-digit token used for installing necessary FragPipe tools. This argument will only be considered if `is_install_fragpipe` is set to `true`.
+
+If you wish to use the proteomics module and install FragPipe, follow these instructions on obtaining a 6-digit token for installing the tools:
+
+<details>
+<summary>How to obtain a 6-digit token for installing FragPipe tools <b><u>(click to expand)</u></b></summary>
+
+1. Head to https://msfragger-upgrader.nesvilab.org/upgrader/.
+2. Enter your first name, last name, academic email address and academic institution.
+3. Check all tickboxes for the academic license, license agreement and SDK library distribution conditions.
+4. Click on the 'Download' button (NOT the 'Get a license key...' button).
+5. Wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
+  - `https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip`
+6. Copy the `<6-digit token>` from the download link. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
+</details>
+
+Then, run the following command, replacing `<6-digit token>` with the token you have copied:
+
+```bash
+docker build --tag genomeprot --network host --build-arg is_install_fragpipe=true --build-arg fragpipe_token=<6-digit token> .
+```
+
+If you do not wish to use the proteomics module or do not want to install FragPipe, run the following command instead:
+
+```bash
+docker build --tag genomeprot --network host --build-arg is_install_fragpipe=false .
+```
+
+In either case, the Docker image will take roughly 10 - 30 minutes to build due to the substantial dependencies GenomeProt uses.
+
+#### Running the Docker container
+
+After building the Docker image, use the following command to run the Docker container:
+
+```bash
+docker run --rm -p 3838:3838 genomeprot
+```
+
+The `--rm` flag removes the container after it is stopped and the `-p 3838:3838` argument maps your local port 3838 to the same port inside the container.
+
+The GenomeProt website should now be running on http://0.0.0.0:3838/ and accessible with a web browser, where you can upload files and run GenomeProt modules.
+
+Although the app is running through a web browser, no files will be uploaded to the internet and everything will be run locally.
+
+#### Stopping the Docker container
+
+To stop the Docker container, close the GenomeProt web browser tab, head back to the terminal where the Docker container is running, and press Ctrl+C.
+
+If the container fails to stop, keep pressing Ctrl+C until you see a message saying the command forcefully exited. Then, run the following command:
+
+```bash
+docker ps
+```
+
+You should see output that looks like the following:
+
+```
+CONTAINER ID   IMAGE          COMMAND                    ...
+abcdef012345   genomeprot     "/bin/sh -c '/bin/ba..."   ...
+```
+
+Copy the container ID and run the following command to stop the container (replace `abcdef012345` with the actual ID):
+
+```bash
+docker stop abcdef012345
+```
+
+The container should be stopped when its ID is printed after running the command.
+
+### Option 3: Locally install the shiny application
+
+The application has substantial dependencies that we have provided as conda environment files.
+
+#### Clone the GenomeProt GitHub repository
+
+```bash
+git clone https://github.com/HiteshKore/GenomeProt.git
+```
+
+#### Set up the GenomeProt conda environment
+
+Install conda by following [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
+
+Two conda environments are provided: one contains the dependencies for running FragPipe and the GenomeProt proteomics module, while the other lacks them. Build the conda environment that suits your needs best:
+```bash
+cd GenomeProt
+conda env create -f conda_env.yaml             # Run this line if you wish to use the proteomics module
+conda env create -f conda_env_no_fragpipe.yaml # Run this line if you DO NOT wish to use the proteomics module
+```
+
+If you choose NOT to use the proteomics module, skip the step below and head to [the next step](#prepare-the-reference-and-test-datasets).
+
+#### Install FragPipe and configure the proteomics module
+
+The proteomics module requires a complete FragPipe v23.1 installation, which can be done by running an interactive Python script provided in this repository:
+
+```bash
+python3 fragpipe_installer.py                # Run this line if you wish to install FragPipe in the current working directory
+python3 fragpipe_installer.py path/to/folder # Run this line if you wish to install FragPipe at a specific path
+```
+
+When running the script, type 'Y' and press enter to answer yes to prompts on installing FragPipe and additional necessary tools. Afterwards, follow the instructions on obtaining a 6-digit token for installing the tools:
+
+<details>
+<summary>How to obtain a 6-digit token for installing FragPipe tools <b><u>(click to expand)</u></b></summary>
+
+1. Head to https://msfragger-upgrader.nesvilab.org/upgrader/.
+2. Enter your first name, last name, academic email address and academic institution.
+3. Check all tickboxes for the academic license, license agreement and SDK library distribution conditions.
+4. Click on the 'Download' button (NOT the 'Get a license key...' button).
+5. Wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
+  - `https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip`
+6. Copy the `<6-digit token>` from the download link and paste it into the terminal. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
+</details>
+
+After the installation is complete, the following line in the `server.R` script needs to be modified if FragPipe was not extracted into `/home/user/Desktop/GenomeProt`:
+
+```R
+" --fragpipe_path ", shQuote("/home/user/Desktop/GenomeProt/fragpipe-23.1/"),
+```
+
+For instance, if FragPipe was extracted into `/home/user/a/b/c/d/`, change `/home/user/Desktop/GenomeProt/fragpipe-23.1/` to `/home/user/a/b/c/d/fragpipe-23.1/`.
+
+<details>
+<summary>Example run of the FragPipe installation script <b><u>(click to expand)</u></b></summary>
+
+    Extraction directory: /home/user/Desktop/GenomeProt
+    Would you like to install FragPipe ([Y]/n)? Y
+    ...
+    Downloading FragPipe v23.1 from https://github.com/Nesvilab/FragPipe/releases/download/23.1/FragPipe-23.1-linux.zip...
+    ...
+    Done!
+    Would you like to install MSFragger, IonQuant and diaTracer (required additional tools to run the FragPipe analysis) ([Y]/n)? Y
+    ...
+    To install the FragPipe tools, first head to https://msfragger-upgrader.nesvilab.org/upgrader/.
+    Then, enter your first name, last name, academic email address and academic institution, and check all tickboxes for the academic license, license agreement and SDK library distribution conditions.
+    Next, click on the 'Download' button (NOT the 'Get a license key...' button), and wait for an email from no-reply@fragpipe.info at the email address you have specified. It should contain a download link with the following format:
+    https://msfragger-upgrader.nesvilab.org/upgrader/download.php?token=<6-digit token>&download=<version>%24zip
+    The 6-digit token can be used to download MSFragger, IonQuant and diaTracer. Note that the token expires 20 minutes after you have clicked on the 'Download' button.
+    Please enter your token (6 digits): 123456
+    Using token '123456'...
+    ...
+    MSFragger downloaded!
+    ...
+    IonQuant downloaded!
+    ...
+    diaTracer downloaded!
+    ...
+    FragPipe installation complete.
+    FragPipe extracted into /home/user/Desktop/GenomeProt.
+    FragPipe tools extracted into /home/user/Desktop/GenomeProt/fragpipe-23.1/tools.
+</details>
+
+#### Prepare the reference and test datasets
+
+Run the following command to unzip the combined UniProt and OpenProt reference files in the `GenomeProt/data` directory and the test data files in the `GenomeProt/testdata` directory:
+
+```bash
+bash prepare_ref_and_test_data.sh
+```
+
+#### Ensuring sufficient space for storing temporary files (if required)
+
+<details>
+<summary>Instructions <b><u>(click to expand)</u></b></summary>
+
+Files selected through the GenomeProt website are copied into a folder reserved for temporary files (usually `/tmp`). If the filesystem storing this folder is too small, selected files cannot be fully copied into the folder, which causes errors during data processing. This problem can be encountered when uploading large files, including mass spectrometry data files for FragPipe to process.
+
+There are two methods to resolve this issue:
+
+1. Store temporary files in a filesystem with sufficient space by setting the `TMPDIR` environment variable (does NOT require `sudo` privileges)
+
+In this example, running `df -h` in a terminal produces the following output:
+
+```
+Filesystem      Size  Used Avail Use% Mounted on
+udev            3.9G     0  3.9G   0% /dev
+tmpfs           795M  524K  794M   1% /run
+/dev/sda2       124G   50G   68G  43% /
+tmpfs           3.9G     0  3.9G   0% /dev/shm
+tmpfs           3.9G  8.0K  3.9G   1% /tmp
+/dev/sda1       511M  4.7M  507M   1% /boot/efi
+tmpfs           795M   36K  794M   1% /run/user/1000
+```
+
+Here, `/tmp` is its own filesystem and has a size of 3.9 GB, but that might be too small for storing mass spectrometry data files, whereas the `/dev/sda2` disk filesystem has a size of 124 GB and contains 68 GB of free space. So, the `/dev/sda2` filesystem should have enough space for storing temporary files.
+
+Assuming the user can create files and folders in the `/dev/sda2` filesystem, they can run GenomeProt as follows, where `/path/to/temp/folder` resides in that filesystem and overrides the default location where temporary files are written to:
+
+```bash
+conda activate GenomeProt_env
+mkdir -p /path/to/temp/folder
+TMPDIR=/path/to/temp/folder Rscript -e "shiny::runApp('path/to/app/GenomeProt/', host='0.0.0.0', port=3838)"
+```
+
+After stopping GenomeProt by pressing Ctrl+C in the terminal where it is running, all temporary files written into `/path/to/temp/folder` should be automatically removed.
+
+2. Increase the size of the filesystem for storing temporary files (requires `sudo` privileges; might be unsuitable for HPC systems)
+
+Instead of changing where temporary files are written to, the filesystem storing these files can be resized to contain sufficient space. Following the example from above, assuming the user has `sudo` privileges, they can run the following command to resize the `/tmp` filesystem to 10 GB:
+
+```bash
+sudo mount -o remount,size=10G /tmp
+```
+
+This method might not work on HPC systems as such privileges are typically not provided to HPC users. Also, the recommended size of the filesystem depends on the sizes of files you wish to process through the GenomeProt website.
+</details>
+
+#### Running GenomeProt as a webserver or through the command line
+
+Activate the conda environment:
+```bash
+conda activate GenomeProt_env
+```
+
+To run the GenomeProt shiny app, run the following command:
+```bash
+Rscript -e "shiny::runApp('path/to/app/GenomeProt/', host='0.0.0.0', port=3838)"
+```
+
+The GenomeProt website should then be hosted locally on http://0.0.0.0:3838/ and accessible with a web browser. To stop the web application, press Ctrl+C in the terminal tab where it is running.
+
+Otherwise, to run GenomeProt through the command line only, you can run the command-line R and Python scripts located in the `GenomeProt/bin` directory. The scripts contain help usage strings and the GenomeProt `server.R` script can be referred to on how the command-line scripts can be used.
