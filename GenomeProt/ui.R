@@ -9,7 +9,7 @@ ui <- dashboardPage(
                   dropdownMenu(type = "messages",
                                tags$li(HTML('<li><a href="https://biomedicalsciences.unimelb.edu.au/sbs-research-groups/physiology/Parker-laboratory-Metabolic-Proteomics" target="_blank"><i class="fa fa-user"></i><h4>About us</h4><p>Parker Laboratory</p></a></li>')),
                                tags$li(HTML('<li><a href="https://biomedicalsciences.unimelb.edu.au/sbs-research-groups/anatomy-and-physiology-research/stem-cell-and-developmental-biology/clark-lab" target="_blank"><i class="fa fa-user"></i><h4>About us</h4><p>Clark Laboratory</p></a></li>')),
-                               tags$li(HTML('<li><a href="mailto:genomeprot@outlook.com" target="_blank"><i class="fa fa-question"></i><h4>Support</h4><p>genomeprot@outlook.com</p></a></li>'))
+                               tags$li(HTML('<li><a href="mailto:ben.parker@unimelb.edu.au,michael.clark@unimelb.edu.au" target="_blank"> <i class="fa fa-question"></i><h4>Support</h4><p>ben.parker@unimelb.edu.au,<br>michael.clark@unimelb.edu.au</p></a></li>'))
                   )),
   # tabs
   dashboardSidebar(width = 200,

@@ -7,7 +7,7 @@ suppressPackageStartupMessages({
 
 option_list = list(
   make_option(c("-s", "--salmon_outdir"), type = "character", default = NULL,
-              help = "Salmon output directory", metavar = "character"),
+              help = "Salmon output directory (must contain directories named after samples, each containing a 'quant.sf' file)", metavar = "character"),
   make_option(c("-g", "--reference_gtf"), type = "character", default = NULL,
               help = "Reference GTF file", metavar = "character"),
   make_option(c("-o", "--counts_output_file"), type = "character", default = NULL,
@@ -65,8 +65,7 @@ transcript_gene_info <- gtf_df[gtf_df$type == "transcript", c("transcript_id", "
 colnames(transcript_gene_info) <- c("TXNAME", "GENEID")
 
 # import salmon quantification files
-samples <- sub(file.path(paste0("^", salmon_outdir), ""), "", files)
-samples <- sub(file.path("", "quant\\.sf$"), "", samples)
+samples <- basename(dirname(files))
 names(files) <- samples
 txi <- tximport::tximport(files, type = "salmon", txOut = TRUE)
 

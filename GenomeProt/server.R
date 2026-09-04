@@ -881,7 +881,7 @@ fastq_server <- function(input, session) {
 
     # Quantify single-end reads
     for (base_name in names(single_end)) {
-      if (base_name == "") { 
+      if (base_name == "") {
         next
       }
 
@@ -904,6 +904,11 @@ fastq_server <- function(input, session) {
         error_msg <- paste0("Error: Failed to quantify the single-end reads of the sample '", base_name, "'.")
         return(error_msg)
       }
+    }
+
+    # The Salmon index is no longer needed
+    if (dir.exists(salmon_index_dir)) {
+      unlink(salmon_index_dir, recursive = TRUE)
     }
 
     transcript_counts_file <- file.path(outdir_bam, "bambu_transcript_counts.txt")

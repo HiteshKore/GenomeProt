@@ -217,13 +217,12 @@ Version: 0.0.1v
 ▐▌▝▜▌▐▛▀▀▘▐▌ ▝▜▌▐▌ ▐▌▐▌  ▐▌▐▛▀▀▘▐▛▀▘ ▐▛▀▚▖▐▌ ▐▌ █
 ▝▚▄▞▘▐▙▄▄▖▐▌  ▐▌▝▚▄▞▘▐▌  ▐▌▐▙▄▄▖▐▌   ▐▌ ▐▌▝▚▄▞▘ █
 
-Usage: genomeprot_db_generation.sh [-h] [-s <sequencing type>] [-o <organism>] [-a <reference GTF>] [-c <start codon>] [-l <ORF length (AA)>] [-t <data type>] [-g <reference genome fasta>] [-p <threads>] [-a <reference GTF>] [-G <custom GTF>] [-v <VCF file>] [-T <ORF type>] [-r <transcriptome database>] [-U <upstream ORFs>] [-D <downstream ORFs>] [-m <minimum transcript count>] [-C <transcript count file>] [-d <sample directory>] [-O <output directory>]
+Usage: genomeprot_db_generation.sh [-h] [-s <sequencing type>] [-o <organism>] [-l <ORF length (AA)>] [-t <data type>] [-g <reference genome fasta>] [-p <threads>] [-a <reference GTF>] [-G <custom GTF>] [-v <VCF file>] [-T <ORF type>] [-r <transcriptome database>] [-U <upstream ORFs>] [-D <downstream ORFs>] [-m <minimum transcript count>] [-C <transcript count file>] [-d <sample directory>] [-O <output directory>]
 
 OPTIONS:
     -h, --help                  Display this help and exit
     -s, --sequencing-type       Sequencing type: long-read or short-read
     -o, --organism              Organism: HUMAN, CAEEL, DROME, MOUSE, RAT or DANRE
-    -c, --start-codon           Start codon: ATG or ATG+CTG
     -l, --orf-length            Minimum ORF length in amino acids (numeric; default: 30)
     -t, --data-type             Data type: FASTQ, BAM, or GTF
     -g, --genome                Reference genome FASTA file (required for FASTQ/BAM input)
@@ -256,8 +255,8 @@ if [ $# -eq 0 ]; then
 fi
 
 # Parse options using getopt
-OPTS=$(getopt -o s:o:c:l:t:g:p:a:G:v:T:r:U:D:m:C:d:O:h \
-              -l sequencing-type:,organism:,start-codon:,orf-length:,data-type:,genome:,threads:,reference-gtf:,custom-gtf:,vcf:,orf-type:,transcriptome-db:,upstream-orf:,downstream-orf:,min-tx-count:,tx-count-file:,sample-dir:,output-dir:,help \
+OPTS=$(getopt -o s:o:l:t:g:p:a:G:v:T:r:U:D:m:C:d:O:h \
+              -l sequencing-type:,organism:,orf-length:,data-type:,genome:,threads:,reference-gtf:,custom-gtf:,vcf:,orf-type:,transcriptome-db:,upstream-orf:,downstream-orf:,min-tx-count:,tx-count-file:,sample-dir:,output-dir:,help \
               -n "genomeprot_db_generation.sh" -- "$@")
 
 if [ $? != 0 ]; then
@@ -274,7 +273,6 @@ while true; do
     case "$1" in
         -s | --sequencing-type )    sequencing_platform="$2"; shift 2 ;;
         -o | --organism )           organism="$2"; shift 2 ;;
-        -c | --start-codon )        start_codon="$2"; shift 2 ;;
         -l | --orf-length )         orf_length="$2"; shift 2 ;;
         -t | --data-type )          data_type="$2"; shift 2 ;;
         -g | --genome )             genome_fa="$2"; shift 2 ;;
@@ -345,13 +343,6 @@ if [ "$organism" = "HUMAN" ] || [ "$organism" = "CAEEL" ] || [ "$organism" = "DR
     fi
 else
     echo "The organism '$organism' is not supported. Please specify 'HUMAN', 'CAEEL', 'DROME', 'MOUSE', 'RAT', or 'DANRE'." | tee -a "$log_file"
-    exit 1
-fi
-
-if [ "$start_codon" = "ATG" ] || [ "$start_codon" = "ATG+CTG" ]; then
-    echo "Start codon: $start_codon"
-else
-    echo "The start codon '$start_codon' is not supported. Please specify either 'ATG' or 'ATG+CTG'." | tee -a "$log_file"
     exit 1
 fi
 

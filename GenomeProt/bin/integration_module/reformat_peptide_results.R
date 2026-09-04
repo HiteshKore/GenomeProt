@@ -10,7 +10,7 @@ reformat_spectronaut_data <- function(peptide_file, dataset_id) {
   }
 
   metadata <- peptide_data_df %>%
-                dplyr::mutate(Peptide = sapply(stringr::str_split(stringr::str_replace_all(EG.PrecursorId, "\\[.*?\\]", ""), "_"), `[`, 2))
+                dplyr::mutate(Peptide = sapply(stringr::str_split(stringr::str_replace_all(EG.PrecursorId, "\\[.*?\\]", ""), "_"), `[`, 2)) %>%
                 dplyr::select(Peptide, PEP.AllOccurringProteinAccessions) %>%
                 base::unique() %>%
                 dplyr::mutate(Dataset_id = dataset_id)
