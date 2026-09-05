@@ -28,7 +28,7 @@ Preprint: https://doi.org/10.64898/2026.08.06.743133
 
 If you use GenomeProt, please cite:
 
-H. Kore <i>et al.</i>, <i>GenomeProt: User friendly proteogenomics for canonical and non-canonical proteoform characterisation.</i> To be published. Accessed: Sep. 5, 2026 [Online]. Available: https://doi.org/10.64898/2026.08.06.743133
+H. Kore <i>et al.</i>, <i>GenomeProt: User friendly proteogenomics for canonical and non-canonical proteoform characterisation.</i> To be published. Accessed: Sep. 5, 2026. [Online]. Available: https://doi.org/10.64898/2026.08.06.743133
 
 ## General usage
 
