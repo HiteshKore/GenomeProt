@@ -170,7 +170,8 @@ ui <- dashboardPage(
                        div(class = "box box-primary", style = "padding-right: 5%; padding-left: 5%; font-size:110%",
                            div(class = "box-body", shiny::includeMarkdown("welcome-page-text.md")),
                            img(src = "images/workflow.png", width = "100%")
-                       )
+                       ),
+                       h4("Preprint: ", tags$a(href = "https://doi.org/10.64898/2026.08.06.743133", target = "_blank", "https://doi.org/10.64898/2026.08.06.743133"))
                 )
               ),
               fluidRow(
@@ -383,7 +384,7 @@ ui <- dashboardPage(
                                 height = "950px",
                                 style = "border:none;"))
               ),
-              h5("The IsoVis website is displayed above for convenience. It is also accessible directly at: https://isomix.org/isovis/"),
+              h5("The IsoVis website is displayed above for convenience. It is also accessible directly at: ", tags$a(href = "https://isomix.org/isovis/", target = "_blank", "https://isomix.org/isovis/")),
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
               conditionalPanel(
                 condition = "input.show_isovis_steps % 2 == 1",

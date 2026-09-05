@@ -24,6 +24,12 @@
 
 Quantifying the diversity of RNAs and proteins produced by cells is fundamental to the biological and clinical sciences. However, many proteins remain uncharacterized due to the limitations of standard proteomics techniques. GenomeProt is a tool to enable user-friendly proteogenomics and identify both known and novel translated open reading frames. GenomeProt integrates RNA-seq and mass-spectrometry data and outputs the RNAs, peptides and proteins present in each sample in a HTML summary report, BED12 and GTF files. GenomeProt also provides a visualisation module to analyse the results and can optionally accept a VCF file of DNA variants to identify variant proteins. GenomeProt can be accessed via a public website, by installing a local version that runs through your web browser, or via the command line.
 
+Preprint: https://doi.org/10.64898/2026.08.06.743133
+
+If you use GenomeProt, please cite:
+
+H. Kore <i>et al.</i>, <i>GenomeProt: User friendly proteogenomics for canonical and non-canonical proteoform characterisation.</i> To be published. Accessed: Sep. 5, 2026 [Online]. Available: https://doi.org/10.64898/2026.08.06.743133
+
 ## General usage
 
 GenomeProt is an integrated proteogenomics platform with four modules: 1) database generation, 2) proteomics, 3) integration, and 4) visualisation.
