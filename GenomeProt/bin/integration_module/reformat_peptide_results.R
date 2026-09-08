@@ -1,7 +1,7 @@
 # usage: Rscript reformat_peptide_results.R -d <peptide results directory> -s <proteomics search tool: one of 'Spectronaut', 'FragPipe' (peptide.tsv) or 'FragPipe_quant' (report.pr_matrix.tsv)>
 
 reformat_spectronaut_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_tsv(peptide_file)
+  peptide_data <- readr::read_delim(peptide_file)
   peptide_data_df <- peptide_data %>%
                        dplyr::select(dplyr::contains("PG."), dplyr::contains("PEP.AllOccurringProteinAccessions"), dplyr::contains("EG.PrecursorId"))
 
@@ -18,7 +18,7 @@ reformat_spectronaut_data <- function(peptide_file, dataset_id) {
 }
 
 reformat_fragpipe_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_tsv(peptide_file)
+  peptide_data <- readr::read_delim(peptide_file)
 
   peptide_data_colnames <- colnames(peptide_data)
   if (!("Peptide" %in% peptide_data_colnames) | !("Protein" %in% peptide_data_colnames) | !("Mapped Proteins" %in% peptide_data_colnames)) {
@@ -47,7 +47,7 @@ reformat_fragpipe_data <- function(peptide_file, dataset_id) {
 }
 
 reformat_fragpipe_quant_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_tsv(peptide_file)
+  peptide_data <- readr::read_delim(peptide_file)
 
   peptide_data_colnames <- colnames(peptide_data)
   if (!("Stripped.Sequence" %in% peptide_data_colnames) | !("Protein.Ids" %in% peptide_data_colnames) | !("All Mapped Proteins" %in% peptide_data_colnames)) { 

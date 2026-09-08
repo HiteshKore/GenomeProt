@@ -343,7 +343,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(6,
                        h3("Part 1: Reformat proteomics results files"),
-                       h5("Note 1: All proteomics results files with a file extension of '.txt' or '.csv' will be renamed to have a flie extension of '.tsv'."),
+                       h5("Note 1: All proteomics results files with a file extension of '.txt' or '.csv' will be renamed to have a file extension of '.tsv'."),
                        h5("Note 2: Ignoring the file extension, if a proteomics results file with the name 'peptide_data' was uploaded, it will be renamed to 'peptide_data_renamed.tsv'."),
                        fileInput("user_orig_proteomics_files", "Upload proteomics results files:", accept = c(".txt", ".csv", ".tsv"), multiple = TRUE),
                        radioButtons("proteomics_search_tool", "Select proteomics search tool:",
