@@ -1,7 +1,6 @@
 # usage: Rscript reformat_peptide_results.R -d <peptide results directory> -s <proteomics search tool: one of 'Spectronaut', 'FragPipe' (peptide.tsv) or 'FragPipe_quant' (report.pr_matrix.tsv)>
 
-reformat_spectronaut_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_delim(peptide_file)
+reformat_spectronaut_data <- function(peptide_data, dataset_id) {
   peptide_data_df <- peptide_data %>%
                        dplyr::select(dplyr::contains("PG."), dplyr::contains("PEP.AllOccurringProteinAccessions"), dplyr::contains("EG.PrecursorId"))
 
@@ -17,9 +16,7 @@ reformat_spectronaut_data <- function(peptide_file, dataset_id) {
   return(metadata)
 }
 
-reformat_fragpipe_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_delim(peptide_file)
-
+reformat_fragpipe_data <- function(peptide_data, dataset_id) {
   peptide_data_colnames <- colnames(peptide_data)
   if (!("Peptide" %in% peptide_data_colnames) | !("Protein" %in% peptide_data_colnames) | !("Mapped Proteins" %in% peptide_data_colnames)) {
     return(NULL)
@@ -46,9 +43,7 @@ reformat_fragpipe_data <- function(peptide_file, dataset_id) {
   return(peptide_data_flt)
 }
 
-reformat_fragpipe_quant_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_delim(peptide_file)
-
+reformat_fragpipe_quant_data <- function(peptide_data, dataset_id) {
   peptide_data_colnames <- colnames(peptide_data)
   if (!("Stripped.Sequence" %in% peptide_data_colnames) | !("Protein.Ids" %in% peptide_data_colnames) | !("All Mapped Proteins" %in% peptide_data_colnames)) { 
     return(NULL)       
@@ -164,12 +159,13 @@ for (fn in peptide_files) {
   }
 
   # reformat peptide results according to the proteomics search tool specified
+  peptide_data <- readr::read_delim(fn)
   if (search_tool == "spectronaut") {
-    results <- reformat_spectronaut_data(fn, dataset_id)
+    results <- reformat_spectronaut_data(peptide_data, dataset_id)
   } else if (search_tool == "fragpipe") {
-    results <- reformat_fragpipe_data(fn, dataset_id)
+    results <- reformat_fragpipe_data(peptide_data, dataset_id)
   } else {
-    results <- reformat_fragpipe_quant_data(fn, dataset_id)
+    results <- reformat_fragpipe_quant_data(peptide_data, dataset_id)
   }
 
   if (length(results) > 0) {
