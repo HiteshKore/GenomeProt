@@ -1,26 +1,25 @@
 ui <- dashboardPage(
   title = "GenomeProt",
   dashboardHeader(title = tags$img(
-                    src = "images/GenomeProt_logo_Thach.png",
-                    height = "40px",
-                    style = "margin-left:1px",
-                    style = "margin-right:1px"
-                  ),
-                  dropdownMenu(type = "messages",
-                               tags$li(HTML('<li><a href="https://biomedicalsciences.unimelb.edu.au/sbs-research-groups/physiology/Parker-laboratory-Metabolic-Proteomics" target="_blank"><i class="fa fa-user"></i><h4>About us</h4><p>Parker Laboratory</p></a></li>')),
-                               tags$li(HTML('<li><a href="https://biomedicalsciences.unimelb.edu.au/sbs-research-groups/anatomy-and-physiology-research/stem-cell-and-developmental-biology/clark-lab" target="_blank"><i class="fa fa-user"></i><h4>About us</h4><p>Clark Laboratory</p></a></li>')),
-                               tags$li(HTML('<li><a href="mailto:ben.parker@unimelb.edu.au,michael.clark@unimelb.edu.au" target="_blank"> <i class="fa fa-question"></i><h4>Support</h4><p>ben.parker@unimelb.edu.au<br> michael.clark@unimelb.edu.au</p></a></li>'))
-                          
-                  )),
+    src = "images/GenomeProt_logo_Thach.png",
+    height = "40px",
+    style = "margin-left:1px",
+    style = "margin-right:1px"
+  ),
+  dropdownMenu(type = "messages",
+               tags$li(HTML('<li><a href="https://biomedicalsciences.unimelb.edu.au/sbs-research-groups/physiology/Parker-laboratory-Metabolic-Proteomics" target="_blank"><i class="fa fa-user"></i><h4>About us</h4><p>Parker Laboratory</p></a></li>')),
+               tags$li(HTML('<li><a href="https://biomedicalsciences.unimelb.edu.au/sbs-research-groups/anatomy-and-physiology-research/stem-cell-and-developmental-biology/clark-lab" target="_blank"><i class="fa fa-user"></i><h4>About us</h4><p>Clark Laboratory</p></a></li>')),
+               tags$li(HTML('<li><a href="mailto:ben.parker@unimelb.edu.au,michael.clark@unimelb.edu.au" target="_blank"> <i class="fa fa-question"></i><h4>Support</h4><p>ben.parker@unimelb.edu.au,<br>michael.clark@unimelb.edu.au</p></a></li>'))
+  )),
   # tabs
   dashboardSidebar(width = 200,
-    sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
-                menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
-                menuItem("Run proteomics analysis", tabName = "analyse_proteomics", icon = icon("search")),
-                menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
-                menuItem("Visualise results", tabName = "visualisation", icon = icon("eye")),
-                menuItem("Quick help", tabName = "help", icon = icon("circle-question"))
-    )
+                   sidebarMenu(menuItem("Welcome", tabName = "welcome", icon = icon("house")),
+                               menuItem("Generate database", tabName = "db_generation", icon = icon("database")),
+                               menuItem("Run proteomics analysis", tabName = "analyse_proteomics", icon = icon("search")),
+                               menuItem("Integrate data", tabName = "integration", icon = icon("code-merge")),
+                               menuItem("Visualise results", tabName = "visualisation", icon = icon("eye")),
+                               menuItem("Quick help", tabName = "help", icon = icon("circle-question"))
+                   )
   ),
   # body
   dashboardBody(
@@ -171,7 +170,8 @@ ui <- dashboardPage(
                        div(class = "box box-primary", style = "padding-right: 5%; padding-left: 5%; font-size:110%",
                            div(class = "box-body", shiny::includeMarkdown("welcome-page-text.md")),
                            img(src = "images/workflow.png", width = "100%")
-                       )
+                       ),
+                       h4("Preprint: ", tags$a(href = "https://doi.org/10.64898/2026.08.06.743133", target = "_blank", "https://doi.org/10.64898/2026.08.06.743133"))
                 )
               ),
               fluidRow(
@@ -203,10 +203,10 @@ ui <- dashboardPage(
                                     choices = c("FASTQs" = "fastq_input",
                                                 "BAMs" = "bam_input",
                                                 "GTF (and/or transcript counts)" = "gtf_input")),
-
+                       
                        # checkbox for whether to generate a variant-aware proteome database
                        checkboxInput("vcf_option", "Incorporate SNVs into protein sequences", value = FALSE),
-
+                       
                        # organism
                        selectInput("organism", "Organism:",
                                    choices = c("Human (H. sapiens)" = "HUMAN",
@@ -215,75 +215,73 @@ ui <- dashboardPage(
                                                "Mouse (M. musculus)" = "MOUSE",
                                                "Rat (R. norvegicus)" = "RAT",
                                                "Zebrafish (D. rerio)" = "DANRE")),
-                                               #"Chimpanzee (P. troglodytes)" = "PANTR",
-                                               #"Cow (B. taurus)" = "BOVIN",
-                                               #"Clawed frog (X. tropicalis)" = "XENTR",
-                                               #"Baker's yeast (S. cerevisiae)" = "YEAST")),
-
+                       #"Chimpanzee (P. troglodytes)" = "PANTR",
+                       #"Cow (B. taurus)" = "BOVIN",
+                       #"Clawed frog (X. tropicalis)" = "XENTR",
+                       #"Baker's yeast (S. cerevisiae)" = "YEAST")),
+                       
                        # Type of ORFs to include in the proteome database
                        radioButtons("database_type", "Type of ORFs to include in the proteome database:",
                                     choices = c("Canonical" = "canonical",
                                                 "All" = "all"),
                                     selected = "all"),
-
+                       
                        # ORF length cutoff
                        numericInput("min_orf_length", "Minimum ORF length (in amino acids):", value = 30, min = 0, step = 1),
-
+                       
                        # options for finding short ORFs
                        h5(tags$b("Find short (10 to 'Minimum ORF length' amino acids) ORFs in the UTRs of reference transcripts:")),
                        checkboxInput("user_find_utr_5_orfs",   "Upstream 5' ORFs"),
                        checkboxInput("user_find_utr_3_orfs", "Downstream 3' ORFs"),
                        numericInput("minimum_tx_count", "Minimum expression threshold (sum per transcript):", value = 5, min = 0, step = 1),
-
+                       numericInput("user_threads", "CPUs:", value = 1, min = 1, step = 1),
+                       
                        # FASTQ-specific input options
                        conditionalPanel(condition = "input.input_type == 'fastq_input'",
-                         numericInput("user_threads",       "CPUs:", value = 1, min = 1, step = 1),
-                         fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):",        accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
-                                                                                                                                      ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz")),
-
-                         conditionalPanel(condition = "input.sequencing_type == 'short-read'",
-                           fileInput("transcriptome_file",  "Upload reference transcriptome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
-                                                                                                                                      ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"))
-                         ),
-
-                         fileInput("user_fastq_files",      "Upload FASTQ files (can be gzipped):",                        accept = c(".fastq", ".fq", ".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
-                                                                                                                                      ".fastq.gz", ".fq.gz", ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"), multiple = TRUE),
+                                        fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):",        accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                                     ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz")),
+                                        
+                                        conditionalPanel(condition = "input.sequencing_type == 'short-read'",
+                                                         fileInput("transcriptome_file",  "Upload reference transcriptome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                                                    ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"))
+                                        ),
+                                        
+                                        fileInput("user_fastq_files",      "Upload FASTQ files (can be gzipped):",                        accept = c(".fastq", ".fq", ".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                                     ".fastq.gz", ".fq.gz", ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"), multiple = TRUE),
                        ),
-
+                       
                        # BAM-specific input options
                        conditionalPanel(condition = "input.input_type == 'bam_input'",
-                         numericInput("user_threads",       "CPUs:", value = 1, min = 1, step = 1),
-                         fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
-                                                                                                                               ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz")),
-                         fileInput("user_bam_files",        "Upload BAM files:",                                    accept = c(".bam"), multiple = TRUE),
+                                        fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                              ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz")),
+                                        fileInput("user_bam_files",        "Upload BAM files:",                                    accept = c(".bam"), multiple = TRUE),
                        ),
-
+                       
                        # GTF-specific input options
                        conditionalPanel(condition = "input.input_type == 'gtf_input'",
-                         numericInput("user_threads",       "CPUs:", value = 1, min = 1, step = 1),
-                         conditionalPanel(condition = "input.sequencing_type == 'long-read'",
-                           fileInput("user_gtf_file",         "Upload user-generated transcript annotation GTF file (e.g. 'bambu_transcript_annotations.gtf'):", accept = c(".gtf", ".gff", ".gff2", ".gff3")),
-                           fileInput("user_tx_count_file",    "Upload user-generated transcript counts file (optional; e.g. 'bambu_transcript_counts.txt'):",    accept = c(".txt", ".csv", ".tsv"))
-                         ),
-
-                         conditionalPanel(condition = "input.sequencing_type == 'short-read'",
-                           fileInput("user_tx_count_file",    "Upload user-generated transcript counts file (e.g. 'bambu_transcript_counts.txt'):", accept = c(".txt", ".csv", ".tsv"))
-                         ),
-
-                         conditionalPanel(condition = "input.vcf_option == true",
-                           fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
-                                                                                                                                 ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"))
-                         )
+                                        conditionalPanel(condition = "input.sequencing_type == 'long-read'",
+                                                         fileInput("user_gtf_file",         "Upload user-generated transcript annotation GTF file (e.g. 'bambu_transcript_annotations.gtf'):", accept = c(".gtf", ".gff", ".gff2", ".gff3")),
+                                                         fileInput("user_tx_count_file",    "Upload user-generated transcript counts file (optional; e.g. 'bambu_transcript_counts.txt'):",    accept = c(".txt", ".csv", ".tsv"))
+                                        ),
+                                        
+                                        conditionalPanel(condition = "input.sequencing_type == 'short-read'",
+                                                         fileInput("user_tx_count_file",    "Upload user-generated transcript counts file (e.g. 'bambu_transcript_counts.txt'):", accept = c(".txt", ".csv", ".tsv"))
+                                        ),
+                                        
+                                        conditionalPanel(condition = "input.vcf_option == true",
+                                                         fileInput("user_reference_genome", "Upload reference genome FASTA file (can be gzipped):", accept = c(".fasta", ".fas", ".fa", ".fna", ".ffn", ".faa", ".mpfa", ".frn",
+                                                                                                                                                               ".fasta.gz", ".fas.gz", ".fa.gz", ".fna.gz", ".ffn.gz", ".faa.gz", ".mpfa.gz", ".frn.gz"))
+                                        )
                        ),
-
+                       
                        # reference transcriptome GTF file
                        fileInput("reference_gtf_file", "Upload reference transcriptome GTF file:", accept = c(".gtf", ".gff", ".gff2", ".gff3")),
-
+                       
                        # VCF file
                        conditionalPanel(condition = "input.vcf_option == true",
-                         fileInput("user_vcf_file", "Upload VCF file:", accept = c(".vcf"))
+                                        fileInput("user_vcf_file", "Upload VCF file:", accept = c(".vcf"))
                        ),
-
+                       
                        actionButton("db_submit_button", "Submit", class = "btn btn-info")
                 ),
                 column(6,
@@ -345,8 +343,9 @@ ui <- dashboardPage(
               fluidRow(
                 column(6,
                        h3("Part 1: Reformat proteomics results files"),
-                       h5("Note: All proteomics result files must have the '.tsv' extension."),
-                       fileInput("user_orig_proteomics_files", "Upload proteomics results files:", accept = ".tsv", multiple = TRUE),
+                       h5("Note 1: All proteomics results files with a file extension of '.txt' or '.csv' will be renamed to have a file extension of '.tsv'."),
+                       h5("Note 2: Ignoring the file extension, if a proteomics results file with the name 'peptide_data' was uploaded, it will be renamed to 'peptide_data_renamed.tsv'."),
+                       fileInput("user_orig_proteomics_files", "Upload proteomics results files:", accept = c(".txt", ".csv", ".tsv"), multiple = TRUE),
                        radioButtons("proteomics_search_tool", "Select proteomics search tool:",
                                     choices = c("Spectronaut" = "Spectronaut",
                                                 "FragPipe (identified peptides, i.e. peptide.tsv)" = "FragPipe",
@@ -379,13 +378,13 @@ ui <- dashboardPage(
       tabItem(tabName = "visualisation",
               fluidRow(
                 column(12,
-                    tags$iframe(id = "isovis_window",
-                                src = "https://isomix.org/isovis/",
-                                width = "100%",
-                                height = "950px",
-                                style = "border:none;"))
+                       tags$iframe(id = "isovis_window",
+                                   src = "https://isomix.org/isovis/",
+                                   width = "100%",
+                                   height = "950px",
+                                   style = "border:none;"))
               ),
-              h5("The IsoVis website is displayed above for convenience. It is also accessible directly at: https://isomix.org/isovis/"),
+              h5("The IsoVis website is displayed above for convenience. It is also accessible directly at: ", tags$a(href = "https://isomix.org/isovis/", target = "_blank", "https://isomix.org/isovis/")),
               h5(actionLink("show_isovis_steps", "Instructions for using IsoVis")),
               conditionalPanel(
                 condition = "input.show_isovis_steps % 2 == 1",

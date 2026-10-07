@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+fragpipe-23.1/
 GenomeProt.Rproj
 GenomeProt/bin/__pycache__/
 GenomeProt/execute_commands_with_bash_env.sh

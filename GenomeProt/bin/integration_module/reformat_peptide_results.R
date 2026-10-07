@@ -1,81 +1,77 @@
 # usage: Rscript reformat_peptide_results.R -d <peptide results directory> -s <proteomics search tool: one of 'Spectronaut', 'FragPipe' (peptide.tsv) or 'FragPipe_quant' (report.pr_matrix.tsv)>
 
-reformat_spectronaut_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_tsv(peptide_file)
+reformat_spectronaut_data <- function(peptide_data, dataset_id) {
   peptide_data_df <- peptide_data %>%
-                       dplyr::select(dplyr::contains("PG."), dplyr::contains("PEP.AllOccurringProteinAccessions"), dplyr::contains("EG.PrecursorId"))
+    dplyr::select(dplyr::contains("PG."), dplyr::contains("PEP.AllOccurringProteinAccessions"), dplyr::contains("EG.PrecursorId"))
+  
   if (length(peptide_data_df) == 0) {
     return(NULL)
   }
-
+  
   metadata <- peptide_data_df %>%
-                dplyr::mutate(Peptide = sapply(stringr::str_split(stringr::str_replace_all(EG.PrecursorId, "\\[.*?\\]", ""), "_"), `[`, 2))%>%
-                dplyr::select(Peptide, PEP.AllOccurringProteinAccessions)%>%
-                base::unique() %>%
-                dplyr::mutate(Dataset_id = dataset_id)
+    dplyr::mutate(Peptide = sapply(stringr::str_split(stringr::str_replace_all(EG.PrecursorId, "\\[.*?\\]", ""), "_"), `[`, 2)) %>%
+    dplyr::select(Peptide, PEP.AllOccurringProteinAccessions) %>%
+    base::unique() %>%
+    dplyr::mutate(Dataset_id = dataset_id)
   return(metadata)
 }
 
-reformat_fragpipe_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_tsv(peptide_file)
-
+reformat_fragpipe_data <- function(peptide_data, dataset_id) {
   peptide_data_colnames <- colnames(peptide_data)
   if (!("Peptide" %in% peptide_data_colnames) | !("Protein" %in% peptide_data_colnames) | !("Mapped Proteins" %in% peptide_data_colnames)) {
     return(NULL)
   }
-
+  
   peptide_data_flt <- peptide_data %>%
-                        dplyr::select(Peptide, Protein, `Mapped Proteins`) %>%
-                        dplyr::mutate(
-                          # Extract accession from Protein (middle piece between | |)
-                          Protein = stringr::str_extract(Protein, "(?<=\\|)[^|]+(?=\\|)"),
-                          `Mapped Proteins` = stringr::str_split(`Mapped Proteins`, ",\\s*"),
-                          `Mapped Proteins` = lapply(`Mapped Proteins`, function(x) {
-                              if (all(is.na(x))) return("")
-                              stringr::str_extract(x, "(?<=\\|)[^|]+(?=\\|)")
-                          }),
-                          # Collapse vector back into comma-separated string
-                          `Mapped Proteins` = sapply(`Mapped Proteins`, function(x) {
-                              if (all(is.na(x))) return("")
-                              paste(x, collapse = ",")
-                          })
-                        ) %>%
-                        dplyr::rename(Mapped_proteins = `Mapped Proteins`) %>%
-                        dplyr::mutate(Dataset_id = dataset_id)
+    dplyr::select(Peptide, Protein, `Mapped Proteins`) %>%
+    dplyr::mutate(
+      # Extract accession from Protein (middle piece between | |)
+      Protein = stringr::str_extract(Protein, "(?<=\\|)[^|]+(?=\\|)"),
+      `Mapped Proteins` = stringr::str_split(`Mapped Proteins`, ",\\s*"),
+      `Mapped Proteins` = lapply(`Mapped Proteins`, function(x) {
+        if (all(is.na(x))) return("")
+        stringr::str_extract(x, "(?<=\\|)[^|]+(?=\\|)")
+      }),
+      # Collapse vector back into comma-separated string
+      `Mapped Proteins` = sapply(`Mapped Proteins`, function(x) {
+        if (all(is.na(x))) return("")
+        paste(x, collapse = ",")
+      })
+    ) %>%
+    dplyr::rename(Mapped_proteins = `Mapped Proteins`) %>%
+    dplyr::mutate(Dataset_id = dataset_id)
   return(peptide_data_flt)
 }
 
-reformat_fragpipe_quant_data <- function(peptide_file, dataset_id) {
-  peptide_data <- readr::read_tsv(peptide_file)
-
+reformat_fragpipe_quant_data <- function(peptide_data, dataset_id) {
   peptide_data_colnames <- colnames(peptide_data)
   if (!("Stripped.Sequence" %in% peptide_data_colnames) | !("Protein.Ids" %in% peptide_data_colnames) | !("All Mapped Proteins" %in% peptide_data_colnames)) { 
     return(NULL)       
   }
-
+  
   peptide_data_flt <- peptide_data %>%
-                        dplyr::select(Stripped.Sequence, Protein.Ids, `All Mapped Proteins`)
+    dplyr::select(Stripped.Sequence, Protein.Ids, `All Mapped Proteins`)
   colnames(peptide_data_flt) <- c("Peptide", "Protein", "Mapped_proteins")
-
+  
   peptide_data_flt <- peptide_data_flt %>%
-                        dplyr::mutate(
-                          # Extract accession from Protein (middle piece between | |)
-                          Protein = stringr::str_extract(Protein, "(?<=\\|)[^|]+(?=\\|)"),
-                          Mapped_proteins = stringr::str_split(Mapped_proteins, ","),
-                          Mapped_proteins = lapply(Mapped_proteins, function(x) {
-                              if (all(is.na(x))) return("")
-                              stringr::str_extract(x, "(?<=\\|)[^|]+(?=\\|)")
-                          }),
-                          Mapped_proteins = mapply(function(mapped, prot) {
-                              if (is.null(mapped) || length(mapped) == 0) return("")
-                              mapped <- mapped[!is.na(mapped)]  # remove NAs
-                              mapped <- trimws(mapped)          # remove spaces
-                              mapped <- mapped[mapped != prot]  # remove the protein accession
-                              if (length(mapped) == 0) "" else paste(mapped, collapse = ",")
-                          }, Mapped_proteins, Protein),
-                          Mapped_proteins = as.character(Mapped_proteins),
-                          Dataset_id = dataset_id
-                        )
+    dplyr::mutate(
+      # Extract accession from Protein (middle piece between | |)
+      Protein = stringr::str_extract(Protein, "(?<=\\|)[^|]+(?=\\|)"),
+      Mapped_proteins = stringr::str_split(Mapped_proteins, ","),
+      Mapped_proteins = lapply(Mapped_proteins, function(x) {
+        if (all(is.na(x))) return("")
+        stringr::str_extract(x, "(?<=\\|)[^|]+(?=\\|)")
+      }),
+      Mapped_proteins = mapply(function(mapped, prot) {
+        if (is.null(mapped) || length(mapped) == 0) return("")
+        mapped <- mapped[!is.na(mapped)]  # remove NAs
+        mapped <- trimws(mapped)          # remove spaces
+        mapped <- mapped[mapped != prot]  # remove the protein accession
+        if (length(mapped) == 0) "" else paste(mapped, collapse = ",")
+      }, Mapped_proteins, Protein),
+      Mapped_proteins = as.character(Mapped_proteins),
+      Dataset_id = dataset_id
+    )
   return(peptide_data_flt)
 }
 
@@ -129,7 +125,7 @@ if (!file.exists(peptide_results_dir)) {
       peptide_files <- c(peptide_files, fn)
     }
   }
-
+  
   if (length(peptide_files) == 0) {
     error_msg <- paste0("There are no non-empty .tsv data files in the peptide results directory '", peptide_results_dir, "'.")
   }
@@ -153,16 +149,25 @@ peptide_results <- list()
 for (fn in peptide_files) {
   dataset_id <- stringr::str_replace(basename(fn), "\\.tsv$", "")
   
-  # reformat peptide results according to the proteomics search tool specified
-  if (search_tool == "spectronaut" && dataset_id != "peptide_data") {
-    results <- reformat_spectronaut_data(fn, dataset_id)
-    
-  } else if (search_tool == "fragpipe" && dataset_id != "peptide_data") {
-    results <- reformat_fragpipe_data(fn, dataset_id)
-  } else {
-    results <- reformat_fragpipe_quant_data(fn, dataset_id)
+  # rename peptide_data.tsv to peptide_data_renamed.tsv
+  if (dataset_id == "peptide_data") {
+    new_filename <- file.path(peptide_results_dir, "peptide_data_renamed.tsv")
+    message(paste0("Renaming '", fn, "' to '", new_filename, "' before reformatting..."))
+    file.rename(fn, new_filename)
+    fn <- new_filename
+    dataset_id <- "peptide_data_renamed"
   }
-
+  
+  # reformat peptide results according to the proteomics search tool specified
+  peptide_data <- readr::read_delim(fn)
+  if (search_tool == "spectronaut") {
+    results <- reformat_spectronaut_data(peptide_data, dataset_id)
+  } else if (search_tool == "fragpipe") {
+    results <- reformat_fragpipe_data(peptide_data, dataset_id)
+  } else {
+    results <- reformat_fragpipe_quant_data(peptide_data, dataset_id)
+  }
+  
   if (length(results) > 0) {
     message(paste0("Successfully parsed '", fn, "'."))
     peptide_results[[dataset_id]] <- results
@@ -180,14 +185,14 @@ if (length(combined_peptide_results) == 0) {
 # combine peptide results
 if (search_tool == "spectronaut") {
   combined_peptide_results_uniq <- combined_peptide_results %>%
-                                     tidyr::separate_rows(PEP.AllOccurringProteinAccessions, sep = ";") %>%
-                                     dplyr::group_by(Peptide) %>%
-                                     dplyr::summarise(
-                                       PEP.AllOccurringProteinAccessions = paste(base::unique(trimws(PEP.AllOccurringProteinAccessions)), collapse = ","),
-                                       Dataset_id = paste(base::unique(trimws(Dataset_id)), collapse = ","),
-                                       .groups = "drop"
-                                     )
-
+    tidyr::separate_rows(PEP.AllOccurringProteinAccessions, sep = ";") %>%
+    dplyr::group_by(Peptide) %>%
+    dplyr::summarise(
+      PEP.AllOccurringProteinAccessions = paste(base::unique(trimws(PEP.AllOccurringProteinAccessions)), collapse = ","),
+      Dataset_id = paste(base::unique(trimws(Dataset_id)), collapse = ","),
+      .groups = "drop"
+    )
+  
   uniq_peptides <- combined_peptide_results_uniq %>%
     dplyr::mutate(Protein = sapply(stringr::str_split(PEP.AllOccurringProteinAccessions, ","), `[`, 1)) %>%
     dplyr::rename(Mapped_proteins = PEP.AllOccurringProteinAccessions) %>%

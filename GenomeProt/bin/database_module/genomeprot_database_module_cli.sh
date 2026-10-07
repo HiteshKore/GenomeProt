@@ -217,7 +217,7 @@ Version: 0.0.1v
 ▐▌▝▜▌▐▛▀▀▘▐▌ ▝▜▌▐▌ ▐▌▐▌  ▐▌▐▛▀▀▘▐▛▀▘ ▐▛▀▚▖▐▌ ▐▌ █
 ▝▚▄▞▘▐▙▄▄▖▐▌  ▐▌▝▚▄▞▘▐▌  ▐▌▐▙▄▄▖▐▌   ▐▌ ▐▌▝▚▄▞▘ █
 
-Usage: genomeprot_db_generation.sh [-h] [-s <sequencing type>] [-o <organism>] [-a <reference GTF>] [-l <ORF length (AA)>] [-t <data type>] [-g <reference genome fasta>] [-p <threads>] [-a <reference GTF>] [-G <custom GTF>] [-v <VCF file>] [-T <ORF type>] [-r <transcriptome database>] [-U <upstream ORFs>] [-D <downstream ORFs>] [-m <minimum transcript count>] [-C <transcript count file>] [-d <sample directory>] [-O <output directory>]
+Usage: genomeprot_db_generation.sh [-h] [-s <sequencing type>] [-o <organism>] [-l <ORF length (AA)>] [-t <data type>] [-g <reference genome fasta>] [-p <threads>] [-a <reference GTF>] [-G <custom GTF>] [-v <VCF file>] [-T <ORF type>] [-r <transcriptome database>] [-U <upstream ORFs>] [-D <downstream ORFs>] [-m <minimum transcript count>] [-C <transcript count file>] [-d <sample directory>] [-O <output directory>]
 
 OPTIONS:
     -h, --help                  Display this help and exit
@@ -337,8 +337,6 @@ else
     echo "The organism '$organism' is not supported. Please specify 'HUMAN', 'CAEEL', 'DROME', 'MOUSE', 'RAT', or 'DANRE'." | tee -a "$log_file"
     exit 1
 fi
-
-
 
 if [ -n "$vcf" ]; then
     echo "VCF file: $vcf" | tee -a "$log_file"
