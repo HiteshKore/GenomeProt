@@ -70,7 +70,8 @@ names(files) <- samples
 txi <- tximport::tximport(files, type = "salmon", txOut = TRUE)
 
 # prepare the transcript counts data
-count_df <- as.data.frame(txi$counts) %>% dplyr::mutate(TXNAME = rownames(count_df)) %>% dplyr::select(TXNAME, dplyr::everything())
+count_df <- as.data.frame(txi$counts) 
+count_df<-count_df%>% dplyr::mutate(TXNAME = rownames(count_df)) %>% dplyr::select(TXNAME, dplyr::everything())
 rownames(count_df) <- NULL
 
 # merge the transcript counts and gene info

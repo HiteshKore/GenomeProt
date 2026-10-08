@@ -910,7 +910,7 @@ fastq_server <- function(input, session) {
       unlink(salmon_index_dir, recursive = TRUE)
     }
 
-    transcript_counts_file <- file.path(outdir_bam, "bambu_transcript_counts.txt")
+    transcript_counts_file <- file.path(outdir_bam, "salmon_transcript_counts.txt")
     remove_file_if_exists(transcript_counts_file)
 
     command_create_count_matrix <- paste0(conda_command, "Rscript bin/database_module/matrix_compilation_salmon.R",
@@ -1024,7 +1024,7 @@ bam_server <- function(input, session) {
     }
   }
 
-  transcript_counts_file <- file.path(outdir_bam, "bambu_transcript_counts.txt")
+  transcript_counts_file <- file.path(outdir_bam, "salmon_transcript_counts.txt")
   remove_file_if_exists(transcript_counts_file)
 
   command_create_count_matrix <- paste0(conda_command, "Rscript bin/database_module/matrix_compilation_salmon.R",
@@ -1164,7 +1164,7 @@ database_server <- function(input, session) {
     db_counts_file <- input$user_tx_count_file$datapath
   } else {                                                                          # if the user supplied FASTQ / BAM files and short-read RNA-seq data
     db_gtf_file <- input$reference_gtf_file$datapath
-    db_counts_file <- file.path(session_id, "mapping_output", "bambu_transcript_counts.txt")
+    db_counts_file <- file.path(session_id, "mapping_output", "salmon_transcript_counts.txt")
   }
 
   ref_gtf <- input$reference_gtf_file$datapath
@@ -1319,24 +1319,28 @@ database_server <- function(input, session) {
 
   # get top level directory
   top_level_dir <- getwd()
-
   # Create a zip of the results files depending on the input type and sequencing type
   files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
-
-  if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
-    bam_files <- list.files(path = file.path("..", "mapping_output"), "\\.bam$", full.names = TRUE)
-    files_to_zip_db <- c(files_to_zip_db, bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
-  } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
-    files_to_zip_db <- c(files_to_zip_db, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
-  } else if (input$input_type != "gtf_input" & input$sequencing_type == "short-read") {
-    files_to_zip_db <- c(files_to_zip_db, "../mapping_output/bambu_transcript_counts.txt")
+  #add files to files_to_zip_db directory
+  if (input$input_type %in% c("fastq_input", "bam_input") && input$sequencing_type == "long-read") {
+    files_to_zip_db <- c(files_to_zip_db,c("bambu_transcript_annotations.gtf","bambu_transcript_counts.txt","novel_transcript_classes.csv","gffcompare.tmap.txt","logfile.txt"))
+  }else if (input$input_type != "gtf_input" & input$sequencing_type == "short-read") {
+    files_to_zip_db <- c(files_to_zip_db, "salmon_transcript_counts.txt")
   }
 
   # Set the path to the ZIP file (in the session_id directory)
   zipfile_path_db <- file.path("..", "database_results.zip")
-
   # Temporarily change the working directory to outdir_db
   setwd(outdir_db)
+  
+  #copy files to database directory
+  if (input$input_type %in% c("fastq_input", "bam_input") && input$sequencing_type == "long-read") {
+    files <- c("../bambu_output/bambu_transcript_annotations.gtf","../bambu_output/bambu_transcript_counts.txt","../bambu_output/novel_transcript_classes.csv","../bambu_output/gffcompare.tmap.txt","../bambu_output/logfile.txt")
+    file.copy(files, ".")
+  } else if (input$sequencing_type == "short-read") {
+    file.copy("../mapping_output/salmon_transcript_counts.txt",".")
+  }
+  
 
   # Ensure all of the results files to be zipped exist
   if (!base::all(file.exists(files_to_zip_db))) {

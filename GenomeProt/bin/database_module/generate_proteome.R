@@ -251,7 +251,7 @@ get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_
 # generate FASTA of transcript sequences
 get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_orfs = FALSE, find_UTR_3_orfs = FALSE, referencegtf, outdir) {
   ref_txdb <- NULL
-  if ((find_UTR_5_orfs == TRUE) | (find_UTR_5_orfs == TRUE)) {  # required for UTR regions
+  if ((find_UTR_5_orfs == TRUE) | (find_UTR_3_orfs == TRUE)) {  # required for UTR regions
     ref_txdb <- txdbmaker::makeTxDbFromGFF(referencegtf)
   }
 
@@ -322,7 +322,7 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
         dplyr::ungroup() %>%
         dplyr::filter(length < (orfik_max_length * 3) - 3) %>% # length ORFs < 30 AA
         dplyr::select(-length)
-
+      
       # remove any ORFs from original ORF object if they were filtered out due to length settings above
       ORFs <- ORFs[names(ORFs) %in% orf_genome_coordinates$names]
 
@@ -344,8 +344,8 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
       orf_aa_seq_df_genomic_coordinates_merge <- dplyr::left_join(orf_aa_seq_df_genomic_coordinates, aa_sequences_df, by = "tx_id")
 
       # get rows containing protein sequences that are sub string of translated sequence to retrieve frame information
-      orf_aa_seq_df_genomic_coordinates_merge_frm <- orf_aa_seq_df_genomic_coordinates_merge %>%
-        dplyr::filter(mapply(function(short, long) grepl(short, long, fixed = TRUE), ORF_sequence, sequence))
+      keep <- vapply(seq_len(nrow(orf_aa_seq_df_genomic_coordinates_merge)),function(i) grepl(orf_aa_seq_df_genomic_coordinates_merge$ORF_sequence[i],orf_aa_seq_df_genomic_coordinates_merge$sequence[i], fixed = TRUE),logical(1))
+      orf_aa_seq_df_genomic_coordinates_merge_frm <- orf_aa_seq_df_genomic_coordinates_merge[keep, ]
 
       orf_aa_seq_df_genomic_coordinates_merge_frm <- orf_aa_seq_df_genomic_coordinates_merge_frm %>%
         dplyr::mutate(reading_frame = sub(".*_rf", "", tx_rf_id)) %>%
