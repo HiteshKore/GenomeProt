@@ -55,6 +55,70 @@ Supported sequencing platforms include short-read Illumina, long-read Oxford Nan
 Optional input:
 
 - VCF file to incorporate single nucleotide variants (SNVs)
+<details>
+<summary>Processing variant data and generating a dataset-specific merged VCF file <b><u>(click to expand)</u></b></summary>
+
+The GenomeProt variant-aware module has been tested with a merged VCF file of variant calls generated from BAM files processed using the [GATK best practices workflow](https://gatk.broadinstitute.org/hc/en-us/sections/360007226651-Best-Practices-Workflows). We advise processing variants with the GATK workflow as described below.
+
+**Prerequisites**
+
+- A reference genome FASTA file, with:
+  - a FASTA index (`.fai`, e.g. from `samtools faidx`)
+  - a sequence dictionary for GATK (`.dict`, from `gatk CreateSequenceDictionary`)
+  - an index for your chosen aligner (e.g. from `bwa index` or `bowtie2-build`)
+- FASTQ files
+- A VCF file of known variant sites for the species of interest, required by GATK `BaseRecalibrator` (e.g. dbSNP for human)
+- An aligner of your choice (e.g. bwa-mem or bowtie2), [GATK](https://gatk.broadinstitute.org/), [samtools](https://www.htslib.org/) and [bcftools](https://samtools.github.io/bcftools/) available on your `PATH`
+**Workflow overview**
+
+```
+FASTQ -> sorted BAM -> MarkDuplicates -> BaseRecalibrator + ApplyBQSR
+      -> Mutect2 -> select SNVs & split multi-allelic sites -> index -> merge
+      -> combined_all_samples.vcf.gz
+```
+
+**Step 1: Align reads to the reference genome**
+
+Align the reads in each FASTQ file to the reference genome of interest using an aligner of your choice (e.g. bwa or bowtie2). Make sure the resulting BAM file is coordinate-sorted using `samtools sort`.
+
+**Step 2: Pre-process the BAM files**
+
+run GATK `MarkDuplicates` For each sample, followed by `BaseRecalibrator` and `ApplyBQSR`, following the GATK best practices guidelines.
+
+**Step 3: Call variants**
+
+Call variants for each sample using `Mutect2`. Other variant callers can be used, provided the resulting VCF files are compatible with the `vcfparser.py` script in the GenomeProt `bin` directory (see the script for the required VCF fields).
+
+**Step 4: Select SNVs and split multi-allelic variants**
+
+Keep only single nucleotide variants (SNVs) and create separate records for each allele of multi-allelic variants:
+
+```bash
+bcftools norm -m -any -f <reference_genome.fa> <file.vcf.gz> | bcftools view -v snps -Oz -o <file_snps.vcf.gz>
+```
+
+**Step 5: Index the variant files**
+
+```bash
+bcftools index -t <file_snps.vcf.gz>
+```
+
+**Step 6: Merge the sample VCF files**
+
+Merge the individual sample VCF files into a single multi-sample VCF file (add one input file per sample):
+
+```bash
+
+bcftools merge file1_snps.vcf.gz file2_snps.vcf.gz -Oz -o combined_all_samples.vcf.gz
+```
+
+
+The merged file `combined_all_samples.vcf.gz` is the VCF input for the GenomeProt database generation module.
+
+Users can optionally filter the merged VCF further using their own criteria to retain only high-confidence variants, for example by requiring a variant to be detected in a minimum number of samples, or by filtering on predicted deleteriousness (e.g. using annotation tools such as Annovar, SnpEff, Funcotator or VEP).
+
+</details>
+
 
 #### Outputs:
 
@@ -183,9 +247,9 @@ MQATPSEAGGESPQSCLSVSRSDWTVGKPVSLLAPLIPPRSSGQPLPFGPGGRQPLRSLLVGMCSGSGRRRSSLSPTMRP
 | Type | Definition |
 |-|-|
 | CDS | Annotated in UniProt or RefSeq |
-| 5UTR | Coordinates are within the 5' UTR region of an mRNA transcript |
-| 3UTR | Coordinates are within the 3' UTR region of an mRNA transcript |
-| 5UTR:CDS | Start site is within the 5' UTR region and stop site is within the CDS region of an mRNA transcript |
+| 5UTR | Coordinates are within the 5′ UTR region of an mRNA transcript |
+| 3UTR | Coordinates are within the 3′ UTR region of an mRNA transcript |
+| 5UTR:CDS | Start site is within the 5′ UTR region and stop site is within the CDS region of an mRNA transcript |
 | gene_overlap | Encoded by a transcript that overlaps a region with annotated protein-coding genes |
 | intergenic | Encoded by a transcript that does not overlap a region with annotated protein-coding genes |
 
