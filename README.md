@@ -68,7 +68,7 @@ The GenomeProt variant-aware module has been tested with a merged VCF file of va
   - an index for your chosen aligner (e.g. from `bwa index` or `bowtie2-build`)
 - FASTQ files
 - A VCF file of known variant sites for the species of interest, required by GATK `BaseRecalibrator` (e.g. dbSNP for human)
-- An aligner of your choice (e.g. bwa-mem or bowtie2), [GATK](https://gatk.broadinstitute.org/), [samtools](https://www.htslib.org/) and [bcftools](https://samtools.github.io/bcftools/) available on your `PATH`
+- An aligner of your choice (e.g. `bwa-mem` or `bowtie2`), [GATK](https://gatk.broadinstitute.org/), [samtools](https://www.htslib.org/) and [bcftools](https://samtools.github.io/bcftools/) available on your `PATH`
 **Workflow overview**
 
 ```
@@ -79,7 +79,7 @@ FASTQ -> sorted BAM -> MarkDuplicates -> BaseRecalibrator + ApplyBQSR
 
 **Step 1: Align reads to the reference genome**
 
-Align the reads in each FASTQ file to the reference genome of interest using an aligner of your choice (e.g. bwa or bowtie2). Make sure the resulting BAM file is coordinate-sorted using `samtools sort`.
+Align the reads in each FASTQ file to the reference genome of interest using an aligner of your choice (e.g. `bwa` or `bowtie2`). Make sure the resulting BAM file is coordinate-sorted using `samtools sort`.
 
 **Step 2: Pre-process the BAM files**
 
@@ -94,7 +94,7 @@ Call variants for each sample using `Mutect2`. Other variant callers can be used
 Keep only single nucleotide variants (SNVs) and create separate records for each allele of multi-allelic variants:
 
 ```bash
-bcftools norm -m -any -f <reference_genome.fa> <file.vcf.gz> | bcftools view -v snps -Oz -o <file_snps.vcf.gz>
+bcftools norm -m any -f <reference_genome.fa> <file.vcf.gz> | bcftools view -v snps -Oz -o <file_snps.vcf.gz>
 ```
 
 **Step 5: Index the variant files**
@@ -117,6 +117,107 @@ The merged file `combined_all_samples.vcf.gz` is the VCF input for the GenomePro
 
 Users can optionally filter the merged VCF further using their own criteria to retain only high-confidence variants, for example by requiring a variant to be detected in a minimum number of samples, or by filtering on predicted deleteriousness (e.g. using annotation tools such as Annovar, SnpEff, Funcotator or VEP).
 
+</details>
+
+## Command-line Usage Examples
+<details>
+  <summary><b>Generate a custom proteogenomic database with <code>genomeprot_db_generation.sh</code> (click to expand)</b></summary>
+  
+  `genomeprot_db_generation.sh` supports database generation from long-read and short-read sequencing data. The script accepts FASTQ, BAM or GTF input.
+
+Before running the commands, replace the example paths with the locations of your reference genome, annotation files, sequencing data and output directory.
+
+
+<details>
+  <summary><b>1. Long-read sequencing: FASTQ input</b></summary>
+  
+  Processes the reads using the specified reference genome and annotation file.
+
+```bash
+./genomeprot_db_generation.sh -s long-read -o HUMAN -l 30 -t FASTQ -p 20 -g /path/to/reference/genome.fa -a /path/to/reference/annotation.gtf -T all -U TRUE -D TRUE -m 5 -d /path/to/fastq_files/ -O /path/to/output_directory/
+  ```
+
+</details>
+  
+<details>
+  <summary><b>2. Long-read sequencing: BAM input</b></summary>
+  
+  Requires the BAM directory, reference genome, reference annotation and custom GTF.
+
+```bash
+./genomeprot_db_generation.sh -s long-read -o HUMAN -l 30-t BAM -p 20 -g /path/to/reference/genome.fa -a /path/to/reference/annotation.gtf -G /path/to/bambu_transcript_annotations.gtf -T all -U TRUE -D TRUE -m 5 -d /path/to/bam_files/ -O /path/to/output_directory/
+  ```
+
+</details>
+  
+<details>
+  <summary><b>3. Long-read sequencing: GTF input</b></summary>
+  
+  Useful when transcript annotations have already been generated.
+
+```bash
+./genomeprot_db_generation.sh -s long-read -o HUMAN -l 30 -t GTF -p 20 -G /path/to/bambu_transcript_annotations.gtf -a /path/to/reference/annotation.gtf -T all -U TRUE -D TRUE -m 5 -O /path/to/output_directory/
+  ```
+
+</details>
+  
+<details>
+  <summary><b>4. Short-read sequencing: FASTQ input</b></summary>
+  
+  Requires transcript annotations, reference genome and transcriptome database.
+
+```bash
+./genomeprot_db_generation.sh -s short-read -o HUMAN -l 30 -t FASTQ -p 25 -g /path/to/reference/genome.fa -a /path/to/reference/annotation.gtf -G /path/to/bambu_transcript_annotations.gtf -r /path/to/protein_coding_transcripts.fa -d /path/to/fastq_files/ -T all -U TRUE -D TRUE -m 5 -O /path/to/output_directory/
+  ```
+</details>
+
+<details>
+
+  <summary><b>4. Short-read sequencing: BAM input</b></summary>
+  
+  Useful when transcriptome-aligned BAM files have already been generated. The genome file is not needed.
+
+```bash
+./genomeprot_db_generation.sh -s short-read -o HUMAN -l 30 -t BAM -p 25 -a /path/to/reference/annotation.gtf -G /path/to/bambu_transcript_annotations.gtf -r /path/to/protein_coding_transcripts.fa -d /path/to/bam_files/ -T all -U TRUE -D TRUE -m 5 -O /path/to/output_directory/
+```
+</details>
+  
+<details>
+<summary><b>5. Short-read sequencing: GTF input</b></summary>
+
+Useful when transcript annotations have already been generated. The genome, transcriptome database and sample directory are not needed.
+
+```bash ./genomeprot_db_generation.sh  -s short-read  -o HUMAN   -l 30   -t GTF  -p 25  -a /path/to/reference/annotation.gtf  -G /path/to/bambu_transcript_annotations.gtf  -T all  -U TRUE  -D TRUE  -m 5  -O /path/to/output_directory/
+```
+</details>
+
+
+  
+  ### Option notes
+  
+  | Option | Description |
+  |--------|-------------|
+  | `-s` | Sequencing type: `long-read` or `short-read` |
+  | `-o` | Organism: `HUMAN`, `CAEEL`, `DROME`, `MOUSE`, `RAT` or `DANRE` |
+  | `-t` | Input data type: `FASTQ`, `BAM` or `GTF` |
+  | `-g` | Reference genome FASTA (required for FASTQ/BAM input) |
+  | `-a` | Reference GTF (GENCODE annotations only) |
+  | `-G` | Custom GTF (required for BAM/GTF input) |
+  | `-d` | Sample directory (required for FASTQ/BAM input) |
+  | `-O` | Output directory |
+  | `-p` | Number of threads (default: 1) |
+  | `-l` | Minimum ORF length in amino acids (default: 30) |
+  | `-m` | Minimum transcript expression cutoff (default: 5) |
+  | `-T` | ORF type: `canonical` or `all` |
+  | `-U`, `-D` | Include upstream (5'UTR) / downstream (3'UTR) ORFs: `TRUE` or `FALSE` |
+  | `-r` | Transcriptome database (required for short-read RNA-Seq input) |
+  
+  To display all available options, run:
+  
+  ```bash
+./genomeprot_db_generation.sh --help
+```
+ 
 </details>
 
 

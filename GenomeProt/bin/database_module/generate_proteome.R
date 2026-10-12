@@ -42,33 +42,43 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts = NA, min_count = N
 
   # remove version numbers for search
   bambu_df <- bambu_df %>% tidyr::separate(gene_id, into = "ensg_id", sep = "\\.", remove = FALSE)
+  
+  if( "gene_name" %in% colnames(bambu_df)){
 
-  # use mygene to search for gene names
-  gene_query <- mygene::queryMany(base::unique(bambu_df$ensg_id), scopes = "ensembl.gene", fields = "symbol", species = as.character(organism), returnall = TRUE)
-
-  # make df
-  gene_df <- as.data.frame(gene_query[["response"]])
-
-  gene_df <- gene_df %>% dplyr::group_by(query) %>% dplyr::slice_tail(n = 1) %>% dplyr::ungroup()
-
-  # if there was no name found, use original ID
-  gene_df <- gene_df %>%
-    dplyr::mutate(gene_name = dplyr::case_when(
-      is.na(symbol) ~ query,
-      !is.na(symbol) ~ symbol
-    )) %>%
-    dplyr::select(query, gene_name)
-
-  # merge results
-  bambu_merged <- merge(bambu_df, gene_df, by.x = "ensg_id", by.y = "query", all.x = T, all.y = F)
-
-  bambu_merged$ensg_id <- NULL
-
-  # make GRanges including new names
-  bambu_data_gr <- GenomicRanges::makeGRangesFromDataFrame(bambu_merged,
-                                                           keep.extra.columns = TRUE, ignore.strand = FALSE, seqinfo = NULL,
-                                                           seqnames.field = "seqnames", start.field = "start", end.field = "end", strand.field = "strand",
-                                                           starts.in.df.are.0based = FALSE)
+    # make GRanges including new names
+    bambu_data_gr <- GenomicRanges::makeGRangesFromDataFrame(bambu_df,
+                                                             keep.extra.columns = TRUE, ignore.strand = FALSE, seqinfo = NULL,
+                                                             seqnames.field = "seqnames", start.field = "start", end.field = "end", strand.field = "strand",
+                                                             starts.in.df.are.0based = FALSE)
+  }else{
+    # use mygene to search for gene names
+    gene_query <- mygene::queryMany(base::unique(bambu_df$ensg_id), scopes = "ensembl.gene", fields = "symbol", species = as.character(organism), returnall = TRUE)
+    
+    # make df
+    gene_df <- as.data.frame(gene_query[["response"]])
+    
+    gene_df <- gene_df %>% dplyr::group_by(query) %>% dplyr::slice_tail(n = 1) %>% dplyr::ungroup()
+    
+    # if there was no name found, use original ID
+    gene_df <- gene_df %>%
+      dplyr::mutate(gene_name = dplyr::case_when(
+        is.na(symbol) ~ query,
+        !is.na(symbol) ~ symbol
+      )) %>%
+      dplyr::select(query, gene_name)
+    
+    # merge results
+    bambu_merged <- merge(bambu_df, gene_df, by.x = "ensg_id", by.y = "query", all.x = T, all.y = F)
+    
+    bambu_merged$ensg_id <- NULL
+    
+    # make GRanges including new names
+    bambu_data_gr <- GenomicRanges::makeGRangesFromDataFrame(bambu_merged,
+                                                             keep.extra.columns = TRUE, ignore.strand = FALSE, seqinfo = NULL,
+                                                             seqnames.field = "seqnames", start.field = "start", end.field = "end", strand.field = "strand",
+                                                             starts.in.df.are.0based = FALSE)
+    
+  }
 
   # remove extra mcols
   columns_present <- all(c("gene_name.x", "gene_name.y") %in% colnames(data.frame(bambu_data_gr)))
@@ -574,22 +584,7 @@ if (organism == "HUMAN") {          # H. sapiens
   })
   genomedb <- BSgenome.Drerio.UCSC.danRer11
 }
-#} else if (organism == "DANRE") {   # D. rerio
-#  library(BSgenome.Drerio.UCSC.danRer11)
-#  genomedb <- BSgenome.Drerio.UCSC.danRer11
-#} else if (organism == "PANTR") {   # P. troglodytes
-#  library(BSgenome.Ptroglodytes.UCSC.panTro6)
-#  genomedb <- BSgenome.Ptroglodytes.UCSC.panTro6
-#} else if (organism == "BOVIN") {   # B. taurus
-#  library(BSgenome.Btaurus.UCSC.bosTau9)
-#  genomedb <- BSgenome.Btaurus.UCSC.bosTau9
-#} else if (organism == "XENTR") {   # X. tropicalis
-#  library(...)
-#  genomedb <- ...
-#} else {                            # S. cerevisiae
-#  library(BSgenome.Scerevisiae.UCSC.sacCer3)
-#  genomedb <- BSgenome.Scerevisiae.UCSC.sacCer3
-#}
+
 
 # create the output directory if it does not already exist
 if (!dir.exists(output_directory)) {

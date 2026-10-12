@@ -34,66 +34,104 @@ function short_read_commands() {
     three_utr_orf=${15}
     ref_proteome=${16}
 
+    
+    echo ${bm_fn[@]}
     echo "Generating salmon index"
+    if [[ ${#fastq_id_pe[@]} -gt 0 || ${#fq_se[@]} -gt 0 ]]; then
+          # FASTQ samples found, so build the salmon index
 
-    # Check if both the reference genome and reference transcriptome are gzipped
-    if [[ "$transcriptome_db" == *.gz ]] && [[ "$genome_fa" == *.gz ]]; then
-        echo "Processing gzipped files"
+          # Check if both the reference genome and reference transcriptome are gzipped
+          if [[ "$transcriptome_db" == *.gz && "$genome_fa" == *.gz ]]; then
+              echo "Processing gzipped files" | tee -a "$log_file"
+      
+              # Generate decoy file (sequence names without '>')
+              gunzip -c "$genome_fa" | grep '^>' | cut -d ' ' -f 1 | sed 's/>//' > "${output_dir}decoys.txt"
+      
+              # Concatenate transcriptome and genome to create gentrome
+              cat "$transcriptome_db" "$genome_fa" > "${output_dir}gentrome.fa.gz"
+      
+              # Run Salmon index
+              "$conda_path" run -n "$genomeprot_env" salmon index --gencode \
+                  -t "${output_dir}gentrome.fa.gz" -d "${output_dir}decoys.txt" \
+                  -p "$threads" -i "${output_dir}salmon_index"
 
-        # Generate decoy file
-        grep '^>' <(gunzip -c $genome_fa) | cut -d ' ' -f 1 > $output_dir"decoys.txt"
+          elif [[ "$transcriptome_db" != *.gz && "$genome_fa" != *.gz ]]; then
+              echo "Processing uncompressed files" | tee -a "$log_file"
+      
+              # Generate decoy file (sequence names without '>')
+              grep '^>' "$genome_fa" | cut -d ' ' -f 1 | sed 's/>//' > "${output_dir}decoys.txt"
+      
+              # Concatenate transcriptome and genome to create gentrome
+              cat "$transcriptome_db" "$genome_fa" > "${output_dir}gentrome.fa"
+      
+              # Run Salmon index
+              "$conda_path" run -n "$genomeprot_env" salmon index --gencode \
+                  -t "${output_dir}gentrome.fa" -d "${output_dir}decoys.txt" \
+                  -p "$threads" -i "${output_dir}salmon_index"
 
-        # Remove '>' from decoy file
-        sed -i -e 's/>//g' $output_dir"decoys.txt"
+          else
+              echo "Error: the transcriptome and genome files must both be gzipped or both uncompressed." | tee -a "$log_file" >&2
+              exit 1
+          fi
 
-        # Concatenate reference and transcriptome to create gentrome
-        cat "$transcriptome_db" "$genome_fa" > $output_dir"gentrome.fa.gz"
-
-        # Run Salmon index
-        $conda_path run -n $genomeprot_env salmon index --gencode -t $output_dir"gentrome.fa.gz" -d $output_dir"decoys.txt" -p "$threads" -i $output_dir"salmon_index"
     else
-        echo "Processing uncompressed files"
-
-        # Generate decoy file
-        grep '^>' "$genome_fa" | cut -d " " -f 1 > $output_dir"decoys.txt"
-
-        # Remove '>' from decoy file
-        sed -i -e 's/>//g' $output_dir"decoys.txt"
-
-        # Concatenate reference and transcriptome to create gentrome
-        cat "$transcriptome_db" "$genome_fa" > $output_dir"gentrome.fa"
-
-        # Run Salmon index
-        $conda_path run -n $genomeprot_env salmon index --gencode -t $output_dir"gentrome.fa" -d $output_dir"decoys.txt" -p "$threads" -i $output_dir"salmon_index"
+        echo "No FASTQ samples found, skipping salmon index generation." | tee -a "$log_file"
     fi
 
-    # Process paired-end samples
+    #processing files
     if [[ ${#fastq_id_pe[@]} -gt 0 ]]; then
+        # Process paired-end samples
         for id in "${fastq_id_pe[@]}"; do
-            echo "Quantifying paired-end reads from "$id | tee -a "$log_file"
-
+            echo "Quantifying paired-end reads from $id" | tee -a "$log_file"
+    
             r1_file_path=$(find "$sample_dir" -type f \( -name "${id}_R1.fastq" -o -name "${id}_R1.fastq.gz" \))
             r2_file_path=$(find "$sample_dir" -type f \( -name "${id}_R2.fastq" -o -name "${id}_R2.fastq.gz" \))
-            $conda_path run -n $genomeprot_env salmon quant -i $output_dir"salmon_index" -p "$threads" -l A -1 $r1_file_path -2 $r2_file_path -o $output_dir$id
+    
+            "$conda_path" run -n "$genomeprot_env" salmon quant \
+                -i "${output_dir}salmon_index" -p "$threads" -l A \
+                -1 "$r1_file_path" -2 "$r2_file_path" \
+                -o "${output_dir}${id}"
         done
-
+    
         echo "Paired-end samples processed." | tee -a "$log_file"
-    fi
 
-    # Process single-end samples
-    if [[ ${#fq_se[@]} -gt 0 ]]; then
+    elif [[ ${#fq_se[@]} -gt 0 ]]; then
+        # Process single-end samples
         for file in "${fq_se[@]}"; do
-            id=$(echo "$file" | sed -e 's/\(.*\)\.fastq\.gz/\1/' -e 's/\(.*\)\.fastq/\1/')
-            echo "Quantifying single-end reads from "$id | tee -a "$log_file"
-
-            $conda_path run -n $genomeprot_env salmon quant -i $output_dir"salmon_index" -p "$threads" -l A -r $sample_dir$file -o $output_dir$id
+            id="${file%.gz}"
+            id="${id%.fastq}"
+            echo "Quantifying single-end reads from $id" | tee -a "$log_file"
+    
+            "$conda_path" run -n "$genomeprot_env" salmon quant \
+                -i "${output_dir}salmon_index" -p "$threads" -l A \
+                -r "${sample_dir}${file}" \
+                -o "${output_dir}${id}"
         done
-
+    
         echo "Single-end samples processed." | tee -a "$log_file"
+
+    elif [[ ${#bm_fn[@]} -gt 0 ]]; then
+        # Process BAM samples
+        for file in "${bm_fn[@]}"; do
+            id="${file%.bam}"
+            echo "Quantifying reads from $id" | tee -a "$log_file"
+    
+            "$conda_path" run -n "$genomeprot_env" salmon quant \
+                -t "$transcriptome_db" -p "$threads" -l A \
+                -a "${sample_dir}${file}" \
+                -o "${output_dir}${id}"
+        done
+    
+        echo "BAM samples processed." | tee -a "$log_file"
+    
+    else
+        echo "Error: no paired-end, single-end or BAM samples found in $sample_dir" | tee -a "$log_file" >&2
+        exit 1
     fi
 
     echo "Generating transcript counts from Salmon quantification files" | tee -a "$log_file"
-    $conda_path run -n $genomeprot_env Rscript ./bin/database_module/matrix_compilation_salmon.R -s "$output_dir" -g "$ref_gtf" -o $output_dir"counts_transcript.txt"
+    
+    $conda_path run -n $genomeprot_env Rscript ./bin/database_module/matrix_compilation_salmon.R -s "$output_dir" -g "$ref_gtf" -o $output_dir"salmon_transcript_counts.txt"
 }
 
 function generate_database() {
@@ -196,11 +234,8 @@ function fastq_bam_input() {
             $conda_path run -n $genomeprot_env Rscript ./bin/database_module/run_bambu.R -b $sample_dir -g $ref_gtf -t $threads -s $organism -o $output_dir 2>&1 | tee -a "$log_file"
         fi
 
-        transcript_count_fn=$output_directory"counts_transcript.txt"
-        custom_gtf=$output_directory"extended_annotations.gtf"
-
-        echo "****"$transcript_count_fn
-        echo "****"$transcript_expr_cutoff
+        transcript_count_fn=$output_directory"bambu_transcript_counts.txt"
+        custom_gtf=$output_directory"bambu_transcript_annotations.gtf"
 
         #protome database generation
         generate_database "$custom_gtf" "$output_dir" "$ref_gtf" "$organism" "$orf_length" "$vcf_fn" "$orf_input_type" "$five_utr_orf" "$three_utr_orf" "$ref_proteome" "$genome_fa" "$transcript_count_fn" "$transcript_expr_cutoff" "$input_type"
@@ -219,25 +254,36 @@ Version: 0.0.1v
 
 Usage: genomeprot_db_generation.sh [-h] [-s <sequencing type>] [-o <organism>] [-l <ORF length (AA)>] [-t <data type>] [-g <reference genome fasta>] [-p <threads>] [-a <reference GTF>] [-G <custom GTF>] [-v <VCF file>] [-T <ORF type>] [-r <transcriptome database>] [-U <upstream ORFs>] [-D <downstream ORFs>] [-m <minimum transcript count>] [-C <transcript count file>] [-d <sample directory>] [-O <output directory>]
 
-OPTIONS:
-    -h, --help                  Display this help and exit
-    -s, --sequencing-type       Sequencing type: long-read or short-read
-    -o, --organism              Organism: HUMAN, CAEEL, DROME, MOUSE, RAT or DANRE
-    -l, --orf-length            Minimum ORF length in amino acids (numeric; default: 30)
-    -t, --data-type             Data type: FASTQ, BAM, or GTF
-    -g, --genome                Reference genome FASTA file (required for FASTQ/BAM input)
-    -p, --threads               Number of threads (numeric; default: 1)
-    -a, --reference-gtf         Reference GTF file (only supports GENCODE annotations)
-    -G, --custom-gtf            Custom GTF file
-    -v, --vcf                   VCF file with variants from all samples
-    -T, --orf-type              ORF type: canonical/all
-    -r, --transcriptome-db      Transcriptome database (required for short-read RNA-Seq input)
-    -U, --upstream-orf          Upstream   (5'UTR) ORFs: TRUE/FALSE (boolean)
-    -D, --downstream-orf        Downstream (3'UTR) ORFs: TRUE/FALSE (boolean)
-    -m, --min-tx-count          Minimum transcript expression cutoff (numeric; default: 5)
-    -C, --tx-count-file         Transcript count file (optional)
-    -d, --sample-dir            Sample directory (required for FASTQ and BAM input)
-    -O, --output-dir            Output directory
+Generate a proteome database from long-read or short-read RNA-seq data.
+Supported inputs: FASTQ, BAM or GTF.
+
+GENERAL
+  -h, --help                      Display this help and exit
+  -p, --threads <int>             Number of threads (default: 1)
+  -O, --output-dir <dir>          Output directory
+
+INPUT
+  -s, --sequencing-type <type>     Sequencing type: long-read | short-read
+  -t, --data-type <type>           Input data type: FASTQ | BAM | GTF
+  -d, --sample-dir <dir>           Sample directory [required for FASTQ and BAM input]
+  -o, --organism <name>            Organism: HUMAN | CAEEL | DROME | MOUSE | RAT | DANRE
+
+REFERENCES
+  -g, --genome <file>             Reference genome FASTA [required for FASTQ and BAM input]
+  -a, --reference-gtf <file>      Reference GTF (GENCODE annotations only)
+  -G, --custom-gtf <file>         Custom GTF [required for BAM and GTF input]
+  -r, --transcriptome-db <file>   Transcriptome database [required for short-read RNA-Seq FASTQ and BAM input]
+  -v, --vcf <file>                VCF file with variants from all samples [optional; use for variant-aware proteome DB]
+
+ORF OPTIONS
+  -T, --orf-type <type>           ORF type: canonical | all
+  -l, --orf-length <int>          Minimum ORF length in amino acids (default: 30)
+  -U, --upstream-orf <bool>       Include upstream (5'UTR) ORFs: TRUE | FALSE
+  -D, --downstream-orf <bool>     Include downstream (3'UTR) ORFs: TRUE | FALSE
+
+EXPRESSION FILTERING
+  -m, --min-tx-count <int>        Minimum transcript expression cutoff (default: 5) [optional]
+  -C, --tx-count-file <file>      Transcript count file [optional]
 
 EOF
     exit 0
@@ -422,6 +468,7 @@ if [ -d "$sample_directory" ] ; then
         for file in "$sample_directory"/*.bam; do
             if [ -f "$file" ]; then
                 bamfiles[$index]=$(basename "$file")
+                echo $file
                 index=$((index+1))
             fi
         done
@@ -444,21 +491,28 @@ start_time=$(date +%s)
 
 echo "Run started at: "$start | tee -a "$log_file"
 
-# short read data
-if [[ "$sequencing_platform" == "short-read" && -f "$transcriptome_db" ]]; then
+if [[ "$data_type" == "GTF" ]]; then
+    generate_database "$custom_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length" "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
+
+elif [[ "$sequencing_platform" == "short-read" && -f "$transcriptome_db" ]]; then
     # run salmon and compile transcript and transcript_counts.txt file
     short_read_commands fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$genome_fa" "$transcriptome_db" "$reference_gtf" "$sample_directory" "$output_directory" "$organism" "$orf_length" "$vcf" "$orf_type" "$threads" "$upstream_orf" "$downstream_orf" "$ref_proteome"
 
     # generate database
-    tx_count_file=$output_directory"counts_transcript.txt"
-    generate_database "$reference_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
-fi
+    tx_count_file="${output_directory}salmon_transcript_counts.txt"
+    generate_database "$reference_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length" "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
 
-# execute commands
-if [[ "$data_type" = "GTF" ]]; then
-    generate_database "$custom_gtf" "$output_directory" "$reference_gtf" "$organism" "$orf_length"  "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$genome_fa" "$tx_count_file" "$min_tx_count" "$data_type"
-else
+elif [[ "$sequencing_platform" == "long-read" ]]; then
     fastq_bam_input fastqfile_se[@] bamfiles[@] fastq_id_pe[@] "$sequencing_platform" "$genome_fa" "$sample_directory" "$output_directory" "$threads" "$reference_gtf" "$organism" "$orf_length" "$vcf" "$orf_type" "$upstream_orf" "$downstream_orf" "$ref_proteome" "$min_tx_count" "$data_type"
+
+    # Rename files
+    mv "$output_directory/extended_annotations.gtf" "$output_directory/bambu_transcript_annotations.gtf"
+    mv "$output_directory/counts_transcript.txt" "$output_directory/bambu_transcript_counts.txt"
+    mv "$output_directory/counts_gene.txt" "$output_directory/bambu_gene_counts.txt"
+
+else
+    echo "Error: unsupported combination (sequencing type: '$sequencing_platform', data type: '$data_type') or missing transcriptome database." >&2
+    exit 1
 fi
 
 # Capture end time
