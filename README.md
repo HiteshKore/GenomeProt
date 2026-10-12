@@ -121,6 +121,7 @@ Users can optionally filter the merged VCF further using their own criteria to r
 
 ## Command-line Usage Examples
 <details>
+  
   <summary><b>Generate a custom proteogenomic database with <code>genomeprot_db_generation.sh</code> (click to expand)</b></summary>
   
   `genomeprot_db_generation.sh` supports database generation from long-read and short-read sequencing data. The script accepts FASTQ, BAM or GTF input.
@@ -183,11 +184,13 @@ Before running the commands, replace the example paths with the locations of you
 </details>
   
 <details>
+
 <summary><b>5. Short-read sequencing: GTF input</b></summary>
 
 Useful when transcript annotations have already been generated. The genome, transcriptome database and sample directory are not needed.
 
-```bash ./genomeprot_db_generation.sh  -s short-read  -o HUMAN   -l 30   -t GTF  -p 25  -a /path/to/reference/annotation.gtf  -G /path/to/bambu_transcript_annotations.gtf  -T all  -U TRUE  -D TRUE  -m 5  -O /path/to/output_directory/
+```bash 
+./genomeprot_db_generation.sh  -s short-read  -o HUMAN   -l 30   -t GTF  -p 25  -a /path/to/reference/annotation.gtf  -G /path/to/bambu_transcript_annotations.gtf  -T all  -U TRUE  -D TRUE  -m 5  -O /path/to/output_directory/
 ```
 </details>
 
