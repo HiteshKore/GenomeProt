@@ -119,7 +119,7 @@ Users can optionally filter the merged VCF further using their own criteria to r
 
 </details>
 
-## Command-line Usage Examples
+**Command-line Usage Examples**
 <details>
   
   <summary><b>Generate a custom proteogenomic database with <code>genomeprot_db_generation.sh</code> (click to expand)</b></summary>
