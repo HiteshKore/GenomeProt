@@ -286,9 +286,6 @@ EXPRESSION FILTERING
   -C, --tx-count-file <file>      Transcript count file [optional]
 
 EOF
-    exit 0
-
-EOF
 }
 
 # Ensure that the script exits if an error occurs
