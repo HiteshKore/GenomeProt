@@ -1604,7 +1604,7 @@ is_peptide_reformat_input_valid <- function(input) {
 
   # The proteomics search tool selected must be one of 'Spectronaut', 'FragPipe' or 'FragPipe_quant'
   search_tool <- input$proteomics_search_tool
-  if (is.null(search_tool) || !(search_tool %in% c("Spectronaut", "FragPipe", "FragPipe_quant"))) {
+  if (is.null(search_tool) || !(search_tool %in% c("Spectronaut", "FragPipe", "FragPipe_quant","DIA-NN"))) {
     error_msg <- "Error: Please select one of the proteomics search tools listed."
     return(error_msg)
   }

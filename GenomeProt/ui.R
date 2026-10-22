@@ -349,7 +349,8 @@ ui <- dashboardPage(
                        radioButtons("proteomics_search_tool", "Select proteomics search tool:",
                                     choices = c("Spectronaut" = "Spectronaut",
                                                 "FragPipe (identified peptides, i.e. peptide.tsv)" = "FragPipe",
-                                                "FragPipe (quantified peptides, i.e. report.pr_matrix.tsv)" = "FragPipe_quant")),
+                                                "FragPipe (quantified peptides, i.e. report.pr_matrix.tsv)" = "FragPipe_quant",
+                                                "DIA-NN (quantified peptides, i.e. report.pr_matrix.tsv)" = "DIA-NN")),
                        actionButton("integ_reformat_submit_button", "Submit", class = "btn btn-info")
                 ),
                 column(6,

@@ -75,6 +75,25 @@ reformat_fragpipe_quant_data <- function(peptide_data, dataset_id) {
   return(peptide_data_flt)
 }
 
+reformat_dia_nn_data <- function(peptide_data, dataset_id) {
+  peptide_data_colnames <- colnames(peptide_data)
+  if (!("Stripped.Sequence" %in% peptide_data_colnames) | !("Protein.Ids" %in% peptide_data_colnames)) { 
+    return(NULL)       
+  }
+  
+  peptide_data_flt <- peptide_data %>%
+    dplyr::select(Stripped.Sequence, Protein.Ids)
+  
+  metadata <- peptide_data_flt %>%
+    dplyr::mutate(Peptide = Stripped.Sequence) %>%
+    dplyr::select(Peptide,Protein.Ids) %>%
+    base::unique() %>%
+    dplyr::mutate(Dataset_id = dataset_id)
+  
+   return(metadata)
+}
+
+
 suppressPackageStartupMessages({
   library(optparse)
 })
@@ -84,7 +103,7 @@ option_list = list(
   make_option(c("-d", "--data_directory"), type = "character", default = NULL,
               help = "peptide results directory; must contain .tsv files (NOTE: peptide_data.tsv will be renamed to peptide_data_renamed.tsv as reformatted data is written to peptide_data.tsv)", metavar = "character"),
   make_option(c("-s", "--search_tool"), type = "character", default = NULL,
-              help = "search tool used to generate the proteomic data: specify 'Spectronaut', 'FragPipe' (peptide.tsv), or 'FragPipe_quant' (report.pr_matrix.tsv)", metavar = "character")
+              help = "search tool used to generate the proteomic data: specify 'Spectronaut', 'FragPipe' (peptide.tsv), 'FragPipe_quant' (report.pr_matrix.tsv), 'DIA-NN' (report.pr_matrix.tsv) ", metavar = "character")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -111,16 +130,18 @@ if (nchar(error_msg) > 0) {
 # check the input arguments
 
 search_tool <- tolower(trimws(as.character(search_tool)))
+
 if (!file.exists(peptide_results_dir)) {
   error_msg <- paste0("The peptide results directory '", peptide_results_dir, "' does not exist.")
 } else if (!dir.exists(peptide_results_dir)) {
   error_msg <- paste0("The peptide results directory '", peptide_results_dir, "' exists but is not a directory.")
-} else if (!(search_tool %in% c("spectronaut", "fragpipe", "fragpipe_quant"))) {
+} else if (!(search_tool %in% c("spectronaut", "fragpipe", "fragpipe_quant","dia-nn"))) {
   error_msg <- paste0("The search tool '", opt$search_tool, "' is not supported. Please specify one of the following (case-insensitive): 'Spectronaut', 'FragPipe' (peptide.tsv), 'FragPipe_quant' (report.pr_matrix.tsv)")
 } else {
   peptide_files_list <- list.files(path = peptide_results_dir, pattern = "\\.tsv$", all.files = TRUE, full.names = TRUE)
   peptide_files <- c()
   for (fn in peptide_files_list) {
+    
     if (file.exists(fn) & (!dir.exists(fn)) & (file.size(fn) > 0)) {
       peptide_files <- c(peptide_files, fn)
     }
@@ -148,7 +169,6 @@ suppressPackageStartupMessages({
 peptide_results <- list()
 for (fn in peptide_files) {
   dataset_id <- stringr::str_replace(basename(fn), "\\.tsv$", "")
-  
   # rename peptide_data.tsv to peptide_data_renamed.tsv
   if (dataset_id == "peptide_data") {
     new_filename <- file.path(peptide_results_dir, "peptide_data_renamed.tsv")
@@ -164,7 +184,11 @@ for (fn in peptide_files) {
     results <- reformat_spectronaut_data(peptide_data, dataset_id)
   } else if (search_tool == "fragpipe") {
     results <- reformat_fragpipe_data(peptide_data, dataset_id)
-  } else {
+  }else if (search_tool == "dia-nn") {
+    results <- reformat_dia_nn_data(peptide_data, dataset_id)
+  } 
+  
+  else {
     results <- reformat_fragpipe_quant_data(peptide_data, dataset_id)
   }
   
@@ -177,31 +201,43 @@ for (fn in peptide_files) {
 }
 
 combined_peptide_results <- do.call(rbind, peptide_results)
+
 if (length(combined_peptide_results) == 0) {
   error_msg <- "Unable to parse any file in the peptide results directory. Please ensure that the files are formatted correctly and the correct search tool is provided. Stopping..."
   stop(error_msg)
 }
 
-# combine peptide results
-if (search_tool == "spectronaut") {
+if (search_tool %in% c("spectronaut","dia-nn")) {
+  
+  # Pick whichever accession column is present
+  
+  acc_col <-intersect(c("PEP.AllOccurringProteinAccessions", "Protein.Ids"),colnames(combined_peptide_results))[1]
+  
+
+  if (is.na(acc_col)) {
+    stop("Neither PEP.AllOccurringProteinAccessions nor Protein.Ids found in the data.")
+  }
+  
   combined_peptide_results_uniq <- combined_peptide_results %>%
-    tidyr::separate_rows(PEP.AllOccurringProteinAccessions, sep = ";") %>%
+    dplyr::rename(Accessions = dplyr::all_of(acc_col)) %>%
+    tidyr::separate_rows(Accessions, sep = ";") %>%
+    dplyr::mutate(Accessions = trimws(Accessions)) %>%
+    dplyr::filter(!is.na(Accessions), Accessions != "") %>%
     dplyr::group_by(Peptide) %>%
     dplyr::summarise(
-      PEP.AllOccurringProteinAccessions = paste(base::unique(trimws(PEP.AllOccurringProteinAccessions)), collapse = ","),
+      Accessions = paste(base::unique(trimws(Accessions)), collapse = ","),
       Dataset_id = paste(base::unique(trimws(Dataset_id)), collapse = ","),
       .groups = "drop"
     )
   
   uniq_peptides <- combined_peptide_results_uniq %>%
-    dplyr::mutate(Protein = sapply(stringr::str_split(PEP.AllOccurringProteinAccessions, ","), `[`, 1)) %>%
-    dplyr::rename(Mapped_proteins = PEP.AllOccurringProteinAccessions) %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(Mapped_proteins = paste(stringr::str_split(Mapped_proteins, ",")[[1]][-1], collapse = ",")) %>%
-    dplyr::ungroup() %>%
-    dplyr::select("Peptide", "Protein", "Mapped_proteins", "Dataset_id") %>%
+    dplyr::mutate(
+      Protein = stringr::word(Accessions, 1, sep = stringr::fixed(",")),
+      Mapped_proteins = stringr::str_remove(Accessions, "^[^,]*,?")
+    ) %>%
+    dplyr::select(Peptide, Protein, Mapped_proteins, Dataset_id) %>%
     stats::na.omit()
-} else {
+}else {
   uniq_peptides <- combined_peptide_results %>%
     tidyr::separate_rows(Mapped_proteins, sep = ",") %>%
     dplyr::group_by(Peptide) %>%
