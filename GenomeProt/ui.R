@@ -193,6 +193,14 @@ ui <- dashboardPage(
       tabItem(tabName = "db_generation",
               h2("Generate a custom proteogenomics database"),
               h5("Creates an amino acid FASTA of all ORFs in your data to use as input for FragPipe/MaxQuant etc."),
+              h5(actionLink("show_fastq_naming_notes", "Notes on properly naming long-read, paired-end short-read, and single-end short-read FASTQ samples")),
+              conditionalPanel(
+                condition = "input.show_fastq_naming_notes % 2 == 1",
+                p("Long-read and single-end short-read FASTQ samples must follow the format '<sample ID><file extension>'."),
+                p("Paired-end short-read FASTQ samples must follow the format '<sample ID>_R1<file extension>' or '<sample ID>_R2<file extension>', with the same sample ID provided for both ends (R1 and R2)."),
+                p("Sample IDs must not be empty. Any files with empty sample IDs are ignored (e.g. '.fastq.gz', '_R1.fastq', '_R2.fa')."),
+                p("Sample IDs must also be unique. This means there must not be any duplicate sample IDs for all samples provided, for either end of the paired-end short-read samples (R1 or R2), and for single-end short-read samples.")
+              ),
               fluidRow(
                 column(6,
                        # radio buttons for the sequencing type (long-read or short-read) and input type (BAM or GTF)
@@ -343,13 +351,14 @@ ui <- dashboardPage(
               fluidRow(
                 column(6,
                        h3("Part 1: Reformat proteomics results files"),
-                       h5("Note 1: All proteomics results files with a file extension of '.txt' or '.csv' will be renamed to have a file extension of '.tsv'."),
-                       h5("Note 2: Ignoring the file extension, if a proteomics results file with the name 'peptide_data' was uploaded, it will be renamed to 'peptide_data_renamed.tsv'."),
+                       h5("Note: All files must be named as <dataset ID><file extension>, where all dataset IDs are unique and non-empty."),
                        fileInput("user_orig_proteomics_files", "Upload proteomics results files:", accept = c(".txt", ".csv", ".tsv"), multiple = TRUE),
                        radioButtons("proteomics_search_tool", "Select proteomics search tool:",
                                     choices = c("Spectronaut" = "Spectronaut",
                                                 "FragPipe (identified peptides, i.e. peptide.tsv)" = "FragPipe",
-                                                "FragPipe (quantified peptides, i.e. report.pr_matrix.tsv)" = "FragPipe_quant")),
+                                                "FragPipe (quantified peptides, i.e. report.pr_matrix.tsv)" = "FragPipe_quant",
+                                                "DIA-NN (quantified peptides, i.e. report.pr_matrix.tsv)" = "DIA-NN",
+                                                "MaxQuant (peptides.txt)" = "MaxQuant")),
                        actionButton("integ_reformat_submit_button", "Submit", class = "btn btn-info")
                 ),
                 column(6,

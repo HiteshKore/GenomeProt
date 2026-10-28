@@ -50,6 +50,11 @@ if (!dir.exists(report_outdir_image)) {
 suppressPackageStartupMessages({
   library(rmarkdown)
 })
+
+# rmarkdown runs with the working directory set to that of the report Rmd file
+# So, if the user provided a relative path to an output directory, it must be turned into an absolute path
+report_outdir <- normalizePath(report_outdir)
+
 rmarkdown::render(input = report_rmd_file,
                   output_file = file.path(report_outdir, "summary_report.html"),
                   output_format = "html_document",

@@ -378,6 +378,89 @@ is_database_generation_input_valid <- function(input) {
         return(error_msg)
       }
     }
+
+    if (sequencing_type == "long-read") {
+      sample_ids <- stringr::str_replace_all(filenames, c("\\.fastq$" = "", "\\.fq$" = "", "\\.fasta$" = "", "\\.fas$" = "", "\\.fa$" = "", "\\.fna$" = "", "\\.ffn$" = "", "\\.faa$" = "", "\\.mpfa$" = "", "\\.frn$" = "",
+                                                          "\\.fastq\\.gz$" = "", "\\.fq\\.gz$" = "", "\\.fasta\\.gz$" = "", "\\.fas\\.gz$" = "", "\\.fa\\.gz$" = "", "\\.fna\\.gz$" = "", "\\.ffn\\.gz$" = "", "\\.faa\\.gz$" = "", "\\.mpfa\\.gz$" = "", "\\.frn\\.gz$" = ""))
+      sample_ids <- sample_ids[which(nchar(sample_ids) > 0)]
+
+      # Every long-read FASTQ file must have a unique sample ID
+      if (length(unique(sample_ids)) != length(sample_ids)) {
+        error_msg <- "Error: There are duplicate sample IDs for long-read FASTQ files. Please ensure all sample IDs are unique."
+        return(error_msg)
+      }
+
+      # If the user only provided one long-read FASTQ file with an empty sample ID...
+      if (length(sample_ids) == 0) {
+        error_msg <- "Error: Please provide long-read FASTQ files with non-empty sample IDs."
+        return(error_msg)
+      }
+    } else {
+      r1_sample_ids <- c()
+      r2_sample_ids <- c()
+      single_end_sample_ids <- c()
+
+      for (i in 1:num_files) {
+        filename <- filenames[i]
+
+        sample_id <- stringr::str_replace_all(filename, c("_R1\\.fastq$" = "", "_R1\\.fq$" = "", "_R1\\.fasta$" = "", "_R1\\.fas$" = "", "_R1\\.fa$" = "", "_R1\\.fna$" = "", "_R1\\.ffn$" = "", "_R1\\.faa$" = "", "_R1\\.mpfa$" = "", "_R1\\.frn$" = "",
+                                                          "_R1\\.fastq\\.gz$" = "", "_R1\\.fq\\.gz$" = "", "_R1\\.fasta\\.gz$" = "", "_R1\\.fas\\.gz$" = "", "_R1\\.fa\\.gz$" = "", "_R1\\.fna\\.gz$" = "", "_R1\\.ffn\\.gz$" = "", "_R1\\.faa\\.gz$" = "", "_R1\\.mpfa\\.gz$" = "", "_R1\\.frn\\.gz$" = ""))
+        if ((nchar(sample_id) > 0) && (nchar(sample_id) < nchar(filename))) {
+          r1_sample_ids <- c(r1_sample_ids, sample_id)
+          next
+        }
+
+        sample_id <- stringr::str_replace_all(filename, c("_R2\\.fastq$" = "", "_R2\\.fq$" = "", "_R2\\.fasta$" = "", "_R2\\.fas$" = "", "_R2\\.fa$" = "", "_R2\\.fna$" = "", "_R2\\.ffn$" = "", "_R2\\.faa$" = "", "_R2\\.mpfa$" = "", "_R2\\.frn$" = "",
+                                                          "_R2\\.fastq\\.gz$" = "", "_R2\\.fq\\.gz$" = "", "_R2\\.fasta\\.gz$" = "", "_R2\\.fas\\.gz$" = "", "_R2\\.fa\\.gz$" = "", "_R2\\.fna\\.gz$" = "", "_R2\\.ffn\\.gz$" = "", "_R2\\.faa\\.gz$" = "", "_R2\\.mpfa\\.gz$" = "", "_R2\\.frn\\.gz$" = ""))
+        if ((nchar(sample_id) > 0) && (nchar(sample_id) < nchar(filename))) {
+          r2_sample_ids <- c(r2_sample_ids, sample_id)
+          next
+        }
+
+        sample_id <- stringr::str_replace_all(filename, c("\\.fastq$" = "", "\\.fq$" = "", "\\.fasta$" = "", "\\.fas$" = "", "\\.fa$" = "", "\\.fna$" = "", "\\.ffn$" = "", "\\.faa$" = "", "\\.mpfa$" = "", "\\.frn$" = "",
+                                                          "\\.fastq\\.gz$" = "", "\\.fq\\.gz$" = "", "\\.fasta\\.gz$" = "", "\\.fas\\.gz$" = "", "\\.fa\\.gz$" = "", "\\.fna\\.gz$" = "", "\\.ffn\\.gz$" = "", "\\.faa\\.gz$" = "", "\\.mpfa\\.gz$" = "", "\\.frn\\.gz$" = ""))
+        if ((nchar(sample_id) > 0) && (nchar(sample_id) < nchar(filename))) {
+          single_end_sample_ids <- c(single_end_sample_ids, sample_id)
+        }
+      }
+
+      # Every single-end FASTQ file must have a unique sample ID
+      if (length(unique(single_end_sample_ids)) != length(single_end_sample_ids)) {
+        error_msg <- "Error: There are duplicate sample IDs for single-end FASTQ files. Please ensure all sample IDs are unique."
+        return(error_msg)
+      }
+
+      # Every paired-end R1 FASTQ file must have a unique sample ID
+      if (length(unique(r1_sample_ids)) != length(r1_sample_ids)) {
+        error_msg <- "Error: There are duplicate sample IDs for paired-end R1 FASTQ files. Please ensure all sample IDs are unique."
+        return(error_msg)
+      }
+
+      # Every paired-end R2 FASTQ file must have a unique sample ID
+      if (length(unique(r2_sample_ids)) != length(r2_sample_ids)) {
+        error_msg <- "Error: There are duplicate sample IDs for paired-end R2 FASTQ files. Please ensure all sample IDs are unique."
+        return(error_msg)
+      }
+
+      # There must not be any matching sample ID between paired-end and single-end FASTQ files
+      paired_end_sample_ids <- c()
+      for (r1_sample_id in r1_sample_ids) {
+        if (r1_sample_id %in% r2_sample_ids) {
+          if (r1_sample_id %in% single_end_sample_ids) {
+            error_msg <- "Error: There are matching sample IDs between paired-end and single-end FASTQ files. Please ensure all sample IDs are unique."
+            return(error_msg)
+          }
+
+          paired_end_sample_ids <- c(paired_end_sample_ids, r1_sample_id)
+        }
+      }
+
+      # If there are no paired-end or single-end FASTQ files...
+      if ((length(paired_end_sample_ids) == 0) && (length(single_end_sample_ids) == 0)) {
+        error_msg <- "Error: Please provide paired-end and/or single-end FASTQ files with non-empty sample IDs."
+        return(error_msg)
+      }
+    }
   } else if (input_type == "bam_input") {
     # Check if the user has uploaded a reference genome FASTA file yet
     user_reference_genome <- input$user_reference_genome
@@ -658,6 +741,11 @@ fastq_server <- function(input, session) {
       file_prefix <- user_fastq_files_df$file_prefix[i]
       fastq_file_name <- user_fastq_files_df$name[i]
 
+      # Ignore FASTQ files that have no sample ID (e.g. '.fastq', '.fastq.gz')
+      if (file_prefix == "") {
+        next
+      }
+
       # 1. create a SAM file of reads mapped to the indexed genome
       mapped_reads_file <- file.path(outdir_bam, paste0(file_prefix, ".sam"))
       remove_file_if_exists(mapped_reads_file)
@@ -825,38 +913,39 @@ fastq_server <- function(input, session) {
     }
 
     # for each FASTQ file, determine whether it contains paired-end reads or single-end reads
-    # FIXME: handle FASTQ files with no sample name (e.g. ".fastq", "_R1.fastq", "_R2.fastq")
-    # FIXME: handle samples that contain both paired-end reads and single-end reads
     paired_end <- list()
     single_end <- list()
 
     for (i in 1:nrow(user_fastq_files_df)) {
-      file_name <- user_fastq_files_df$name[i]
-      if (grepl("_R1", file_name)) {
-        base_name <- stringr::str_replace_all(file_name, c("_R1\\.fastq$" = "", "_R1\\.fq$" = "", "_R1\\.fasta$" = "", "_R1\\.fas$" = "", "_R1\\.fa$" = "", "_R1\\.fna$" = "", "_R1\\.ffn$" = "", "_R1\\.faa$" = "", "_R1\\.mpfa$" = "", "_R1\\.frn$" = "",
-                                                           "_R1\\.fastq\\.gz$" = "", "_R1\\.fq\\.gz$" = "", "_R1\\.fasta\\.gz$" = "", "_R1\\.fas\\.gz$" = "", "_R1\\.fa\\.gz$" = "", "_R1\\.fna\\.gz$" = "", "_R1\\.ffn\\.gz$" = "", "_R1\\.faa\\.gz$" = "", "_R1\\.mpfa\\.gz$" = "", "_R1\\.frn\\.gz$" = ""))
-        paired_end[[base_name]]$R1 <- user_fastq_files_df$datapath[i]
-      } else if (grepl("_R2", file_name)) {
-        base_name <- stringr::str_replace_all(file_name, c("_R2\\.fastq$" = "", "_R2\\.fq$" = "", "_R2\\.fasta$" = "", "_R2\\.fas$" = "", "_R2\\.fa$" = "", "_R2\\.fna$" = "", "_R2\\.ffn$" = "", "_R2\\.faa$" = "", "_R2\\.mpfa$" = "", "_R2\\.frn$" = "",
-                                                           "_R2\\.fastq\\.gz$" = "", "_R2\\.fq\\.gz$" = "", "_R2\\.fasta\\.gz$" = "", "_R2\\.fas\\.gz$" = "", "_R2\\.fa\\.gz$" = "", "_R2\\.fna\\.gz$" = "", "_R2\\.ffn\\.gz$" = "", "_R2\\.faa\\.gz$" = "", "_R2\\.mpfa\\.gz$" = "", "_R2\\.frn\\.gz$" = ""))
-        paired_end[[base_name]]$R2 <- user_fastq_files_df$datapath[i]
-      } else {
-        base_name <- user_fastq_files_df$file_prefix[i]
-        single_end[[base_name]] <- user_fastq_files_df$datapath[i]
+      filename <- user_fastq_files_df$name[i]
+
+      sample_id <- stringr::str_replace_all(filename, c("_R1\\.fastq$" = "", "_R1\\.fq$" = "", "_R1\\.fasta$" = "", "_R1\\.fas$" = "", "_R1\\.fa$" = "", "_R1\\.fna$" = "", "_R1\\.ffn$" = "", "_R1\\.faa$" = "", "_R1\\.mpfa$" = "", "_R1\\.frn$" = "",
+                                                        "_R1\\.fastq\\.gz$" = "", "_R1\\.fq\\.gz$" = "", "_R1\\.fasta\\.gz$" = "", "_R1\\.fas\\.gz$" = "", "_R1\\.fa\\.gz$" = "", "_R1\\.fna\\.gz$" = "", "_R1\\.ffn\\.gz$" = "", "_R1\\.faa\\.gz$" = "", "_R1\\.mpfa\\.gz$" = "", "_R1\\.frn\\.gz$" = ""))
+      if ((nchar(sample_id) > 0) && (nchar(sample_id) < nchar(filename))) {
+        paired_end[[sample_id]]$R1 <- user_fastq_files_df$datapath[i]
+        next
+      }
+
+      sample_id <- stringr::str_replace_all(filename, c("_R2\\.fastq$" = "", "_R2\\.fq$" = "", "_R2\\.fasta$" = "", "_R2\\.fas$" = "", "_R2\\.fa$" = "", "_R2\\.fna$" = "", "_R2\\.ffn$" = "", "_R2\\.faa$" = "", "_R2\\.mpfa$" = "", "_R2\\.frn$" = "",
+                                                        "_R2\\.fastq\\.gz$" = "", "_R2\\.fq\\.gz$" = "", "_R2\\.fasta\\.gz$" = "", "_R2\\.fas\\.gz$" = "", "_R2\\.fa\\.gz$" = "", "_R2\\.fna\\.gz$" = "", "_R2\\.ffn\\.gz$" = "", "_R2\\.faa\\.gz$" = "", "_R2\\.mpfa\\.gz$" = "", "_R2\\.frn\\.gz$" = ""))
+      if ((nchar(sample_id) > 0) && (nchar(sample_id) < nchar(filename))) {
+        paired_end[[sample_id]]$R2 <- user_fastq_files_df$datapath[i]
+        next
+      }
+
+      sample_id <- user_fastq_files_df$file_prefix[i]
+      if ((nchar(sample_id) > 0) && (nchar(sample_id) < nchar(filename))) {
+        single_end[[sample_id]] <- user_fastq_files_df$datapath[i]
       }
     }
 
     # Quantify paired-end reads
-    for (base_name in names(paired_end)) {
-      if (base_name == "") {
-        next
-      }
-
-      R1_path <- paired_end[[base_name]]$R1
-      R2_path <- paired_end[[base_name]]$R2
+    for (sample_id in names(paired_end)) {
+      R1_path <- paired_end[[sample_id]]$R1
+      R2_path <- paired_end[[sample_id]]$R2
 
       if (!is.null(R1_path) & !is.null(R2_path)) {
-        quant_output_folder <- file.path(outdir_bam, base_name)
+        quant_output_folder <- file.path(outdir_bam, sample_id)
         quant_output_file <- file.path(quant_output_folder, "quant.sf")
 
         command_salmon <- paste0(conda_command, "salmon quant",
@@ -867,41 +956,37 @@ fastq_server <- function(input, session) {
                                  " -2 ", shQuote(R2_path),
                                  " -o ", shQuote(quant_output_folder))
 
-        message(paste0("Base name: ", base_name, " --- ", "R1 path: ", R1_path, ", R2 path: ", R2_path))
+        message(paste0("Sample: ", sample_id, " --- ", "R1 path: ", R1_path, ", R2 path: ", R2_path))
         message(command_salmon)
         system(command_salmon)
 
         # Ensure the paired-end reads of the sample are quantified
         if (!file.exists(quant_output_file)) {
-          error_msg <- paste0("Error: Failed to quantify the paired-end reads of the sample '", base_name, "'.")
+          error_msg <- paste0("Error: Failed to quantify the paired-end reads of the sample '", sample_id, "'.")
           return(error_msg)
         }
       }
     }
 
     # Quantify single-end reads
-    for (base_name in names(single_end)) {
-      if (base_name == "") {
-        next
-      }
-
-      quant_output_folder <- file.path(outdir_bam, base_name)
+    for (sample_id in names(single_end)) {
+      quant_output_folder <- file.path(outdir_bam, sample_id)
       quant_output_file <- file.path(quant_output_folder, "quant.sf")
 
       command_salmon <- paste0(conda_command, "salmon quant",
                                " -i ", shQuote(salmon_index_dir),
                                " -p ", shQuote(user_threads),
                                " -l ", shQuote("A"),
-                               " -r ", shQuote(single_end[[base_name]]),
+                               " -r ", shQuote(single_end[[sample_id]]),
                                " -o ", shQuote(quant_output_folder))
 
-      message(single_end[[base_name]])
+      message(single_end[[sample_id]])
       message(command_salmon)
       system(command_salmon)
 
       # Ensure the single-end reads of the sample are quantified
       if (!file.exists(quant_output_file)) {
-        error_msg <- paste0("Error: Failed to quantify the single-end reads of the sample '", base_name, "'.")
+        error_msg <- paste0("Error: Failed to quantify the single-end reads of the sample '", sample_id, "'.")
         return(error_msg)
       }
     }
@@ -911,7 +996,7 @@ fastq_server <- function(input, session) {
       unlink(salmon_index_dir, recursive = TRUE)
     }
 
-    transcript_counts_file <- file.path(outdir_bam, "bambu_transcript_counts.txt")
+    transcript_counts_file <- file.path(outdir_bam, "salmon_transcript_counts.txt")
     remove_file_if_exists(transcript_counts_file)
 
     command_create_count_matrix <- paste0(conda_command, "Rscript bin/database_module/matrix_compilation_salmon.R",
@@ -1025,7 +1110,7 @@ bam_server <- function(input, session) {
     }
   }
 
-  transcript_counts_file <- file.path(outdir_bam, "bambu_transcript_counts.txt")
+  transcript_counts_file <- file.path(outdir_bam, "salmon_transcript_counts.txt")
   remove_file_if_exists(transcript_counts_file)
 
   command_create_count_matrix <- paste0(conda_command, "Rscript bin/database_module/matrix_compilation_salmon.R",
@@ -1165,7 +1250,7 @@ database_server <- function(input, session) {
     db_counts_file <- input$user_tx_count_file$datapath
   } else {                                                                          # if the user supplied FASTQ / BAM files and short-read RNA-seq data
     db_gtf_file <- input$reference_gtf_file$datapath
-    db_counts_file <- file.path(session_id, "mapping_output", "bambu_transcript_counts.txt")
+    db_counts_file <- file.path(session_id, "mapping_output", "salmon_transcript_counts.txt")
   }
 
   ref_gtf <- input$reference_gtf_file$datapath
@@ -1335,13 +1420,10 @@ database_server <- function(input, session) {
   # Create a zip of the results files depending on the input type and sequencing type
   files_to_zip_db <- c("proteome_database.fasta", "proteome_database_metadata.txt", "proteome_database_transcripts.gtf")
 
-  if (input$input_type == "fastq_input" & input$sequencing_type == "long-read") {
-    bam_files <- list.files(path = file.path("..", "mapping_output"), "\\.bam$", full.names = TRUE)
-    files_to_zip_db <- c(files_to_zip_db, bam_files, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
-  } else if (input$input_type == "bam_input" & input$sequencing_type == "long-read") {
+  if (input$input_type != "gtf_input" & input$sequencing_type == "long-read") {
     files_to_zip_db <- c(files_to_zip_db, "../bambu_output/bambu_transcript_annotations.gtf", "../bambu_output/bambu_transcript_counts.txt", "../bambu_output/novel_transcript_classes.csv", "../bambu_output/gffcompare.tmap.txt", "../bambu_output/logfile.txt")
   } else if (input$input_type != "gtf_input" & input$sequencing_type == "short-read") {
-    files_to_zip_db <- c(files_to_zip_db, "../mapping_output/bambu_transcript_counts.txt")
+    files_to_zip_db <- c(files_to_zip_db, "../mapping_output/salmon_transcript_counts.txt")
   }
 
   # Set the path to the ZIP file (in the session_id directory)
@@ -1358,6 +1440,21 @@ database_server <- function(input, session) {
   }
 
   remove_file_if_exists(zipfile_path_db)
+
+  # For each results file that is in a directory one level above the current one, make a copy of the file in the current directory
+  for (i in 1:length(files_to_zip_db)) {
+    results_file <- files_to_zip_db[i]
+    if (base::startsWith(results_file, "../")) {
+      directory <- basename(dirname(results_file))
+      if (!dir.exists(directory)) {
+        dir.create(directory)
+      }
+
+      new_path <- file.path(directory, basename(results_file))
+      file.copy(results_file, new_path)
+      files_to_zip_db[i] <- new_path
+    }
+  }
 
   # Zip the results files
   zip(zipfile = zipfile_path_db, files = files_to_zip_db)
@@ -1607,9 +1704,23 @@ is_peptide_reformat_input_valid <- function(input) {
     }
   }
 
-  # The proteomics search tool selected must be one of 'Spectronaut', 'FragPipe' or 'FragPipe_quant'
+  dataset_ids <- stringr::str_replace(filenames, "\\.(csv|tsv|txt)$", "")
+
+  # All dataset IDs must be unique
+  if (length(unique(dataset_ids)) != length(dataset_ids)) {
+    error_msg <- "Error: There are duplicate dataset IDs. Please ensure all dataset IDs are unique."
+    return(error_msg)
+  }
+
+  # All dataset IDs must consist of at least one character
+  if (any(nchar(dataset_ids) == 0)) {
+    error_msg <- "Error: There are empty dataset IDs. Please ensure all dataset IDs consist of at least one character."
+    return(error_msg)
+  }
+
+  # The proteomics search tool selected must be one of 'Spectronaut', 'FragPipe', 'FragPipe_quant', 'DIA-NN' or 'MaxQuant'
   search_tool <- input$proteomics_search_tool
-  if (is.null(search_tool) || !(search_tool %in% c("Spectronaut", "FragPipe", "FragPipe_quant"))) {
+  if (is.null(search_tool) || !(search_tool %in% c("Spectronaut", "FragPipe", "FragPipe_quant", "DIA-NN", "MaxQuant"))) {
     error_msg <- "Error: Please select one of the proteomics search tools listed."
     return(error_msg)
   }
@@ -1620,7 +1731,18 @@ is_peptide_reformat_input_valid <- function(input) {
 
 integration_reformat_server <- function(input, session) {
   session_id <- session$token                                               # session ID
+  input_dir_peptide_files <- file.path(session_id, "peptide_results_input") # input directory
   outdir_peptide_results <- file.path(session_id, "peptide_results_output") # output directory
+
+  # create the input directory if it does not exist, and remove all input files inside it if it does
+  if (!dir.exists(input_dir_peptide_files)) {
+    dir.create(input_dir_peptide_files)
+  } else {
+    prev_input_files <- Sys.glob(file.path(input_dir_peptide_files, c("*.txt", "*.csv", "*.tsv")))
+    for (prev_input_file in prev_input_files) {
+      remove_file_if_exists(prev_input_file)
+    }
+  }
 
   # create the output directory
   if (!dir.exists(outdir_peptide_results)) {
@@ -1629,41 +1751,24 @@ integration_reformat_server <- function(input, session) {
 
   user_orig_proteomics_files <- input$user_orig_proteomics_files
   search_tool <- input$proteomics_search_tool
-  orig_folder <- dirname(user_orig_proteomics_files$datapath[1])
 
-  # move all uploaded proteomics files into the output directory
-  num_files <- nrow(user_orig_proteomics_files)
-  new_paths <- c()
-  for (i in 1:num_files) {
-    orig_name <- user_orig_proteomics_files$name[i]
+  # copy all uploaded proteomics results files into the input directory
+  new_paths <- file.path(input_dir_peptide_files, user_orig_proteomics_files$name)
+  mapply(file.copy, from = user_orig_proteomics_files$datapath, to = new_paths)
 
-    new_name <- stringr::str_replace(orig_name, "\\.txt$", ".tsv")
-    new_name <- stringr::str_replace(orig_name, "\\.csv$", ".tsv")
-    if (new_name == "peptide_data.tsv") {
-      new_name <- "peptide_data_renamed.tsv"
-    }
-
-    new_path <- file.path(orig_folder, new_name)
-    new_paths <- c(new_paths, new_path)
-  }
-
-  mapply(file.rename, from = user_orig_proteomics_files$datapath, to = new_paths)
-
+  reformatted_file <- file.path(outdir_peptide_results, "peptide_data.tsv")
   command_peptide_reformat <- paste0(conda_command, "Rscript bin/integration_module/reformat_peptide_results.R",
-                                     " -d ", shQuote(orig_folder),
-                                     " -s ", shQuote(search_tool))
+                                     " -d ", shQuote(input_dir_peptide_files),
+                                     " -s ", shQuote(search_tool),
+                                     " -o ", shQuote(reformatted_file))
 
   # reformat the proteomics results
   message(command_peptide_reformat)
   system(command_peptide_reformat)
 
   error_msg <- ""
-  reformatted_file <- file.path(orig_folder, "peptide_data.tsv")
   if (!file.exists(reformatted_file)) {
-    error_msg <- "Error: Failed to reformat proteomics results. Please ensure that the files are formatted correctly and the correct search tool is provided."
-  } else {
-    output_location <- file.path(outdir_peptide_results, "peptide_data.tsv")
-    file.copy(reformatted_file, output_location)
+    error_msg <- "Error: Failed to reformat proteomics results. Please ensure that the uploaded files are formatted correctly and the correct search tool is specified."
   }
 
   return(error_msg)

@@ -43,26 +43,29 @@ filter_custom_gtf <- function(customgtf, organism, tx_counts = NA, min_count = N
   # remove version numbers for search
   bambu_df <- bambu_df %>% tidyr::separate(gene_id, into = "ensg_id", sep = "\\.", remove = FALSE)
 
-  # use mygene to search for gene names
-  gene_query <- mygene::queryMany(base::unique(bambu_df$ensg_id), scopes = "ensembl.gene", fields = "symbol", species = as.character(organism), returnall = TRUE)
+  # if the gene_name column is absent from the Bambu GTF, query MyGene.info for gene names
+  if (!("gene_name" %in% colnames(bambu_df))) {
+    gene_query <- mygene::queryMany(base::unique(bambu_df$ensg_id), scopes = "ensembl.gene", fields = "symbol", species = as.character(organism), returnall = TRUE)
 
-  # make df
-  gene_df <- as.data.frame(gene_query[["response"]])
+    # make df
+    gene_df <- as.data.frame(gene_query[["response"]])
 
-  gene_df <- gene_df %>% dplyr::group_by(query) %>% dplyr::slice_tail(n = 1) %>% dplyr::ungroup()
+    gene_df <- gene_df %>% dplyr::group_by(query) %>% dplyr::slice_tail(n = 1) %>% dplyr::ungroup()
 
-  # if there was no name found, use original ID
-  gene_df <- gene_df %>%
-    dplyr::mutate(gene_name = dplyr::case_when(
-      is.na(symbol) ~ query,
-      !is.na(symbol) ~ symbol
-    )) %>%
-    dplyr::select(query, gene_name)
+    # if there was no name found, use original ID
+    gene_df <- gene_df %>%
+      dplyr::mutate(gene_name = dplyr::case_when(
+        is.na(symbol) ~ query,
+        !is.na(symbol) ~ symbol
+      )) %>%
+      dplyr::select(query, gene_name)
 
-  # merge results
-  bambu_merged <- merge(bambu_df, gene_df, by.x = "ensg_id", by.y = "query", all.x = T, all.y = F)
-
-  bambu_merged$ensg_id <- NULL
+    # merge results
+    bambu_merged <- merge(bambu_df, gene_df, by.x = "ensg_id", by.y = "query", all.x = T, all.y = F)
+    bambu_merged$ensg_id <- NULL
+  } else {
+    bambu_merged <- bambu_df
+  }
 
   # make GRanges including new names
   bambu_data_gr <- GenomicRanges::makeGRangesFromDataFrame(bambu_merged,
@@ -251,7 +254,7 @@ get_variant_protein_seqs <- function(wt_orfome, custom_genome_hm, custom_genome_
 # generate FASTA of transcript sequences
 get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_orfs = FALSE, find_UTR_3_orfs = FALSE, referencegtf, outdir) {
   ref_txdb <- NULL
-  if ((find_UTR_5_orfs == TRUE) | (find_UTR_5_orfs == TRUE)) {  # required for UTR regions
+  if ((find_UTR_5_orfs == TRUE) | (find_UTR_3_orfs == TRUE)) {  # required for UTR regions
     ref_txdb <- txdbmaker::makeTxDbFromGFF(referencegtf)
   }
 
@@ -344,8 +347,8 @@ get_transcript_orfs <- function(filteredgtf, genomedb, orf_len = 30, find_UTR_5_
       orf_aa_seq_df_genomic_coordinates_merge <- dplyr::left_join(orf_aa_seq_df_genomic_coordinates, aa_sequences_df, by = "tx_id")
 
       # get rows containing protein sequences that are sub string of translated sequence to retrieve frame information
-      orf_aa_seq_df_genomic_coordinates_merge_frm <- orf_aa_seq_df_genomic_coordinates_merge %>%
-        dplyr::filter(mapply(function(short, long) grepl(short, long, fixed = TRUE), ORF_sequence, sequence))
+      keep <- vapply(seq_len(nrow(orf_aa_seq_df_genomic_coordinates_merge)), function(i) grepl(orf_aa_seq_df_genomic_coordinates_merge$ORF_sequence[i], orf_aa_seq_df_genomic_coordinates_merge$sequence[i], fixed = TRUE), FUN.VALUE = logical(1))
+      orf_aa_seq_df_genomic_coordinates_merge_frm <- orf_aa_seq_df_genomic_coordinates_merge[keep, ]
 
       orf_aa_seq_df_genomic_coordinates_merge_frm <- orf_aa_seq_df_genomic_coordinates_merge_frm %>%
         dplyr::mutate(reading_frame = sub(".*_rf", "", tx_rf_id)) %>%

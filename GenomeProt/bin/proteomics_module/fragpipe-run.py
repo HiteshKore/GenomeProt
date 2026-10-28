@@ -512,7 +512,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     # required arguments
-    parser.add_argument("--db_path", help = "path to the proteome database for the peptide search", type = str, required = True)
+    parser.add_argument("--db_path", help = "path to the proteome database for the peptide search (e.g. proteome_database.fasta)", type = str, required = True)
     parser.add_argument("--mass_spec_info_path", help = f"path to a mass spectrometry file list; each line is a unique mass spectrometry data file and its data type ({' / '.join(accepted_mass_spec_data_types)}, case-insensitive) separated by a tab character", type = str, required = True)
     parser.add_argument("--protease1", help = f"the first protease used", type = str, required = True, choices = protease_rules.keys())
     parser.add_argument("--output_dir", help = "output directory", type = str, required = True)
@@ -520,7 +520,7 @@ def main():
 
     # optional arguments
     parser.add_argument("--protease2", help = f"the second protease used (optional; must not be identical to the first protease)", type = str, default = '', choices = protease_rules.keys())
-    parser.add_argument("--add_contaminants", help = "add contaminants into the proteome database?", default = False, action = argparse.BooleanOptionalAction)
+    parser.add_argument("--add_contaminants", help = "add contaminants into the proteome database?", default = True, action = argparse.BooleanOptionalAction)
     parser.add_argument("--perform_quantification", help = "perform peptide quantification after the peptide search?", default = False, action = argparse.BooleanOptionalAction)
 
     parser.add_argument("--num_threads", help = "number of CPU threads to use for FragPipe (default: 1; specify '0' for FragPipe to use <number of cores in system - 1> threads)", default = 1, type = int)

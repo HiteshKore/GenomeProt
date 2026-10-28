@@ -68,6 +68,174 @@ Optional input:
 - Supports ORF identification for 6 model organisms: human, roundworm, fruit fly, mouse, rat and zebrafish
 - Includes optional uORF and dORF protein sequences
 
+<details>
+<summary>Processing variant data and generating a dataset-specific merged VCF file <b><u>(click to expand)</u></b></summary>
+
+The GenomeProt variant-aware module has been tested with a merged VCF file of variant calls generated from BAM files processed using the [GATK best practices workflow](https://gatk.broadinstitute.org/hc/en-us/sections/360007226651-Best-Practices-Workflows). We advise processing variants with the GATK workflow as described below.
+
+**Prerequisites**
+
+- A reference genome FASTA file, with:
+  - a FASTA index (`.fai`, e.g. from `samtools faidx`)
+  - a sequence dictionary for GATK (`.dict`, from `gatk CreateSequenceDictionary`)
+  - an index for your chosen aligner (e.g. from `bwa index` or `bowtie2-build`)
+- FASTQ files
+- A VCF file of known variant sites for the species of interest, required by GATK `BaseRecalibrator` (e.g. dbSNP for human)
+- An aligner of your choice (e.g. `bwa` or `bowtie2`), [GATK](https://gatk.broadinstitute.org/), [samtools](https://www.htslib.org/) and [bcftools](https://samtools.github.io/bcftools/) available on your `$PATH`
+
+**Workflow overview**
+
+```
+FASTQ -> sorted BAM -> MarkDuplicates -> BaseRecalibrator + ApplyBQSR
+      -> Mutect2 -> select SNVs & split multi-allelic sites -> index -> merge
+      -> combined_all_samples.vcf
+```
+
+**Step 1: Align reads to the reference genome**
+
+Align the reads in each FASTQ file to the reference genome of interest using an aligner of your choice (e.g. `bwa` or `bowtie2`). Make sure the resulting BAM file is coordinate-sorted using `samtools sort`.
+
+**Step 2: Pre-process the BAM files**
+
+Run GATK `MarkDuplicates` for each sample, followed by `BaseRecalibrator` and `ApplyBQSR`, following the GATK best practices guidelines.
+
+**Step 3: Call variants**
+
+Call variants for each sample using `Mutect2`. Other variant callers can be used, provided the resulting VCF files are compatible with the `vcfparser.py` script in the GenomeProt `bin` directory (see the script for the required VCF fields).
+
+**Step 4: Select SNVs and split multi-allelic variants**
+
+Keep only single nucleotide variants (SNVs) and create separate records for each allele of multi-allelic variants:
+```bash
+bcftools norm -m any -f <reference_genome.fa> <file.vcf.gz> | bcftools view -v snps -Oz -o <file_snps.vcf.gz>
+```
+
+**Step 5: Index the variant files**
+
+```bash
+bcftools index -t <file_snps.vcf.gz>
+```
+
+**Step 6: Merge the sample VCF files**
+
+Merge the individual sample VCF files into a single multi-sample VCF file (add one input file per sample):
+```bash
+bcftools merge file1_snps.vcf.gz file2_snps.vcf.gz -Ov -o combined_all_samples.vcf
+```
+
+The merged file `combined_all_samples.vcf` is the VCF input for the GenomeProt proteome database generation module.
+
+Users can optionally filter the merged VCF further using their own criteria to retain only high-confidence variants, for example by requiring a variant to be detected in a minimum number of samples, or by filtering on predicted deleteriousness (e.g. using annotation tools such as ANNOVAR, SnpEff, Funcotator or VEP).
+</details>
+
+**Command-line usage examples**
+<details>
+<summary><b>Generate a custom proteome database with <code>genomeprot_database_module_cli.sh</code> (click to expand)</b></summary>
+
+`genomeprot_database_module_cli.sh` supports database generation from long-read and short-read RNA sequencing data. The script accepts FASTQ, BAM and GTF inputs.
+
+Before running the example commands below, replace the example paths with the actual locations of your files and directories.
+
+<details>
+<summary><b>1. Long-read sequencing: FASTQ input</b></summary>
+Required files: A reference genome FASTA and a reference transcriptome GTF.
+
+```bash
+bash genomeprot_database_module_cli.sh -s long-read -t FASTQ -o HUMAN -p 20 -g reference_genome.fa -a reference_transcriptome.gtf -T all -l 30 -U TRUE -D TRUE -m 5 -d fastq_files/ -O output_directory/
+```
+</details>
+
+<details>
+<summary><b>2. Long-read sequencing: BAM input</b></summary>
+Required files: A reference genome FASTA and a reference transcriptome GTF.
+
+Useful when <u>genome</u>-aligned BAM files have already been generated.
+
+```bash
+bash genomeprot_database_module_cli.sh -s long-read -t BAM -o HUMAN -p 20 -g reference_genome.fa -a reference_transcriptome.gtf -T all -l 30 -U TRUE -D TRUE -m 5 -d bam_files/ -O output_directory/
+```
+</details>
+
+<details>
+<summary><b>3. Long-read sequencing: GTF input</b></summary>
+Required files: A reference transcriptome GTF and a custom transcript annotation GTF.
+
+Useful when transcript annotations have already been generated.
+
+```bash
+bash genomeprot_database_module_cli.sh -s long-read -t GTF -o HUMAN -p 20 -a reference_transcriptome.gtf -G bambu_transcript_annotations.gtf -T all -l 30 -U TRUE -D TRUE -m 5 -O output_directory/
+```
+</details>
+
+<details>
+<summary><b>4. Short-read sequencing: FASTQ input</b></summary>
+Required files: A reference genome FASTA, a reference transcriptome FASTA and a reference transcriptome GTF.
+
+```bash
+bash genomeprot_database_module_cli.sh -s short-read -t FASTQ -o HUMAN -p 20 -g reference_genome.fa -r reference_transcriptome.fa -a reference_transcriptome.gtf -T all -l 30 -U TRUE -D TRUE -m 5 -d fastq_files/ -O output_directory/
+```
+</details>
+
+<details>
+<summary><b>5. Short-read sequencing: BAM input</b></summary>
+Required files: A reference genome FASTA and a reference transcriptome GTF.
+
+Useful when <u>transcriptome</u>-aligned BAM files have already been generated.
+
+```bash
+bash genomeprot_database_module_cli.sh -s short-read -t BAM -o HUMAN -p 20 -g reference_genome.fa -a reference_transcriptome.gtf -T all -l 30 -U TRUE -D TRUE -m 5 -d bam_files/ -O output_directory/
+```
+</details>
+
+<details>
+<summary><b>6. Short-read sequencing: GTF input</b></summary>
+Required files: A reference transcriptome GTF and a transcript counts file.
+
+Useful when transcript expression has already been quantified.
+
+```bash
+bash genomeprot_database_module_cli.sh -s short-read -t GTF -o HUMAN -p 20 -a reference_transcriptome.gtf -T all -l 30 -U TRUE -D TRUE -m 5 -C bambu_transcript_counts.txt -O output_directory/
+```
+</details>
+
+<details>
+<summary><b>7. Run the test data through the database generation module</b></summary>
+
+```bash
+bash genomeprot_database_module_cli.sh -s long-read -t BAM -o HUMAN -g testdata/GRCh38_chr1_6_7_masked.fa -a testdata/gencode_v47_sorted.gtf -v testdata/BRAF_mutation.vcf -d testdata/long_read_bam/ -O output_directory/
+```
+</details>
+
+### Script options
+
+| Option | Description |
+|--------|-------------|
+| `-p` | Number of threads (default: 1) |
+| `-O` | Output directory [required] |
+| `-s` | Sequencing type: `long-read` or `short-read` [required] |
+| `-t` | Input data type: `FASTQ`, `BAM` or `GTF` [required] |
+| `-d` | Sample directory [required for FASTQ and BAM input; FASTQ files can be gzipped] |
+| `-o` | Organism: `HUMAN`, `CAEEL`, `DROME`, `MOUSE`, `RAT` or `DANRE` |
+| `-g` | Reference genome FASTA [required for FASTQ and BAM input and for generating a variant-aware proteome database; can be gzipped] |
+| `-r` | Reference transcriptome FASTA [required for short-read RNA-seq FASTQ input; can be gzipped] |
+| `-a` | Reference transcriptome GTF [required; must contain GENCODE annotations only] |
+| `-G` | Custom transcript annotation GTF [required for long-read GTF input] |
+| `-v` | VCF file with variants from all samples (optional; used for generating a variant-aware proteome database) |
+| `-T` | ORF type: `canonical` or `all` (default: all) |
+| `-l` | Minimum ORF length in amino acids (default: 30) |
+| `-U` | Include upstream (5' UTR) ORFs: `TRUE` or `FALSE` (default: `FALSE`) |
+| `-D` | Include downstream (3' UTR) ORFs: `TRUE` or `FALSE` (default: `FALSE`) |
+| `-m` | Minimum transcript expression cutoff (default: 5) |
+| `-C` | Transcript counts file [required for short-read GTF input] |
+
+To display these options or to read usage instructions, run:
+
+```bash
+bash genomeprot_database_module_cli.sh --help
+```
+
+</details>
+
 ### 2. Analyse MS proteomics
 
 The proteomics module uses FragPipe to perform a proteomics search with the custom database generated from the previous module. A simple interface is provided for the user to upload the custom database and mass spectrometry data files, and to configure basic FragPipe settings, which includes the proteases used, whether to add contaminants into the database and to perform peptide quantification, the number of CPU threads and the maximum amount of memory to use. Once FragPipe has finished running, the module outputs the peptide search results and peptide counts (if peptide quantification were done). Users wishing to configure FragPipe beyond the level offered by GenomeProt or to use a proteomics pipeline other than FragPipe can perform their proteomics searches externally.
@@ -77,9 +245,83 @@ The proteomics module uses FragPipe to perform a proteomics search with the cust
 - Discovered peptides from FragPipe
 - Peptide counts from FragPipe (if peptide quantification was enabled)
 
+**Command-line usage examples**
+<details>
+<summary><b>Use FragPipe to perform a proteomics search with <code>bin/proteomics_module/fragpipe_run.py</code> (click to expand)</b></summary>
+
+`bin/proteomics_module/fragpipe_run.py` exposes the most important and basic FragPipe options for users unfamiliar with proteomics to perform proteomics searches.
+
+Before running the example commands below, replace the example paths with the actual locations of your files and directories.
+
+<details>
+<summary><b>1. Only perform peptide search</b></summary>
+
+```bash
+python bin/proteomics_module/fragpipe_run.py --db_path proteome_database.fasta --mass_spec_info_path mass_spec_file_list.txt --protease1 stricttrypsin --output_dir output_directory/ --fragpipe_path /path/to/fragpipe-23.1/ --num_threads 20 --memory_limit 100
+```
+</details>
+
+<details>
+<summary><b>2. Perform peptide search AND quantification</b></summary>
+
+```bash
+python bin/proteomics_module/fragpipe_run.py --db_path proteome_database.fasta --mass_spec_info_path mass_spec_file_list.txt --protease1 stricttrypsin --output_dir output_directory/ --fragpipe_path /path/to/fragpipe-23.1/ --perform_quantification --num_threads 20 --memory_limit 100
+```
+</details>
+
+### Script options
+
+#### Required arguments
+
+| Option | Description |
+|--------|-------------|
+| `--db_path` | Path to the proteome database for the peptide search (e.g. `proteome_database.fasta`) |
+| `--mass_spec_info_path` | Path to a mass spectrometry file list* |
+| `--protease1` | The first protease used: `stricttrypsin`, `trypsin`, `trypsin_gluc`, `gluc`, `lysc`, `lysn`, `argc` or `aspn` |
+| `--output_dir` | Output directory |
+| `--fragpipe_path` | Path to the FragPipe installation directory |
+
+*Each line of a mass spectrometry file list consists of a unique mass spectrometry data file and its data type (case-insensitive) separated by a tab character.
+
+Each mass spectrometry data file specified must have a file extension of `.mzML`, `.mzXML`, `.mgf`, `.mzBIN`, `.raw` or `.d`. Both absolute and relative file paths are accepted.
+
+The mass spectrometry data types available are `DDA`, `DDA+`, `DIA`, `DIA-Quant`, `DIA-Lib` and `GPF-DIA`.
+
+An example is as follows, with `\t` signifying tab characters:
+
+```
+dia_mass_spec_file1.raw\tDIA
+folder1/dia_mass_spec_file2.mzML\tDIA
+/folder2/dda_mass_spec_file1.mzXML\tDDA
+folder3/folderxyz/dia_mass_spec_file3.mgf\tDIA
+dda_mass_spec_file2.mzBIN\tDDA
+```
+
+#### Optional arguments
+
+| Option | Description |
+|--------|-------------|
+| `--protease2` | The second protease used: Same choices as `--protease1` but must not be identical to the first protease |
+| `--add_contaminants` / `--no-add_contaminants` | Add contaminants into the proteome database? (default: yes) |
+| `--perform_quantification` / `--no-perform_quantification` | Perform peptide quantification after the peptide search? (default: no) |
+| `--num_threads` | Number of CPU threads to use for FragPipe (default: `1`; specify `0` for FragPipe to use `<number of cores in system> - 1` threads) |
+| `--memory_limit` | Memory limit in GB for FragPipe (default: `15` GB; specify `0` to let FragPipe decide; FragPipe will exit and fail to complete the peptide search if the memory limit is below the minimum needed) |
+| `--diann_path` | Path to the DIA-NN binary for peptide quantification (default: `<fragpipe_path>/tools/diann/*/linux/diann-*`) |
+| `--python_path` | Path to the Python binary with `easypqp` installed (default: the Python binary used to run this script) |
+| `--philosopher_path` | Path to the Philosopher binary for preparing the custom proteome database (default: `<fragpipe_path>/tools/Philosopher/philosopher-*`) |
+| `--tools_folder_path` | Path to the FragPipe tools folder containing MSFragger, IonQuant and dirTracer (default: `<fragpipe_path>/tools/`) |
+
+To display these options or to read usage instructions, run:
+
+```bash
+python bin/proteomics_module/fragpipe-run.py --help
+```
+
+</details>
+
 ### 3. Integration
 
-This module integrates proteomics and transcriptomics data. Peptides are associated back to transcript isoforms and mapped to spliced genomic coordinates for downstream visualisation. This generates BED12 file of transcripts, ORFs and peptides for visualisation in the UCSC Genome Browser and a combined GTF file for visualisation within the app. An HTML report is also created that provides a summary of identified known and novel transcripts, uniquely mapping peptides, and known and novel ORFs.
+This module integrates transcriptomics and proteomics data. Peptides are associated back to transcript isoforms and mapped to spliced genomic coordinates for downstream visualisation. This generates BED12 file of transcripts, ORFs and peptides for visualisation in the UCSC Genome Browser and a combined GTF file for visualisation within the app. An HTML report is also created that provides a summary of identified known and novel transcripts, uniquely mapping peptides, and known and novel ORFs.
 
 #### Key outputs:
 
@@ -87,6 +329,75 @@ This module integrates proteomics and transcriptomics data. Peptides are associa
 - BED12 files for visualisation in the UCSC Genome Browser.
 - Combined GTF file for visualisation within GenomeProt.
 - HTML report summarising identified transcripts, peptides and ORFs.
+
+**Command-line usage examples**
+<details>
+<summary><b>Integrate transcriptomics and proteomics data with <code>genomeprot_integration_module_cli.sh</code> (click to expand)</b></summary>
+
+`genomeprot_integration_module_cli.sh` can 1) reformat proteomics results and 2) perform proteogenomics integration. Users can choose to run both modes or only one mode.
+
+Before running the example commands below, replace the example paths with the actual locations of your files and directories.
+
+<details>
+<summary><b>1. Only reformat proteomics results</b></summary>
+
+```bash
+bash genomeprot_integration_module_cli.sh -d proteomics_results_directory/ -t FragPipe -r output_directory/reformatted_results.tsv
+```
+</details>
+
+<details>
+<summary><b>2. Only perform proteogenomics integration</b></summary>
+
+```bash
+bash genomeprot_integration_module_cli.sh -p reformatted_results.tsv -m proteome_database_metadata.txt -g proteome_database_transcripts.gtf -o output_directory/
+```
+</details>
+
+<details>
+<summary><b>3. Reformat proteomics results AND perform proteogenomics integration</b></summary>
+
+```bash
+bash genomeprot_integration_module_cli.sh -d proteomics_results_directory/ -t FragPipe -r output_directory/reformatted_results.tsv -m proteome_database_metadata.txt -g proteome_database_transcripts.gtf -o output_directory/
+```
+</details>
+
+<details>
+<summary><b>4. Perform proteogenomics integration on the test data</b></summary>
+
+Replace the paths for `proteome_database_metadata.txt` and `proteome_database_transcripts.gtf` to those for the corresponding files obtained from running the test data through the database generation module.
+
+```bash
+bash genomeprot_integration_module_cli.sh -p testdata/peptide_data.tsv -m proteome_database_metadata.txt -g proteome_database_transcripts.gtf -o output_directory/
+```
+</details>
+
+### Script options
+
+#### Proteomics results reformatting
+
+| Option | Description |
+|--------|-------------|
+| `-d` | Proteomics results directory; must contain .txt, .csv or .tsv proteomics results files |
+| `-t` | Search tool used to generate the proteomic data: `Spectronaut`, `FragPipe`, `FragPipe_quant`, `DIA-NN` or `MaxQuant` |
+| `-r` | Path to write the reformatted proteomics results to |
+
+#### Proteogenomics integration
+
+| Option | Description |
+|--------|-------------|
+| `-p` | Reformatted proteomics results file |
+| `-m` | Proteome database metadata file (e.g. `proteome_database_metadata.txt`) |
+| `-g` | Proteome database transcripts GTF file (e.g. `proteome_database_transcripts.gtf`) |
+| `-o` | Output directory |
+
+To display these options or to read usage instructions, run:
+
+```bash
+bash genomeprot_integration_module_cli.sh --help
+```
+
+</details>
 
 ### 4. Visualisation
 
@@ -183,9 +494,9 @@ MQATPSEAGGESPQSCLSVSRSDWTVGKPVSLLAPLIPPRSSGQPLPFGPGGRQPLRSLLVGMCSGSGRRRSSLSPTMRP
 | Type | Definition |
 |-|-|
 | CDS | Annotated in UniProt or RefSeq |
-| 5UTR | Coordinates are within the 5' UTR region of an mRNA transcript |
-| 3UTR | Coordinates are within the 3' UTR region of an mRNA transcript |
-| 5UTR:CDS | Start site is within the 5' UTR region and stop site is within the CDS region of an mRNA transcript |
+| 5UTR | Coordinates are within the 5′ UTR region of an mRNA transcript |
+| 3UTR | Coordinates are within the 3′ UTR region of an mRNA transcript |
+| 5UTR:CDS | Start site is within the 5′ UTR region and stop site is within the CDS region of an mRNA transcript |
 | gene_overlap | Encoded by a transcript that overlaps a region with annotated protein-coding genes |
 | intergenic | Encoded by a transcript that does not overlap a region with annotated protein-coding genes |
 
