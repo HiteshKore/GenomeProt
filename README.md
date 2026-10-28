@@ -24,6 +24,10 @@
 
 Quantifying the diversity of RNAs and proteins produced by cells is fundamental to the biological and clinical sciences. However, many proteins remain uncharacterized due to the limitations of standard proteomics techniques. GenomeProt is a tool to enable user-friendly proteogenomics and identify both known and novel translated open reading frames. GenomeProt integrates RNA-seq and mass-spectrometry data and outputs the RNAs, peptides and proteins present in each sample in a HTML summary report, BED12 and GTF files. GenomeProt also provides a visualisation module to analyse the results and can optionally accept a VCF file of DNA variants to identify variant proteins. GenomeProt can be accessed via a public website, by installing a local version that runs through your web browser, or via the command line.
 
+Current version: v1.0
+
+Supported operating systems: Linux / Unix
+
 Preprint: https://doi.org/10.64898/2026.08.06.743133
 
 If you use GenomeProt, please cite:
@@ -204,6 +208,8 @@ bash genomeprot_database_module_cli.sh -s short-read -t GTF -o HUMAN -p 20 -a re
 ```bash
 bash genomeprot_database_module_cli.sh -s long-read -t BAM -o HUMAN -g testdata/GRCh38_chr1_6_7_masked.fa -a testdata/gencode_v47_sorted.gtf -v testdata/BRAF_mutation.vcf -d testdata/long_read_bam/ -O output_directory/
 ```
+
+This should take around 1 to 2 minutes on a normal desktop computer. The expected output files can be found in this ZIP file <a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata_output/database_results.zip">here</a>.
 </details>
 
 ### Script options
@@ -370,6 +376,8 @@ Replace the paths for `proteome_database_metadata.txt` and `proteome_database_tr
 ```bash
 bash genomeprot_integration_module_cli.sh -p testdata/peptide_data.tsv -m proteome_database_metadata.txt -g proteome_database_transcripts.gtf -o output_directory/
 ```
+
+This should take around 1 to 2 minutes on a normal desktop computer. The expected output files can be found in this ZIP file <a href="https://genomeprot.researchsoftware.unimelb.edu.au/testdata_output/2026-05-07_1456_integration_results.zip">here</a>.
 </details>
 
 ### Script options
@@ -716,6 +724,8 @@ conda env create -f conda_env_no_fragpipe.yaml # Run this line if you DO NOT wis
 ```
 
 If you choose NOT to use the proteomics module, skip the step below and head to [the next step](#prepare-the-reference-and-test-datasets).
+
+In either case, the conda environment will take roughly 10 - 30 minutes to build due to the substantial dependencies GenomeProt uses.
 
 #### Install FragPipe and configure the proteomics module
 
