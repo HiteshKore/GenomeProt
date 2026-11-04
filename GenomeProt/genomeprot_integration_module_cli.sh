@@ -32,10 +32,10 @@ function integrate_proteogenomics() {
     gtf=$3
     output_dir=$4
 
-    echo "Reformatted proteomics results file: $proteomics"
-    echo "Proteome database metadata file: $metadata"
-    echo "Proteome database transcripts GTF file: $gtf"
-    echo "Output directory: $output_dir"
+    echo "Reformatted proteomics results file: $proteomics" | tee -a "$log_file"
+    echo "Proteome database metadata file: $metadata" | tee -a "$log_file"
+    echo "Proteome database transcripts GTF file: $gtf" | tee -a "$log_file"
+    echo "Output directory: $output_dir" | tee -a "$log_file"
 
     echo 'Performing proteogenomics integration' | tee -a "$log_file"
     "$conda_path" run -n "$genomeprot_env" Rscript ./bin/integration_module/map_peptides_generate_outputs.R -p "$proteomics" -m "$metadata" -g "$gtf" -s "$output_dir"
