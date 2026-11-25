@@ -252,10 +252,10 @@ stats <- data.frame(item, total)
 knitr::kable(stats, format = "html", col.names = c(" ", ""))
 ```
 
+`r if (nrow(df_var_peptides) > 0) {"### Variant protein isoform data"}`
+
 ```{r variant_protein_isoform, echo = FALSE}
 if (nrow(df_var_peptides) > 0) {
-  cat("### Variant protein isoform data\n\n")
-
   # Number of variant ORFs with UMPs
   var_p <- df_var_peptides %>%
            dplyr::filter(peptide_ids_orf == TRUE) %>%
